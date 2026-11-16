@@ -8,7 +8,7 @@ Free-tier path for sharing a working backend with testers. Not production HA.
 - **Render** — one free web service running identity + market + food + ride + chat + games + gateway
 - Flutter points at the Render HTTPS URL via `--dart-define`
 
-**Tradeoffs:** free Render services sleep after ~15 minutes idle (first request can take ~30–60s). Free tier RAM is tight with 7 Node processes — if the service OOMs, bump to Render Starter (~$7/mo) for the demo week.
+**Tradeoffs:** free Render services sleep after ~15 minutes idle (first request can take ~30–60s). Demo start runs all services in **one Node process** to fit the 512MB free plan. If it still OOMs, bump to Render Starter (~$7/mo).
 
 ---
 

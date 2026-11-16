@@ -6,12 +6,16 @@ services:
     runtime: node
     plan: free
     rootDir: backend
-    buildCommand: npm ci && npm run build -w @maekel/shared
+    buildCommand: npm ci --include=dev && npm run build -w @maekel/shared
     startCommand: npm run start:demo
     healthCheckPath: /healthz
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=460"
+      - key: PG_POOL_MAX
+        value: "2"
       - key: POSTGRES_SSL
         value: "true"
       - key: JWT_SECRET

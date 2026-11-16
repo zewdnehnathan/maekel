@@ -7,9 +7,11 @@ const { Pool } = pg;
 export type Db = pg.Pool;
 
 export function createPool(connectionString: string): Db {
+  // Keep pools small on free-tier hosts (one process × many DBs).
+  const max = Number(process.env.PG_POOL_MAX ?? (postgresSslEnabled() ? 2 : 5));
   return new Pool({
     connectionString,
-    max: 5,
+    max: Number.isFinite(max) && max > 0 ? max : 2,
     ssl: postgresSslEnabled()
       ? {
           // Neon / managed Postgres terminate TLS at the proxy.
