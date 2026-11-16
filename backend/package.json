@@ -1,0 +1,27 @@
+{
+  "name": "maekel-backend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Maekel MVP microservices (identity, market, food, ride, chat, gateway)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @maekel/shared && npm run build --workspaces --if-present",
+    "dev:identity": "npm run dev -w @maekel/identity-service",
+    "dev:market": "npm run dev -w @maekel/market-service",
+    "dev:food": "npm run dev -w @maekel/food-service",
+    "dev:ride": "npm run dev -w @maekel/ride-service",
+    "dev:chat": "npm run dev -w @maekel/chat-service",
+    "dev:games": "npm run dev -w @maekel/games-service",
+    "dev:gateway": "npm run dev -w @maekel/gateway",
+    "dev:all": "npx concurrently -k -n identity,market,food,ride,chat,games,gateway -c cyan,magenta,yellow,green,blue,red,white \"npm:dev:identity\" \"npm:dev:market\" \"npm:dev:food\" \"npm:dev:ride\" \"npm:dev:chat\" \"npm:dev:games\" \"npm:dev:gateway\"",
+    "start:demo": "node ./scripts/start-demo.mjs",
+    "db:init": "powershell -ExecutionPolicy Bypass -File ./scripts/init-dbs.ps1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,44 @@
+# Demo/QA blueprint: one web service running the full Maekel API stack.
+# Pair with Neon Postgres (see docs/deploy-demo-render-neon.md).
+services:
+  - type: web
+    name: maekel-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npm run build -w @maekel/shared
+    startCommand: npm run start:demo
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: POSTGRES_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL_SEC
+        value: "3600"
+      - key: MOCK_OTP_CODE
+        value: "123456"
+      - key: IDENTITY_URL
+        value: http://127.0.0.1:3001
+      - key: MARKET_URL
+        value: http://127.0.0.1:3002
+      - key: FOOD_URL
+        value: http://127.0.0.1:3003
+      - key: RIDE_URL
+        value: http://127.0.0.1:3004
+      - key: CHAT_URL
+        value: http://127.0.0.1:3005
+      - key: GAMES_URL
+        value: http://127.0.0.1:3006
+      # Set these in the Render dashboard from your Neon connection string:
+      # POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: "5432"
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
