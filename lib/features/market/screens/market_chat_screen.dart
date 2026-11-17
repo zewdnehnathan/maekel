@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme.dart';
+import '../components/market_safety_banner.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
@@ -94,23 +95,11 @@ class _MarketChatScreenState extends ConsumerState<MarketChatScreen> {
       ],
       child: Column(
         children: [
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: MaekelColors.amber.withValues(alpha: 0.1),
-              border: Border.all(
-                color: MaekelColors.amber.withValues(alpha: 0.35),
-              ),
-            ),
-            child: Text(
-              'Safety banner: Meet publicly. Inspect before pay. Maekel staff never ask for fees here.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: MaekelColors.amber,
-                    fontSize: 12,
-                  ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: MarketSafetyBanner(
+              compact: true,
+              message: MarketSafetyCopy.chatBanner,
             ),
           ),
           Expanded(

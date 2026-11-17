@@ -154,9 +154,9 @@ Everything else in the full FRDs is **post-MVP** unless listed below.
 
 ### Market acceptance (done when)
 
-- [ ] Buyer finds ad via search/filter, opens detail, starts chat, can call  
-- [ ] Seller posts ad with photos → appears only after approve  
-- [ ] Report + reject/suspend path works for ops  
+- [x] Buyer finds ad via search/filter, opens detail, starts chat, can call  
+- [x] Seller posts ad with photos → appears only after approve  
+- [x] Report + reject/suspend path works for ops  
 - [ ] Favorites and My Ads work offline-of-network gracefully enough to retry  
 
 ---

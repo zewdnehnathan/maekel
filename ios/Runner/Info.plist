@@ -8,6 +8,12 @@
 	<string>Maekel uses your location to set the Ride pickup point by default.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Maekel uses your location to set the Ride pickup point by default.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Maekel needs camera access so you can photograph items for Market listings.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Maekel needs photo library access so you can add listing photos from your gallery.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Maekel may save listing photos to your library when you choose.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

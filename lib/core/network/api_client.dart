@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../constants/app_constants.dart';
 import 'api_exception.dart';
@@ -109,6 +110,36 @@ class ApiClient {
       _uri(path),
       headers: _headers(auth: auth),
     );
+    return _decode(res);
+  }
+
+  /// Multipart upload (e.g. market photo). [bytes] is the file body.
+  Future<dynamic> postMultipart(
+    String path, {
+    required List<int> bytes,
+    required String filename,
+    String fieldName = 'file',
+    String contentType = 'image/jpeg',
+    bool auth = false,
+  }) async {
+    final request = http.MultipartRequest('POST', _uri(path));
+    request.headers.addAll(_headers(auth: auth));
+    MediaType? mediaType;
+    try {
+      mediaType = MediaType.parse(contentType);
+    } catch (_) {
+      mediaType = MediaType('image', 'jpeg');
+    }
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        fieldName,
+        bytes,
+        filename: filename,
+        contentType: mediaType,
+      ),
+    );
+    final streamed = await _http.send(request);
+    final res = await http.Response.fromStream(streamed);
     return _decode(res);
   }
 

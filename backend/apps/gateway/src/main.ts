@@ -9,7 +9,11 @@ import {
 const port = envInt('GATEWAY_PORT', 8080);
 
 async function boot() {
-  const app = await createService({ name: 'gateway', port });
+  const app = await createService({
+    name: 'gateway',
+    port,
+    bodyLimit: 12 * 1024 * 1024,
+  });
 
   const routes: Array<{ prefix: string; upstream: string }> = [
     { prefix: '/v1/auth', upstream: env('IDENTITY_URL', 'http://127.0.0.1:3001') },

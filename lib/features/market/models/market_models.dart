@@ -23,6 +23,7 @@ class MarketSeller {
     required this.phoneE164,
     this.showPhone = true,
     this.locationLabel = 'Addis Ababa',
+    this.suspended = false,
   });
 
   final String id;
@@ -30,6 +31,88 @@ class MarketSeller {
   final String phoneE164;
   final bool showPhone;
   final String locationLabel;
+  final bool suspended;
+
+  MarketSeller copyWith({
+    String? name,
+    String? phoneE164,
+    bool? showPhone,
+    String? locationLabel,
+    bool? suspended,
+  }) {
+    return MarketSeller(
+      id: id,
+      name: name ?? this.name,
+      phoneE164: phoneE164 ?? this.phoneE164,
+      showPhone: showPhone ?? this.showPhone,
+      locationLabel: locationLabel ?? this.locationLabel,
+      suspended: suspended ?? this.suspended,
+    );
+  }
+}
+
+class SellerNotification {
+  const SellerNotification({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.body,
+    required this.createdAt,
+    this.adId,
+    this.readAt,
+  });
+
+  final String id;
+  final String? adId;
+  final String kind;
+  final String title;
+  final String body;
+  final DateTime createdAt;
+  final DateTime? readAt;
+
+  bool get isUnread => readAt == null;
+}
+
+class MarketReportItem {
+  const MarketReportItem({
+    required this.id,
+    required this.adId,
+    required this.adTitle,
+    required this.sellerId,
+    required this.reporterId,
+    required this.reason,
+    required this.createdAt,
+    this.status = 'open',
+  });
+
+  final String id;
+  final String adId;
+  final String adTitle;
+  final String sellerId;
+  final String reporterId;
+  final String reason;
+  final String status;
+  final DateTime createdAt;
+}
+
+class MarketOpsQueue {
+  const MarketOpsQueue({
+    required this.pendingAds,
+    required this.reports,
+  });
+
+  final List<MarketAd> pendingAds;
+  final List<MarketReportItem> reports;
+}
+
+class MarketConfig {
+  const MarketConfig({
+    this.maxActiveFreeAds = 5,
+    this.phoneRevealDailyLimit = 10,
+  });
+
+  final int maxActiveFreeAds;
+  final int phoneRevealDailyLimit;
 }
 
 class MarketAd {
@@ -66,6 +149,7 @@ class MarketAd {
   final Map<String, String> attributes;
 
   MarketAd copyWith({
+    String? categoryId,
     String? title,
     String? description,
     int? priceEtb,
@@ -81,7 +165,7 @@ class MarketAd {
     return MarketAd(
       id: id,
       sellerId: sellerId,
-      categoryId: categoryId,
+      categoryId: categoryId ?? this.categoryId,
       title: title ?? this.title,
       description: description ?? this.description,
       priceEtb: priceEtb ?? this.priceEtb,

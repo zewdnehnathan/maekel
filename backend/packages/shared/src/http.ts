@@ -12,8 +12,12 @@ export type AuthedRequest = FastifyRequest & { user: AccessClaims };
 export async function createService(opts: {
   name: string;
   port: number;
+  bodyLimit?: number;
 }): Promise<FastifyInstance> {
-  const app = Fastify({ logger: true });
+  const app = Fastify({
+    logger: true,
+    bodyLimit: opts.bodyLimit ?? 1_048_576,
+  });
   await app.register(cors, { origin: true });
 
   app.setErrorHandler((error, _req, reply) => {
@@ -56,7 +60,7 @@ export async function createService(opts: {
 
 export function requireAuth(
   req: FastifyRequest,
-  _reply: FastifyReply,
+  _reply?: FastifyReply,
 ): AccessClaims {
   try {
     const user = bearerUser(req.headers.authorization);
@@ -67,6 +71,17 @@ export function requireAuth(
     return user;
   } catch {
     throw new AppError('Unauthorized', 401, 'unauthorized');
+  }
+}
+
+export function requireRole(
+  user: AccessClaims,
+  allowed: string | string[],
+): void {
+  const needed = Array.isArray(allowed) ? allowed : [allowed];
+  const has = needed.some((role) => user.roles.includes(role));
+  if (!has) {
+    throw new AppError('Forbidden', 403, 'forbidden');
   }
 }
 

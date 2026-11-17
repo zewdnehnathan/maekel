@@ -22,6 +22,7 @@ import '../features/market/screens/market_chat_screen.dart';
 import '../features/market/screens/market_favorites_screen.dart';
 import '../features/market/screens/market_messages_screen.dart';
 import '../features/market/screens/market_my_ads_screen.dart';
+import '../features/market/screens/market_ops_screen.dart';
 import '../features/market/screens/market_screen.dart';
 import '../features/market/screens/market_sell_screen.dart';
 import '../features/ride/screens/ride_driver_screen.dart';
@@ -45,6 +46,7 @@ abstract final class AppRoutes {
   static const marketMyAds = '/market/my-ads';
   static const marketFavorites = '/market/favorites';
   static const marketMessages = '/market/messages';
+  static const marketOps = '/market/ops';
 
   static const food = '/food';
   static const foodCart = '/food/cart';
@@ -128,11 +130,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'sell',
-            builder: (context, state) => const MarketSellScreen(),
+            builder: (context, state) => MarketSellScreen(
+              editAdId: state.uri.queryParameters['edit'],
+            ),
           ),
           GoRoute(
             path: 'my-ads',
             builder: (context, state) => const MarketMyAdsScreen(),
+          ),
+          GoRoute(
+            path: 'ops',
+            builder: (context, state) => const MarketOpsScreen(),
           ),
           GoRoute(
             path: 'favorites',

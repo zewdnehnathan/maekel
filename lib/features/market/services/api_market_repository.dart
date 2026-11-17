@@ -25,6 +25,9 @@ class ApiMarketRepository implements MarketRepository {
   final Set<String> _favoriteIds = {};
   final List<ChatThread> _threads = [];
   final Map<String, List<ChatMessage>> _messages = {};
+  final List<SellerNotification> _notifications = [];
+  MarketSeller? _mySeller;
+  MarketConfig _config = const MarketConfig();
 
   void dispose() {
     _poll?.cancel();
@@ -106,6 +109,31 @@ class ApiMarketRepository implements MarketRepository {
               .cast<Map<String, dynamic>>()
               .map(_parseThread),
         );
+
+      try {
+        final sellerRaw =
+            await _client.get('/v1/market/me/seller', auth: true);
+        _mySeller = _parseSeller(sellerRaw as Map<String, dynamic>);
+        _upsertSeller(_mySeller!);
+      } catch (_) {}
+
+      try {
+        final notes =
+            await _client.get('/v1/market/me/notifications', auth: true);
+        _notifications
+          ..clear()
+          ..addAll(
+            ((notes as Map)['items'] as List)
+                .cast<Map<String, dynamic>>()
+                .map(_parseNotification),
+          );
+      } catch (_) {}
+
+      try {
+        final cfg = await _client.get('/v1/market/config');
+        _config = _parseConfig(cfg as Map<String, dynamic>);
+      } catch (_) {}
+
       _notify();
     } catch (_) {
       // Ignore until signed in.
@@ -228,20 +256,45 @@ class ApiMarketRepository implements MarketRepository {
     ) as Map<String, dynamic>;
     final ad = _parseAd(raw);
     _ads.insert(0, ad);
-    if (getSeller(sellerId) == null) {
-      _sellers.add(
-        MarketSeller(
-          id: sellerId,
-          name: 'You',
-          phoneE164: '+251',
-          locationLabel: '$subcity, Addis Ababa',
-        ),
-      );
+    await refreshAuthed(sellerId);
+    _notify();
+    return ad;
+  }
+
+  @override
+  Future<MarketAd> updateAd(
+    String adId, {
+    String? categoryId,
+    String? title,
+    String? description,
+    int? priceEtb,
+    AdCondition? condition,
+    String? subcity,
+    List<String>? photoUrls,
+    Map<String, String>? attributes,
+  }) async {
+    final raw = await _client.patch(
+      '/v1/market/ads/$adId',
+      auth: true,
+      body: {
+        if (categoryId != null) 'categoryId': categoryId,
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (priceEtb != null) 'priceEtb': priceEtb,
+        if (condition != null) 'condition': condition.name,
+        if (subcity != null) 'subcity': subcity,
+        if (photoUrls != null) 'photoUrls': photoUrls,
+        if (attributes != null) 'attributes': attributes,
+      },
+    ) as Map<String, dynamic>;
+    final ad = _parseAd(raw);
+    final idx = _ads.indexWhere((a) => a.id == adId);
+    if (idx >= 0) {
+      _ads[idx] = ad;
+    } else {
+      _ads.add(ad);
     }
     _notify();
-    unawaited(Future<void>.delayed(const Duration(seconds: 5), () async {
-      await refreshCatalog(silent: true);
-    }));
     return ad;
   }
 
@@ -275,6 +328,142 @@ class ApiMarketRepository implements MarketRepository {
     await _client.delete('/v1/market/ads/$adId', auth: true);
     _ads.removeWhere((a) => a.id == adId);
     _notify();
+  }
+
+  @override
+  Future<String> uploadPhoto({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  }) async {
+    final raw = await _client.postMultipart(
+      '/v1/market/media',
+      bytes: bytes,
+      filename: filename,
+      contentType: contentType,
+      auth: true,
+    ) as Map<String, dynamic>;
+    return raw['url'] as String;
+  }
+
+  @override
+  Future<MarketSeller> getMySeller() async {
+    final raw =
+        await _client.get('/v1/market/me/seller', auth: true)
+            as Map<String, dynamic>;
+    _mySeller = _parseSeller(raw);
+    _upsertSeller(_mySeller!);
+    _notify();
+    return _mySeller!;
+  }
+
+  @override
+  Future<MarketSeller> updateMySeller({
+    bool? showPhone,
+    String? name,
+    String? locationLabel,
+  }) async {
+    final raw = await _client.patch(
+      '/v1/market/me/seller',
+      auth: true,
+      body: {
+        if (showPhone != null) 'showPhone': showPhone,
+        if (name != null) 'name': name,
+        if (locationLabel != null) 'locationLabel': locationLabel,
+      },
+    ) as Map<String, dynamic>;
+    _mySeller = _parseSeller(raw);
+    _upsertSeller(_mySeller!);
+    _notify();
+    return _mySeller!;
+  }
+
+  @override
+  Future<List<SellerNotification>> getNotifications() async {
+    final raw =
+        await _client.get('/v1/market/me/notifications', auth: true);
+    _notifications
+      ..clear()
+      ..addAll(
+        ((raw as Map)['items'] as List)
+            .cast<Map<String, dynamic>>()
+            .map(_parseNotification),
+      );
+    _notify();
+    return List.unmodifiable(_notifications);
+  }
+
+  @override
+  Future<MarketOpsQueue> getOpsQueue() async {
+    final raw =
+        await _client.get('/v1/market/ops/queue', auth: true)
+            as Map<String, dynamic>;
+    final pending = ((raw['pendingAds'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(_parseAd)
+        .toList();
+    final reports = ((raw['reports'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(_parseReportItem)
+        .toList();
+    return MarketOpsQueue(pendingAds: pending, reports: reports);
+  }
+
+  @override
+  Future<void> resolveReport({
+    required String reportId,
+    required String action,
+    String? note,
+  }) async {
+    await _client.post(
+      '/v1/market/ops/reports/$reportId/resolve',
+      auth: true,
+      body: {
+        'action': action,
+        if (note != null) 'note': note,
+      },
+    );
+  }
+
+  @override
+  Future<void> suspendSeller({
+    required String sellerId,
+    required bool suspended,
+    String? note,
+  }) async {
+    await _client.post(
+      '/v1/market/ops/sellers/$sellerId/suspend',
+      auth: true,
+      body: {
+        'suspended': suspended,
+        if (note != null) 'note': note,
+      },
+    );
+  }
+
+  @override
+  Future<String> revealPhone(String adId) async {
+    final raw = await _client.post(
+      '/v1/market/ads/$adId/reveal-phone',
+      auth: true,
+    ) as Map<String, dynamic>;
+    return raw['phoneE164'] as String;
+  }
+
+  @override
+  Future<MarketConfig> getConfig() async {
+    final raw = await _client.get('/v1/market/config');
+    _config = _parseConfig(raw as Map<String, dynamic>);
+    return _config;
+  }
+
+  void _upsertSeller(MarketSeller seller) {
+    final idx = _sellers.indexWhere((s) => s.id == seller.id);
+    if (idx >= 0) {
+      _sellers[idx] = seller;
+    } else {
+      _sellers.add(seller);
+    }
   }
 
   @override
@@ -529,6 +718,42 @@ class ApiMarketRepository implements MarketRepository {
       phoneE164: j['phoneE164'] as String,
       locationLabel: (j['locationLabel'] as String?) ?? 'Addis Ababa',
       showPhone: (j['showPhone'] as bool?) ?? true,
+      suspended: (j['suspended'] as bool?) ?? false,
+    );
+  }
+
+  SellerNotification _parseNotification(Map<String, dynamic> j) {
+    return SellerNotification(
+      id: j['id'] as String,
+      adId: j['adId'] as String?,
+      kind: j['kind'] as String,
+      title: j['title'] as String,
+      body: j['body'] as String,
+      createdAt: DateTime.parse(j['createdAt'].toString()),
+      readAt: j['readAt'] == null
+          ? null
+          : DateTime.tryParse(j['readAt'].toString()),
+    );
+  }
+
+  MarketReportItem _parseReportItem(Map<String, dynamic> j) {
+    return MarketReportItem(
+      id: j['id'] as String,
+      adId: j['adId'] as String,
+      adTitle: (j['adTitle'] as String?) ?? 'Ad',
+      sellerId: (j['sellerId'] as String?) ?? '',
+      reporterId: (j['reporterId'] as String?) ?? '',
+      reason: j['reason'] as String,
+      status: (j['status'] as String?) ?? 'open',
+      createdAt: DateTime.parse(j['createdAt'].toString()),
+    );
+  }
+
+  MarketConfig _parseConfig(Map<String, dynamic> j) {
+    return MarketConfig(
+      maxActiveFreeAds: (j['maxActiveFreeAds'] as num?)?.toInt() ?? 5,
+      phoneRevealDailyLimit:
+          (j['phoneRevealDailyLimit'] as num?)?.toInt() ?? 10,
     );
   }
 

@@ -6,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/glass_panel.dart';
+import '../components/market_safety_banner.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
@@ -59,19 +61,27 @@ class MarketAdDetailScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: AspectRatio(
-              aspectRatio: 16 / 11,
-              child: Image.network(
-                ad.photoUrls.first,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: MaekelColors.panelLift,
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.image_not_supported_outlined),
-                ),
-              ),
+          SizedBox(
+            height: 220,
+            child: PageView.builder(
+              itemCount: ad.photoUrls.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.network(
+                      ad.photoUrls[index],
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: MaekelColors.panelLift,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.image_not_supported_outlined),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 16),
@@ -90,17 +100,7 @@ class MarketAdDetailScreen extends ConsumerWidget {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
-          GlassPanel(
-            accent: MaekelColors.amber,
-            padding: const EdgeInsets.all(16),
-            borderRadius: 18,
-            child: Text(
-              'Safety: Meet in public. Inspect before paying. Never send deposits to strangers.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: MaekelColors.amber,
-                  ),
-            ),
-          ),
+          const MarketSafetyBanner(message: MarketSafetyCopy.shortTip),
           const SizedBox(height: 16),
           Text('DETAILS', style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
@@ -169,44 +169,38 @@ class MarketAdDetailScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: userId == null
                   ? null
-                  : () async {
-                      try {
-                        final thread = await ref
-                            .read(marketRepositoryProvider)
-                            .openOrCreateThread(adId: ad.id, buyerId: userId);
-                        if (context.mounted) {
-                          context.push(
-                            '${AppRoutes.marketMessages}/${thread.id}',
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('$e')),
-                          );
-                        }
-                      }
-                    },
+                  : () => _startChat(context, ref, userId, ad.id),
               icon: const Icon(Icons.chat_rounded),
               label: const Text('CHAT WITH SELLER'),
             ),
             const SizedBox(height: 10),
             if (seller != null && seller.showPhone)
               OutlinedButton.icon(
-                onPressed: () => _call(seller.phoneE164),
+                onPressed: userId == null
+                    ? null
+                    : () => _callSeller(context, ref, ad.id),
                 icon: const Icon(Icons.call_rounded),
-                label: Text('CALL ${seller.phoneE164}'),
+                label: const Text('CALL SELLER'),
               )
             else if (seller != null)
               Text(
                 'Seller hid their phone. Use chat.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
-          ] else
+          ] else ...[
             Text(
               'This is your listing.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            if (ad.status != AdStatus.sold) ...[
+              const SizedBox(height: 10),
+              OutlinedButton(
+                onPressed: () =>
+                    context.push('${AppRoutes.marketSell}?edit=${ad.id}'),
+                child: const Text('EDIT LISTING'),
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -229,9 +223,54 @@ class MarketAdDetailScreen extends ConsumerWidget {
     return buf.toString();
   }
 
-  Future<void> _call(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone);
-    await launchUrl(uri);
+  Future<void> _startChat(
+    BuildContext context,
+    WidgetRef ref,
+    String userId,
+    String adId,
+  ) async {
+    final ok = await showMarketSafetyGate(context);
+    if (!ok || !context.mounted) return;
+    try {
+      final thread = await ref
+          .read(marketRepositoryProvider)
+          .openOrCreateThread(adId: adId, buyerId: userId);
+      if (context.mounted) {
+        context.push('${AppRoutes.marketMessages}/${thread.id}');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _callSeller(
+    BuildContext context,
+    WidgetRef ref,
+    String adId,
+  ) async {
+    final ok = await showMarketSafetyGate(context);
+    if (!ok || !context.mounted) return;
+    try {
+      final phone =
+          await ref.read(marketRepositoryProvider).revealPhone(adId);
+      await launchUrl(Uri(scheme: 'tel', path: phone));
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
+      }
+    }
   }
 
   Future<void> _report(

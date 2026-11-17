@@ -14,11 +14,16 @@ class AuthSession {
     required this.userId,
     required this.phoneE164,
     required this.accessToken,
+    this.roles = const [],
   });
 
   final String userId;
   final String phoneE164;
   final String accessToken;
+  final List<String> roles;
+
+  bool get isMarketModerator =>
+      roles.contains('market_moderator') || roles.contains('market_ops');
 }
 
 class AuthState {
@@ -116,6 +121,9 @@ class AuthNotifier extends Notifier<AuthState> {
       final accessToken = raw['accessToken'] as String;
       final userId = raw['userId'] as String;
       final phone = (raw['phone'] as String?) ?? pending;
+      final roles = ((raw['roles'] as List?) ?? const [])
+          .map((e) => '$e')
+          .toList();
 
       _tokens.setAccessToken(accessToken);
       state = AuthState(
@@ -123,6 +131,7 @@ class AuthNotifier extends Notifier<AuthState> {
           userId: userId,
           phoneE164: phone,
           accessToken: accessToken,
+          roles: roles,
         ),
       );
 

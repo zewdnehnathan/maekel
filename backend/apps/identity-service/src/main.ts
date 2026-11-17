@@ -109,6 +109,9 @@ async function boot() {
         'ride_passenger',
         'food_customer',
         'market_buyer',
+        'market_seller',
+        // Demo MVP: every new account can open the thin ops queue.
+        'market_moderator',
       ];
       for (const role of defaultRoles) {
         await pool.query(
@@ -124,6 +127,14 @@ async function boot() {
     }
 
     const userId = user.rows[0].id as string;
+    // Demo MVP: ensure market seller + thin ops roles exist for returning users.
+    for (const role of ['market_seller', 'market_moderator']) {
+      await pool.query(
+        `INSERT INTO role_grants (user_id, role) VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [userId, role],
+      );
+    }
     const rolesRes = await pool.query(
       `SELECT role FROM role_grants WHERE user_id = $1`,
       [userId],

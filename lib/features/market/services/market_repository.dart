@@ -22,12 +22,48 @@ abstract class MarketRepository {
     required List<String> photoUrls,
     Map<String, String> attributes,
   });
+  Future<MarketAd> updateAd(
+    String adId, {
+    String? categoryId,
+    String? title,
+    String? description,
+    int? priceEtb,
+    AdCondition? condition,
+    String? subcity,
+    List<String>? photoUrls,
+    Map<String, String>? attributes,
+  });
   Future<MarketAd> updateAdStatus(
     String adId, {
     required AdStatus status,
     String? rejectReason,
   });
   Future<void> deleteAd(String adId);
+  Future<String> uploadPhoto({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  });
+  Future<MarketSeller> getMySeller();
+  Future<MarketSeller> updateMySeller({
+    bool? showPhone,
+    String? name,
+    String? locationLabel,
+  });
+  Future<List<SellerNotification>> getNotifications();
+  Future<MarketOpsQueue> getOpsQueue();
+  Future<void> resolveReport({
+    required String reportId,
+    required String action,
+    String? note,
+  });
+  Future<void> suspendSeller({
+    required String sellerId,
+    required bool suspended,
+    String? note,
+  });
+  Future<String> revealPhone(String adId);
+  Future<MarketConfig> getConfig();
   List<ChatThread> getThreadsForUser(String userId);
   List<ChatMessage> getMessages(String threadId);
   Future<ChatThread> openOrCreateThread({
@@ -60,6 +96,10 @@ class InMemoryMarketRepository implements MarketRepository {
   final List<ChatThread> _threads = [];
   final List<ChatMessage> _messages = [];
   final List<AdReport> _reports = [];
+  final List<SellerNotification> _notifications = [];
+  final List<AdReport> _openReports = [];
+  final Map<String, int> _phoneRevealsToday = {};
+  MarketConfig _config = const MarketConfig();
   int _seq = 100;
 
   static const subcities = [
@@ -317,7 +357,9 @@ class InMemoryMarketRepository implements MarketRepository {
     Map<String, String> attributes = const {},
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    // Ensure seller record exists for current user.
+    if (photoUrls.isEmpty) {
+      throw ArgumentError('At least one photo is required');
+    }
     if (getSeller(sellerId) == null) {
       _sellers.add(
         MarketSeller(
@@ -326,6 +368,19 @@ class InMemoryMarketRepository implements MarketRepository {
           phoneE164: sellerId.replaceFirst('user-', '+'),
           locationLabel: '$subcity, Addis Ababa',
         ),
+      );
+    }
+
+    final activeCount = _ads
+        .where(
+          (a) =>
+              a.sellerId == sellerId &&
+              (a.status == AdStatus.approved || a.status == AdStatus.pending),
+        )
+        .length;
+    if (activeCount >= _config.maxActiveFreeAds) {
+      throw StateError(
+        'Active ad limit reached (${_config.maxActiveFreeAds}).',
       );
     }
 
@@ -339,28 +394,61 @@ class InMemoryMarketRepository implements MarketRepository {
       condition: condition,
       locationLabel: 'Addis Ababa',
       subcity: subcity,
-      photoUrls: photoUrls.isEmpty
-          ? const [
-              'https://images.unsplash.com/photo-1560472355-536de3962603?w=800',
-            ]
-          : photoUrls,
+      photoUrls: photoUrls,
       status: AdStatus.pending,
       createdAt: DateTime.now(),
       attributes: attributes,
     );
     _ads.insert(0, ad);
+    _notifications.insert(
+      0,
+      SellerNotification(
+        id: _id('note'),
+        adId: ad.id,
+        kind: 'moderation_submitted',
+        title: 'Ad submitted',
+        body: '"${ad.title}" is pending review.',
+        createdAt: DateTime.now(),
+      ),
+    );
     _notify();
-
-    // Mock moderation: auto-approve after a short delay for demo flow.
-    unawaited(Future<void>.delayed(const Duration(seconds: 4), () async {
-      final idx = _ads.indexWhere((a) => a.id == ad.id);
-      if (idx >= 0 && _ads[idx].status == AdStatus.pending) {
-        _ads[idx] = _ads[idx].copyWith(status: AdStatus.approved);
-        _notify();
-      }
-    }));
-
     return ad;
+  }
+
+  @override
+  Future<MarketAd> updateAd(
+    String adId, {
+    String? categoryId,
+    String? title,
+    String? description,
+    int? priceEtb,
+    AdCondition? condition,
+    String? subcity,
+    List<String>? photoUrls,
+    Map<String, String>? attributes,
+  }) async {
+    final idx = _ads.indexWhere((a) => a.id == adId);
+    if (idx < 0) throw StateError('Ad not found');
+    final current = _ads[idx];
+    final material = title != null ||
+        description != null ||
+        priceEtb != null ||
+        photoUrls != null ||
+        categoryId != null;
+    _ads[idx] = current.copyWith(
+      categoryId: categoryId,
+      title: title,
+      description: description,
+      priceEtb: priceEtb,
+      condition: condition,
+      subcity: subcity,
+      photoUrls: photoUrls,
+      attributes: attributes,
+      status: material ? AdStatus.pending : current.status,
+      clearRejectReason: material,
+    );
+    _notify();
+    return _ads[idx];
   }
 
   @override
@@ -378,6 +466,24 @@ class InMemoryMarketRepository implements MarketRepository {
       rejectReason: rejectReason,
       clearRejectReason: rejectReason == null && status != AdStatus.rejected,
     );
+    final ad = _ads[idx];
+    if (status == AdStatus.approved || status == AdStatus.rejected) {
+      _notifications.insert(
+        0,
+        SellerNotification(
+          id: _id('note'),
+          adId: ad.id,
+          kind: status == AdStatus.approved
+              ? 'moderation_approved'
+              : 'moderation_rejected',
+          title: status == AdStatus.approved ? 'Ad approved' : 'Ad declined',
+          body: status == AdStatus.approved
+              ? '"${ad.title}" is now live.'
+              : (rejectReason ?? 'Your ad was declined.'),
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
     _notify();
     return _ads[idx];
   }
@@ -387,6 +493,107 @@ class InMemoryMarketRepository implements MarketRepository {
     _ads.removeWhere((a) => a.id == adId);
     _notify();
   }
+
+  @override
+  Future<String> uploadPhoto({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    return 'https://images.unsplash.com/photo-1560472355-536de3962603?w=800';
+  }
+
+  @override
+  Future<MarketSeller> getMySeller() async {
+    return _sellers.first;
+  }
+
+  @override
+  Future<MarketSeller> updateMySeller({
+    bool? showPhone,
+    String? name,
+    String? locationLabel,
+  }) async {
+    final idx = 0;
+    _sellers[idx] = _sellers[idx].copyWith(
+      showPhone: showPhone,
+      name: name,
+      locationLabel: locationLabel,
+    );
+    _notify();
+    return _sellers[idx];
+  }
+
+  @override
+  Future<List<SellerNotification>> getNotifications() async {
+    return List.unmodifiable(_notifications);
+  }
+
+  @override
+  Future<MarketOpsQueue> getOpsQueue() async {
+    final pending =
+        _ads.where((a) => a.status == AdStatus.pending).toList();
+    return MarketOpsQueue(
+      pendingAds: pending,
+      reports: _openReports
+          .map(
+            (r) => MarketReportItem(
+              id: r.id,
+              adId: r.adId,
+              adTitle: getAd(r.adId)?.title ?? 'Ad',
+              sellerId: getAd(r.adId)?.sellerId ?? '',
+              reporterId: r.reporterId,
+              reason: r.reason,
+              createdAt: r.createdAt,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  @override
+  Future<void> resolveReport({
+    required String reportId,
+    required String action,
+    String? note,
+  }) async {
+    _openReports.removeWhere((r) => r.id == reportId);
+    _notify();
+  }
+
+  @override
+  Future<void> suspendSeller({
+    required String sellerId,
+    required bool suspended,
+    String? note,
+  }) async {
+    final idx = _sellers.indexWhere((s) => s.id == sellerId);
+    if (idx >= 0) {
+      _sellers[idx] = _sellers[idx].copyWith(suspended: suspended);
+    }
+    _notify();
+  }
+
+  @override
+  Future<String> revealPhone(String adId) async {
+    final ad = getAd(adId);
+    if (ad == null) throw StateError('Ad not found');
+    final seller = getSeller(ad.sellerId);
+    if (seller == null || !seller.showPhone) {
+      throw StateError('Phone hidden');
+    }
+    final key = DateTime.now().toIso8601String().substring(0, 10);
+    final used = _phoneRevealsToday[key] ?? 0;
+    if (used >= _config.phoneRevealDailyLimit) {
+      throw StateError('Daily call limit reached');
+    }
+    _phoneRevealsToday[key] = used + 1;
+    return seller.phoneE164;
+  }
+
+  @override
+  Future<MarketConfig> getConfig() async => _config;
 
   @override
   List<ChatThread> getThreadsForUser(String userId) {
@@ -510,6 +717,7 @@ class InMemoryMarketRepository implements MarketRepository {
       createdAt: DateTime.now(),
     );
     _reports.add(report);
+    _openReports.add(report);
     _notify();
     return report;
   }
