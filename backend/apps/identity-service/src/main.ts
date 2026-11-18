@@ -342,17 +342,17 @@ async function applyBootstrapAdminRoles(
 }
 
 /**
- * One-time style cleanup each boot:
- * - strip demo-era staff roles from non-bootstrap phones
- * - ensure bootstrap phones that already registered are admins
+ * On boot:
+ * - only strip platform_admin from non-bootstrap phones (keep Staff grants)
+ * - ensure bootstrap phones keep their admin / food staff bootstrap set
+ *
+ * Previously this deleted ALL staffRoles (food_merchant, food_rider, …) for
+ * everyone except ADMIN_PHONES on every Render restart — wiping QA grants.
  */
 async function reconcileStaffRoles(): Promise<void> {
   if (adminPhones.length === 0) {
-    // Still strip blanket demo moderators so random users are not staff.
     await pool.query(
-      `DELETE FROM role_grants
-       WHERE role = ANY($1::text[])`,
-      [staffRoles],
+      `DELETE FROM role_grants WHERE role = 'platform_admin'`,
     );
     return;
   }
@@ -361,9 +361,9 @@ async function reconcileStaffRoles(): Promise<void> {
     `DELETE FROM role_grants rg
      USING users u
      WHERE rg.user_id = u.id
-       AND rg.role = ANY($1::text[])
-       AND NOT (u.phone_e164 = ANY($2::text[]))`,
-    [staffRoles, adminPhones],
+       AND rg.role = 'platform_admin'
+       AND NOT (u.phone_e164 = ANY($1::text[]))`,
+    [adminPhones],
   );
 
   for (const phone of adminPhones) {

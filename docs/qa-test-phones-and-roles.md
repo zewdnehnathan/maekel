@@ -10,6 +10,8 @@ Use these numbers on **https://luxury-phoenix-403a4a.netlify.app** (or local) ag
 
 After granting a role in **Staff**, the target user must **sign out → OTP again** so the JWT picks up the new role.
 
+Staff grants now **persist across Render restarts**. If `role_grants` only shows the four defaults (`ride_passenger`, `food_customer`, `market_buyer`, `market_seller`), the staff role was never granted (or was wiped by an older API build) — grant again from Staff.
+
 ---
 
 ## 1. Bootstrap admin (already wired)
