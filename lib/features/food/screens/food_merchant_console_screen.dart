@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/glass_panel.dart';
@@ -20,7 +22,6 @@ class FoodMerchantConsoleScreen extends ConsumerStatefulWidget {
 class _FoodMerchantConsoleScreenState
     extends ConsumerState<FoodMerchantConsoleScreen> {
   FoodMerchant? _merchant;
-  List<FoodMerchant> _claimable = const [];
   List<FoodOrder> _orders = const [];
   List<MenuItem> _menu = const [];
   bool _loading = true;
@@ -40,27 +41,16 @@ class _FoodMerchantConsoleScreenState
     });
     try {
       final repo = ref.read(foodRepositoryProvider);
-      final isOps = ref.read(authProvider).session?.isFoodOps == true;
       final mine = await repo.getMyMerchant();
-      List<FoodMerchant> claimable = const [];
       List<FoodOrder> orders = const [];
       List<MenuItem> menu = const [];
-      if (mine == null) {
-        if (isOps) {
-          try {
-            claimable = await repo.getClaimableMerchants();
-          } catch (_) {
-            claimable = const [];
-          }
-        }
-      } else {
+      if (mine != null) {
         orders = await repo.getMerchantOrders();
         menu = await repo.getMerchantMenu();
       }
       if (!mounted) return;
       setState(() {
         _merchant = mine;
-        _claimable = claimable;
         _orders = orders;
         _menu = menu;
         _loading = false;
@@ -209,6 +199,8 @@ class _FoodMerchantConsoleScreenState
 
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(authProvider).session;
+
     return FoodShell(
       title: 'Merchant',
       showBottomNav: false,
@@ -244,72 +236,30 @@ class _FoodMerchantConsoleScreenState
                   children: [
                     if (_merchant == null) ...[
                       Text(
-                        ref.watch(authProvider).session?.isFoodOps == true
-                            ? 'NO STORE LINKED'
-                            : 'YOUR RESTAURANT',
+                        'NO RESTAURANT LINKED',
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
                       GlassPanel(
                         accent: MaekelColors.food,
                         child: Text(
-                          ref.watch(authProvider).session?.isFoodOps == true
-                              ? 'This account is not the owner of a restaurant. In Food ops, create a merchant and set Owner phone to the restaurant staff number — only they can edit that menu.'
-                              : 'No restaurant is linked to your account. Ask Food ops to assign your phone as the owner. You can only edit your own restaurant menu — never someone else’s.',
+                          session?.isFoodOps == true
+                              ? 'Food ops does not edit restaurant menus here. Open Food ops to create a merchant and Assign owner phone to the restaurant staff. Only that owner can add dishes.'
+                              : 'Ask Food ops to assign your phone as the owner of one restaurant. You can only edit that restaurant’s menu — never another store’s.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
-                      if (ref.watch(authProvider).session?.isFoodOps ==
-                          true) ...[
+                      if (session?.isFoodOps == true) ...[
                         const SizedBox(height: 16),
-                        Text(
-                          'UNASSIGNED STORES (ops only)',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      if (ref.watch(authProvider).session?.isFoodOps != true)
-                        const SizedBox.shrink()
-                      else if (_claimable.isEmpty)
-                        const Text('No unassigned merchants.'),
-                      if (ref.watch(authProvider).session?.isFoodOps == true)
-                      for (final m in _claimable) ...[
-                        GlassPanel(
-                          borderRadius: 16,
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                m.name,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${m.kind.name} · ${m.subcity}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              const SizedBox(height: 12),
-                              FilledButton(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: MaekelColors.food,
-                                  foregroundColor: MaekelColors.ink,
-                                ),
-                                onPressed: _busy
-                                    ? null
-                                    : () => _run(
-                                          () async {
-                                            await ref
-                                                .read(foodRepositoryProvider)
-                                                .claimMerchant(m.id);
-                                          },
-                                        ),
-                                child: const Text('Claim this store'),
-                              ),
-                            ],
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: MaekelColors.food,
+                            foregroundColor: MaekelColors.ink,
                           ),
+                          onPressed: () => context.go(AppRoutes.foodOps),
+                          icon: const Icon(Icons.admin_panel_settings_outlined),
+                          label: const Text('Open Food ops'),
                         ),
-                        const SizedBox(height: 10),
                       ],
                     ] else ...[
                       GlassPanel(
@@ -378,7 +328,7 @@ class _FoodMerchantConsoleScreenState
                           borderRadius: 16,
                           padding: const EdgeInsets.all(14),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Row(
                                 children: [
@@ -491,7 +441,7 @@ class _FoodMerchantConsoleScreenState
                           borderRadius: 16,
                           padding: const EdgeInsets.all(14),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Text(
                                 '#${order.id.substring(0, 8)} · ${order.status.label}',

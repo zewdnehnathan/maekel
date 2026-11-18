@@ -31,8 +31,9 @@ class AuthSession {
 
   bool get isFoodOps => isPlatformAdmin || roles.contains('food_ops');
 
+  /// Assigned restaurant staff (not Food ops — ops uses Food ops screen).
   bool get isFoodMerchant =>
-      isPlatformAdmin || isFoodOps || roles.contains('food_merchant');
+      isPlatformAdmin || roles.contains('food_merchant');
 
   bool get isFoodRider =>
       isPlatformAdmin || isFoodOps || roles.contains('food_rider');

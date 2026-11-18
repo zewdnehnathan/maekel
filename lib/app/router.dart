@@ -111,7 +111,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (loc == AppRoutes.foodMerchantConsole &&
           session != null &&
-          !session.isFoodMerchant) {
+          !session.isFoodMerchant &&
+          !session.isFoodOps) {
         return AppRoutes.food;
       }
       if (loc == AppRoutes.foodRider &&
