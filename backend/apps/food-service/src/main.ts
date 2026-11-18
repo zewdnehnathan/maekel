@@ -1,8 +1,3 @@
-import { createReadStream, createWriteStream } from 'node:fs';
-import { access, mkdir, unlink } from 'node:fs/promises';
-import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
-import { fileURLToPath } from 'node:url';
 import multipart from '@fastify/multipart';
 import {
   AppError,
@@ -31,11 +26,7 @@ const merchantStaff = ['food_merchant', 'food_ops', 'platform_admin'] as const;
 const riderStaff = ['food_rider', 'food_ops', 'platform_admin'] as const;
 const opsStaff = ['food_ops', 'platform_admin'] as const;
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-
 async function boot() {
-  await mkdir(uploadsDir, { recursive: true });
   await migrate(pool, [
     `CREATE TABLE IF NOT EXISTS merchants (
       id TEXT PRIMARY KEY,
@@ -92,6 +83,14 @@ async function boot() {
       details TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
+    // Survive Render ephemeral disk: store compressed dish photos in Neon.
+    `CREATE TABLE IF NOT EXISTS media_objects (
+      id TEXT PRIMARY KEY,
+      content_type TEXT NOT NULL,
+      bytes BYTEA NOT NULL,
+      byte_len INT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
   ]);
   await seed();
 
@@ -108,7 +107,7 @@ async function boot() {
     },
   });
 
-  // ── Dish photo upload (merchant-owned) ───────────────────────────────
+  // ── Dish photo upload (merchant-owned) → Postgres BYTEA ──────────────
   app.post('/v1/food/merchant/media', async (req) => {
     const user = requireAuth(req);
     await requireOwnedMerchant(user.sub, user.roles);
@@ -120,22 +119,20 @@ async function boot() {
     if (!mime.startsWith('image/')) {
       throw new AppError('Only image uploads are allowed', 400, 'invalid_media');
     }
+    const bytes = await file.toBuffer();
+    if (file.file.truncated) {
+      throw new AppError('File too large (max 8MB)', 413, 'file_too_large');
+    }
     const ext = extensionForMime(mime);
     const id = crypto.randomUUID();
     const filename = `${id}${ext}`;
-    const dest = path.join(uploadsDir, filename);
-    try {
-      await pipeline(file.file, createWriteStream(dest));
-    } catch (err) {
-      await unlink(dest).catch(() => undefined);
-      throw err;
-    }
-    if (file.file.truncated) {
-      await unlink(dest).catch(() => undefined);
-      throw new AppError('File too large (max 8MB)', 413, 'file_too_large');
-    }
+    await pool.query(
+      `INSERT INTO media_objects (id, content_type, bytes, byte_len)
+       VALUES ($1,$2,$3,$4)`,
+      [filename, mime, bytes, bytes.length],
+    );
     return {
-      id,
+      id: filename,
       url: `${publicApiBase}/v1/food/media/files/${filename}`,
       contentType: mime,
     };
@@ -146,23 +143,16 @@ async function boot() {
     if (!/^[a-f0-9-]+\.(jpe?g|png|webp|gif)$/i.test(filename)) {
       throw new AppError('Invalid media path', 400, 'validation_error');
     }
-    const filePath = path.join(uploadsDir, filename);
-    try {
-      await access(filePath);
-    } catch {
+    const res = await pool.query(
+      `SELECT content_type, bytes FROM media_objects WHERE id = $1`,
+      [filename],
+    );
+    if (!res.rowCount) {
       throw new AppError('Media not found', 404, 'not_found');
     }
-    const ext = path.extname(filename).toLowerCase();
-    const type =
-      ext === '.png'
-        ? 'image/png'
-        : ext === '.webp'
-          ? 'image/webp'
-          : ext === '.gif'
-            ? 'image/gif'
-            : 'image/jpeg';
-    reply.type(type);
-    return reply.send(createReadStream(filePath));
+    const row = res.rows[0] as { content_type: string; bytes: Buffer };
+    reply.header('Cache-Control', 'public, max-age=86400');
+    return reply.type(row.content_type).send(row.bytes);
   });
 
   // ── Catalog ──────────────────────────────────────────────────────────
