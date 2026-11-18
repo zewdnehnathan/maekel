@@ -7,6 +7,7 @@ import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/glass_panel.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
@@ -119,10 +120,20 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
   Widget build(BuildContext context) {
     final queue = _queue;
 
+    final isPlatformAdmin =
+        ref.watch(authProvider).session?.isPlatformAdmin ?? false;
+
     return MarketShell(
       title: 'Ops',
       showBottomNav: false,
       actions: [
+        if (isPlatformAdmin)
+          IconButton(
+            onPressed: () => context.push(AppRoutes.adminStaff),
+            icon: const Icon(Icons.group_outlined),
+            color: MaekelColors.amber,
+            tooltip: 'Staff & admins',
+          ),
         IconButton(
           onPressed: _loading ? null : _load,
           icon: const Icon(Icons.refresh_rounded),

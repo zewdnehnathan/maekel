@@ -159,6 +159,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   ),
                             ),
                           ),
+                          if (session.isPlatformAdmin ||
+                              session.isMarketModerator) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                if (session.isMarketModerator)
+                                  TextButton.icon(
+                                    onPressed: () =>
+                                        context.push(AppRoutes.marketOps),
+                                    icon: const Icon(
+                                      Icons.admin_panel_settings_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Market ops'),
+                                  ),
+                                if (session.isPlatformAdmin)
+                                  TextButton.icon(
+                                    onPressed: () =>
+                                        context.push(AppRoutes.adminStaff),
+                                    icon: const Icon(
+                                      Icons.group_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Staff'),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ],
                       ],
                     ),

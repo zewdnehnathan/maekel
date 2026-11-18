@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../features/admin/screens/admin_staff_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/otp_screen.dart';
 import '../features/auth/screens/phone_screen.dart';
@@ -47,6 +48,7 @@ abstract final class AppRoutes {
   static const marketFavorites = '/market/favorites';
   static const marketMessages = '/market/messages';
   static const marketOps = '/market/ops';
+  static const adminStaff = '/admin/staff';
 
   static const food = '/food';
   static const foodCart = '/food/cart';
@@ -85,6 +87,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           auth.pendingPhoneE164 == null) {
         return AppRoutes.auth;
       }
+      final session = auth.session;
+      if (loc == AppRoutes.marketOps &&
+          session != null &&
+          !session.isMarketModerator) {
+        return AppRoutes.marketMyAds;
+      }
+      if (loc == AppRoutes.adminStaff &&
+          session != null &&
+          !session.isPlatformAdmin) {
+        return AppRoutes.home;
+      }
       return null;
     },
     routes: [
@@ -99,6 +112,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminStaff,
+        builder: (context, state) => const AdminStaffScreen(),
       ),
       GoRoute(
         path: AppRoutes.ride,

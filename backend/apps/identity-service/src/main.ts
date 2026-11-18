@@ -8,6 +8,7 @@ import {
   listen,
   migrate,
   requireAuth,
+  requireRole,
   signAccessToken,
 } from '@maekel/shared';
 import { z } from 'zod';
@@ -15,6 +16,25 @@ import { z } from 'zod';
 const port = envInt('IDENTITY_PORT', 3001);
 const mockOtp = env('MOCK_OTP_CODE', '123456');
 const pool = createPool(databaseUrl('maekel_identity'));
+
+/** Comma-separated E.164 phones that bootstrap as real admins. */
+const adminPhones = parseAdminPhones(
+  (process.env.ADMIN_PHONES ?? '').trim() || '+251999999999',
+);
+
+const defaultUserRoles = [
+  'ride_passenger',
+  'food_customer',
+  'market_buyer',
+  'market_seller',
+] as const;
+
+const staffRoles = ['platform_admin', 'market_moderator', 'market_ops'] as const;
+const grantableRoles = [
+  'platform_admin',
+  'market_moderator',
+  'market_ops',
+] as const;
 
 async function boot() {
   await migrate(pool, [
@@ -45,6 +65,8 @@ async function boot() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
   ]);
+
+  await reconcileStaffRoles();
 
   const app = await createService({ name: 'identity-service', port });
 
@@ -105,20 +127,8 @@ async function boot() {
         `INSERT INTO users (id, phone_e164) VALUES ($1, $2)`,
         [userId, phone],
       );
-      const defaultRoles = [
-        'ride_passenger',
-        'food_customer',
-        'market_buyer',
-        'market_seller',
-        // Demo MVP: every new account can open the thin ops queue.
-        'market_moderator',
-      ];
-      for (const role of defaultRoles) {
-        await pool.query(
-          `INSERT INTO role_grants (user_id, role) VALUES ($1, $2)
-           ON CONFLICT DO NOTHING`,
-          [userId, role],
-        );
+      for (const role of defaultUserRoles) {
+        await grantRole(userId, role);
       }
       user = await pool.query(
         `SELECT id, phone_e164 FROM users WHERE id = $1`,
@@ -127,19 +137,11 @@ async function boot() {
     }
 
     const userId = user.rows[0].id as string;
-    // Demo MVP: ensure market seller + thin ops roles exist for returning users.
-    for (const role of ['market_seller', 'market_moderator']) {
-      await pool.query(
-        `INSERT INTO role_grants (user_id, role) VALUES ($1, $2)
-         ON CONFLICT DO NOTHING`,
-        [userId, role],
-      );
-    }
-    const rolesRes = await pool.query(
-      `SELECT role FROM role_grants WHERE user_id = $1`,
-      [userId],
-    );
-    const roles = rolesRes.rows.map((r) => r.role as string);
+    // Returning users created before market_seller existed.
+    await grantRole(userId, 'market_seller');
+    await applyBootstrapAdminRoles(userId, phone);
+
+    const roles = await listRoles(userId);
     const accessToken = signAccessToken({
       sub: userId,
       phone,
@@ -165,31 +167,229 @@ async function boot() {
 
   app.get('/v1/me', async (req) => {
     const user = requireAuth(req);
-    const rolesRes = await pool.query(
-      `SELECT role FROM role_grants WHERE user_id = $1`,
-      [user.sub],
-    );
+    const roles = await listRoles(user.sub);
     return {
       userId: user.sub,
       phone: user.phone,
-      roles: rolesRes.rows.map((r) => r.role),
+      roles,
+      isPlatformAdmin: roles.includes('platform_admin'),
+      isMarketModerator: isMarketModerator(roles),
+    };
+  });
+
+  app.get('/v1/admin/staff', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, 'platform_admin');
+    const res = await pool.query(
+      `SELECT u.id, u.phone_e164, array_agg(rg.role ORDER BY rg.role) AS roles
+       FROM users u
+       JOIN role_grants rg ON rg.user_id = u.id
+       WHERE rg.role = ANY($1::text[])
+       GROUP BY u.id, u.phone_e164
+       ORDER BY u.phone_e164`,
+      [staffRoles],
+    );
+    return {
+      items: res.rows.map((r) => ({
+        userId: r.id,
+        phone: r.phone_e164,
+        roles: r.roles as string[],
+      })),
+      bootstrapPhones: adminPhones,
     };
   });
 
   app.post('/v1/admin/roles/grant', async (req) => {
-    requireAuth(req);
+    const actor = requireAuth(req);
+    requireRole(actor, 'platform_admin');
     const body = z
-      .object({ userId: z.string().uuid(), role: z.string().min(2) })
+      .object({
+        role: z.enum(grantableRoles),
+        userId: z.string().uuid().optional(),
+        phone: z.string().min(9).optional(),
+      })
+      .refine((v) => Boolean(v.userId || v.phone), {
+        message: 'userId or phone required',
+      })
       .parse(req.body ?? {});
+
+    const target = await resolveUser({
+      userId: body.userId,
+      phone: body.phone,
+    });
+    await grantRole(target.id, body.role);
+    // Platform admins can always moderate Market.
+    if (body.role === 'platform_admin') {
+      await grantRole(target.id, 'market_moderator');
+    }
+    return {
+      ok: true,
+      userId: target.id,
+      phone: target.phone_e164,
+      roles: await listRoles(target.id),
+    };
+  });
+
+  app.post('/v1/admin/roles/revoke', async (req) => {
+    const actor = requireAuth(req);
+    requireRole(actor, 'platform_admin');
+    const body = z
+      .object({
+        role: z.enum(grantableRoles),
+        userId: z.string().uuid().optional(),
+        phone: z.string().min(9).optional(),
+      })
+      .refine((v) => Boolean(v.userId || v.phone), {
+        message: 'userId or phone required',
+      })
+      .parse(req.body ?? {});
+
+    const target = await resolveUser({
+      userId: body.userId,
+      phone: body.phone,
+    });
+
+    if (target.id === actor.sub && body.role === 'platform_admin') {
+      throw new AppError(
+        'Cannot revoke your own platform_admin role',
+        400,
+        'cannot_self_demote',
+      );
+    }
+
     await pool.query(
-      `INSERT INTO role_grants (user_id, role) VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
-      [body.userId, body.role],
+      `DELETE FROM role_grants WHERE user_id = $1 AND role = $2`,
+      [target.id, body.role],
     );
-    return { ok: true };
+    return {
+      ok: true,
+      userId: target.id,
+      phone: target.phone_e164,
+      roles: await listRoles(target.id),
+    };
   });
 
   await listen(app, port);
+  if (adminPhones.length === 0) {
+    console.warn(
+      '[identity] ADMIN_PHONES is empty — no bootstrap admins. Set ADMIN_PHONES=+2519… to create the first platform admin.',
+    );
+  } else {
+    console.log(
+      `[identity] Bootstrap admin phones: ${adminPhones.join(', ')}`,
+    );
+  }
+}
+
+function parseAdminPhones(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      try {
+        return normalizePhone(p);
+      } catch {
+        console.warn(`[identity] Ignoring invalid ADMIN_PHONES entry: ${p}`);
+        return '';
+      }
+    })
+    .filter(Boolean);
+}
+
+function isMarketModerator(roles: string[]): boolean {
+  return roles.some((r) =>
+    ['market_moderator', 'market_ops', 'platform_admin'].includes(r),
+  );
+}
+
+async function listRoles(userId: string): Promise<string[]> {
+  const rolesRes = await pool.query(
+    `SELECT role FROM role_grants WHERE user_id = $1 ORDER BY role`,
+    [userId],
+  );
+  return rolesRes.rows.map((r) => r.role as string);
+}
+
+async function grantRole(userId: string, role: string): Promise<void> {
+  await pool.query(
+    `INSERT INTO role_grants (user_id, role) VALUES ($1, $2)
+     ON CONFLICT DO NOTHING`,
+    [userId, role],
+  );
+}
+
+async function applyBootstrapAdminRoles(
+  userId: string,
+  phone: string,
+): Promise<void> {
+  if (!adminPhones.includes(phone)) return;
+  await grantRole(userId, 'platform_admin');
+  await grantRole(userId, 'market_moderator');
+}
+
+/**
+ * One-time style cleanup each boot:
+ * - strip demo-era staff roles from non-bootstrap phones
+ * - ensure bootstrap phones that already registered are admins
+ */
+async function reconcileStaffRoles(): Promise<void> {
+  if (adminPhones.length === 0) {
+    // Still strip blanket demo moderators so random users are not staff.
+    await pool.query(
+      `DELETE FROM role_grants
+       WHERE role = ANY($1::text[])`,
+      [staffRoles],
+    );
+    return;
+  }
+
+  await pool.query(
+    `DELETE FROM role_grants rg
+     USING users u
+     WHERE rg.user_id = u.id
+       AND rg.role = ANY($1::text[])
+       AND NOT (u.phone_e164 = ANY($2::text[]))`,
+    [staffRoles, adminPhones],
+  );
+
+  for (const phone of adminPhones) {
+    const user = await pool.query(
+      `SELECT id FROM users WHERE phone_e164 = $1`,
+      [phone],
+    );
+    if (!user.rowCount) continue;
+    const userId = user.rows[0].id as string;
+    await grantRole(userId, 'platform_admin');
+    await grantRole(userId, 'market_moderator');
+  }
+}
+
+async function resolveUser(input: {
+  userId?: string;
+  phone?: string;
+}): Promise<{ id: string; phone_e164: string }> {
+  if (input.userId) {
+    const res = await pool.query(
+      `SELECT id, phone_e164 FROM users WHERE id = $1`,
+      [input.userId],
+    );
+    if (!res.rowCount) throw new AppError('User not found', 404, 'not_found');
+    return res.rows[0] as { id: string; phone_e164: string };
+  }
+  const phone = normalizePhone(input.phone!);
+  const res = await pool.query(
+    `SELECT id, phone_e164 FROM users WHERE phone_e164 = $1`,
+    [phone],
+  );
+  if (!res.rowCount) {
+    throw new AppError(
+      'User not found — they must sign in with OTP once first',
+      404,
+      'not_found',
+    );
+  }
+  return res.rows[0] as { id: string; phone_e164: string };
 }
 
 function normalizePhone(raw: string): string {

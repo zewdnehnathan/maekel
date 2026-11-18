@@ -22,8 +22,12 @@ class AuthSession {
   final String accessToken;
   final List<String> roles;
 
+  bool get isPlatformAdmin => roles.contains('platform_admin');
+
   bool get isMarketModerator =>
-      roles.contains('market_moderator') || roles.contains('market_ops');
+      isPlatformAdmin ||
+      roles.contains('market_moderator') ||
+      roles.contains('market_ops');
 }
 
 class AuthState {

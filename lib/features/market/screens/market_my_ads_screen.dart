@@ -6,6 +6,7 @@ import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/glass_panel.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
@@ -61,16 +62,19 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
   Widget build(BuildContext context) {
     final ads = ref.watch(myAdsProvider);
     final unread = _notes.where((n) => n.isUnread).length;
+    final isModerator =
+        ref.watch(authProvider).session?.isMarketModerator ?? false;
 
     return MarketShell(
       title: 'My ads',
       actions: [
-        IconButton(
-          onPressed: () => context.push(AppRoutes.marketOps),
-          icon: const Icon(Icons.admin_panel_settings_outlined),
-          color: MaekelColors.amber,
-          tooltip: 'Ops queue',
-        ),
+        if (isModerator)
+          IconButton(
+            onPressed: () => context.push(AppRoutes.marketOps),
+            icon: const Icon(Icons.admin_panel_settings_outlined),
+            color: MaekelColors.amber,
+            tooltip: 'Ops queue',
+          ),
         IconButton(
           onPressed: () => context.push(AppRoutes.marketSell),
           icon: const Icon(Icons.add_circle_outline_rounded),

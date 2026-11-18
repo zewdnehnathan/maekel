@@ -520,7 +520,7 @@ async function boot() {
     const ad = owned.rows[0];
     const isOwner = ad.seller_id === user.sub;
     const isModerator = user.roles.some((r) =>
-      ['market_moderator', 'market_ops'].includes(r),
+      ['market_moderator', 'market_ops', 'platform_admin'].includes(r),
     );
 
     if (body.status === 'sold' || body.status === 'pending') {
@@ -713,7 +713,7 @@ async function boot() {
 
   app.get('/v1/market/ops/queue', async (req) => {
     const user = requireAuth(req);
-    requireRole(user, ['market_moderator', 'market_ops']);
+    requireRole(user, ['market_moderator', 'market_ops', 'platform_admin']);
     const pending = await pool.query(
       `SELECT * FROM ads WHERE status = 'pending' ORDER BY created_at ASC`,
     );
@@ -742,7 +742,7 @@ async function boot() {
 
   app.post('/v1/market/ops/reports/:id/resolve', async (req) => {
     const user = requireAuth(req);
-    requireRole(user, ['market_moderator', 'market_ops']);
+    requireRole(user, ['market_moderator', 'market_ops', 'platform_admin']);
     const { id } = req.params as { id: string };
     const body = z
       .object({
@@ -793,7 +793,7 @@ async function boot() {
 
   app.post('/v1/market/ops/sellers/:id/suspend', async (req) => {
     const user = requireAuth(req);
-    requireRole(user, ['market_moderator', 'market_ops']);
+    requireRole(user, ['market_moderator', 'market_ops', 'platform_admin']);
     const { id } = req.params as { id: string };
     const body = z
       .object({
@@ -821,7 +821,7 @@ async function boot() {
 
   app.patch('/v1/market/ops/categories/:id', async (req) => {
     const user = requireAuth(req);
-    requireRole(user, ['market_moderator', 'market_ops']);
+    requireRole(user, ['market_moderator', 'market_ops', 'platform_admin']);
     const { id } = req.params as { id: string };
     const body = z
       .object({
@@ -847,7 +847,7 @@ async function boot() {
 
   app.patch('/v1/market/ops/config', async (req) => {
     const user = requireAuth(req);
-    requireRole(user, ['market_moderator', 'market_ops']);
+    requireRole(user, ['market_moderator', 'market_ops', 'platform_admin']);
     const body = z
       .object({ maxActiveFreeAds: z.number().int().min(1).max(50) })
       .parse(req.body ?? {});
