@@ -8,9 +8,12 @@ import '../features/auth/screens/otp_screen.dart';
 import '../features/auth/screens/phone_screen.dart';
 import '../features/food/screens/food_cart_screen.dart';
 import '../features/food/screens/food_checkout_screen.dart';
+import '../features/food/screens/food_merchant_console_screen.dart';
 import '../features/food/screens/food_merchant_screen.dart';
+import '../features/food/screens/food_ops_screen.dart';
 import '../features/food/screens/food_order_detail_screen.dart';
 import '../features/food/screens/food_orders_screen.dart';
+import '../features/food/screens/food_rider_screen.dart';
 import '../features/food/screens/food_screen.dart';
 import '../features/games/screens/brick_breaker_screen.dart';
 import '../features/games/screens/candy_crush_screen.dart';
@@ -54,6 +57,9 @@ abstract final class AppRoutes {
   static const foodCart = '/food/cart';
   static const foodCheckout = '/food/checkout';
   static const foodOrders = '/food/orders';
+  static const foodMerchantConsole = '/food/console';
+  static const foodRider = '/food/rider';
+  static const foodOps = '/food/ops';
 
   static const games = '/games';
   static const brickBreaker = '/games/brick-breaker';
@@ -97,6 +103,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           session != null &&
           !session.isPlatformAdmin) {
         return AppRoutes.home;
+      }
+      if (loc == AppRoutes.foodOps &&
+          session != null &&
+          !session.isFoodOps) {
+        return AppRoutes.food;
+      }
+      if (loc == AppRoutes.foodMerchantConsole &&
+          session != null &&
+          !session.isFoodMerchant) {
+        return AppRoutes.food;
+      }
+      if (loc == AppRoutes.foodRider &&
+          session != null &&
+          !session.isFoodRider) {
+        return AppRoutes.food;
       }
       return null;
     },
@@ -206,6 +227,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'checkout',
             builder: (context, state) => const FoodCheckoutScreen(),
+          ),
+          GoRoute(
+            path: 'console',
+            builder: (context, state) => const FoodMerchantConsoleScreen(),
+          ),
+          GoRoute(
+            path: 'rider',
+            builder: (context, state) => const FoodRiderScreen(),
+          ),
+          GoRoute(
+            path: 'ops',
+            builder: (context, state) => const FoodOpsScreen(),
           ),
           GoRoute(
             path: 'orders',

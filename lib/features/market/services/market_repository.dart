@@ -64,6 +64,12 @@ abstract class MarketRepository {
   });
   Future<String> revealPhone(String adId);
   Future<MarketConfig> getConfig();
+  Future<MarketCategory> updateCategory(
+    String categoryId, {
+    String? name,
+    String? iconName,
+  });
+  Future<MarketConfig> updateMarketConfig({required int maxActiveFreeAds});
   List<ChatThread> getThreadsForUser(String userId);
   List<ChatMessage> getMessages(String threadId);
   Future<ChatThread> openOrCreateThread({
@@ -594,6 +600,37 @@ class InMemoryMarketRepository implements MarketRepository {
 
   @override
   Future<MarketConfig> getConfig() async => _config;
+
+  @override
+  Future<MarketCategory> updateCategory(
+    String categoryId, {
+    String? name,
+    String? iconName,
+  }) async {
+    final idx = _categories.indexWhere((c) => c.id == categoryId);
+    if (idx < 0) throw StateError('Category not found');
+    final current = _categories[idx];
+    final updated = MarketCategory(
+      id: current.id,
+      name: name ?? current.name,
+      iconName: iconName ?? current.iconName,
+    );
+    _categories[idx] = updated;
+    _notify();
+    return updated;
+  }
+
+  @override
+  Future<MarketConfig> updateMarketConfig({
+    required int maxActiveFreeAds,
+  }) async {
+    _config = MarketConfig(
+      maxActiveFreeAds: maxActiveFreeAds,
+      phoneRevealDailyLimit: _config.phoneRevealDailyLimit,
+    );
+    _notify();
+    return _config;
+  }
 
   @override
   List<ChatThread> getThreadsForUser(String userId) {

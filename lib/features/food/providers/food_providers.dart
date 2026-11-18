@@ -18,12 +18,19 @@ final foodChangeTickProvider = StreamProvider<int>((ref) {
 
 final foodKindFilterProvider = StateProvider<MerchantKind?>((ref) => null);
 final foodQueryProvider = StateProvider<String>((ref) => '');
+final foodCoverageSubcityProvider = StateProvider<String?>((ref) => 'Bole');
 
 final foodMerchantsProvider = Provider<List<FoodMerchant>>((ref) {
   ref.watch(foodChangeTickProvider);
   final kind = ref.watch(foodKindFilterProvider);
   final query = ref.watch(foodQueryProvider);
-  return ref.watch(foodRepositoryProvider).getMerchants(kind: kind, query: query);
+  final pin = ref.watch(foodCoverageSubcityProvider);
+  var list =
+      ref.watch(foodRepositoryProvider).getMerchants(kind: kind, query: query);
+  if (pin != null && pin.isNotEmpty) {
+    list = list.where((m) => m.covers(pin)).toList();
+  }
+  return list;
 });
 
 final foodMerchantProvider =

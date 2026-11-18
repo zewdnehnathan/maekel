@@ -457,6 +457,49 @@ class ApiMarketRepository implements MarketRepository {
     return _config;
   }
 
+  @override
+  Future<MarketCategory> updateCategory(
+    String categoryId, {
+    String? name,
+    String? iconName,
+  }) async {
+    final raw = await _client.patch(
+      '/v1/market/ops/categories/$categoryId',
+      auth: true,
+      body: {
+        if (name != null) 'name': name,
+        if (iconName != null) 'iconName': iconName,
+      },
+    ) as Map<String, dynamic>;
+    final updated = _parseCategory(raw);
+    final idx = _categories.indexWhere((c) => c.id == categoryId);
+    if (idx >= 0) {
+      _categories[idx] = updated;
+    } else {
+      _categories.add(updated);
+    }
+    _notify();
+    return updated;
+  }
+
+  @override
+  Future<MarketConfig> updateMarketConfig({
+    required int maxActiveFreeAds,
+  }) async {
+    final raw = await _client.patch(
+      '/v1/market/ops/config',
+      auth: true,
+      body: {'maxActiveFreeAds': maxActiveFreeAds},
+    ) as Map<String, dynamic>;
+    _config = MarketConfig(
+      maxActiveFreeAds:
+          (raw['maxActiveFreeAds'] as num?)?.toInt() ?? maxActiveFreeAds,
+      phoneRevealDailyLimit: _config.phoneRevealDailyLimit,
+    );
+    _notify();
+    return _config;
+  }
+
   void _upsertSeller(MarketSeller seller) {
     final idx = _sellers.indexWhere((s) => s.id == seller.id);
     if (idx >= 0) {

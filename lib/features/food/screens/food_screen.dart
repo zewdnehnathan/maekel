@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
@@ -12,15 +13,47 @@ import '../providers/food_providers.dart';
 class FoodScreen extends ConsumerWidget {
   const FoodScreen({super.key});
 
+  static const _pins = [
+    'Bole',
+    'CMC',
+    'Kirkos',
+    'Yeka',
+    'Kazanchis',
+    'Arada',
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final merchants = ref.watch(foodMerchantsProvider);
     final kind = ref.watch(foodKindFilterProvider);
     final cart = ref.watch(foodCartProvider);
+    final pin = ref.watch(foodCoverageSubcityProvider);
+    final session = ref.watch(authProvider).session;
 
     return FoodShell(
       title: 'Food',
       actions: [
+        if (session?.isFoodMerchant == true)
+          IconButton(
+            tooltip: 'Merchant console',
+            onPressed: () => context.push(AppRoutes.foodMerchantConsole),
+            icon: const Icon(Icons.storefront_outlined),
+            color: MaekelColors.food,
+          ),
+        if (session?.isFoodRider == true)
+          IconButton(
+            tooltip: 'Rider',
+            onPressed: () => context.push(AppRoutes.foodRider),
+            icon: const Icon(Icons.delivery_dining_outlined),
+            color: MaekelColors.food,
+          ),
+        if (session?.isFoodOps == true)
+          IconButton(
+            tooltip: 'Food ops',
+            onPressed: () => context.push(AppRoutes.foodOps),
+            icon: const Icon(Icons.admin_panel_settings_outlined),
+            color: MaekelColors.food,
+          ),
         if (!cart.isEmpty)
           IconButton(
             onPressed: () => context.push(AppRoutes.foodCart),
@@ -42,6 +75,25 @@ class FoodScreen extends ConsumerWidget {
           Text(
             'Restaurants & groceries · COD · OTP handover',
             style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'DELIVERY PIN',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final p in _pins)
+                _KindChip(
+                  label: p,
+                  selected: pin == p,
+                  onTap: () =>
+                      ref.read(foodCoverageSubcityProvider.notifier).state = p,
+                ),
+            ],
           ),
           const SizedBox(height: 14),
           TextField(
@@ -78,83 +130,112 @@ class FoodScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 18),
-          ...merchants.map((m) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                onTap: m.isOpen
-                    ? () => context.push('${AppRoutes.food}/merchant/${m.id}')
-                    : null,
-                borderRadius: BorderRadius.circular(18),
-                child: Ink(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    color: MaekelColors.panel.withValues(alpha: 0.88),
-                    border: Border.all(
-                      color: m.isOpen
-                          ? MaekelColors.glassBorder
-                          : MaekelColors.muted.withValues(alpha: 0.3),
-                    ),
+          if (merchants.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.location_off_outlined,
+                    size: 40,
+                    color: MaekelColors.muted.withValues(alpha: 0.8),
                   ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: const BorderRadius.horizontal(
-                          left: Radius.circular(18),
-                        ),
-                        child: Image.network(
-                          m.coverUrl,
-                          width: 96,
-                          height: 96,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+                  const SizedBox(height: 12),
+                  Text(
+                    'No merchants deliver to $pin',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Try another delivery pin nearby.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            )
+          else
+            ...merchants.map((m) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: m.isOpen
+                      ? () =>
+                          context.push('${AppRoutes.food}/merchant/${m.id}')
+                      : null,
+                  borderRadius: BorderRadius.circular(18),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: MaekelColors.panel.withValues(alpha: 0.88),
+                      border: Border.all(
+                        color: m.isOpen
+                            ? MaekelColors.glassBorder
+                            : MaekelColors.muted.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(18),
+                          ),
+                          child: Image.network(
+                            m.coverUrl,
                             width: 96,
                             height: 96,
-                            color: MaekelColors.panelLift,
-                            child: const Icon(Icons.storefront),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 96,
+                              height: 96,
+                              color: MaekelColors.panelLift,
+                              child: const Icon(Icons.storefront),
+                            ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                m.name,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${m.kind.label} · ${m.subcity} · ★ ${m.rating}',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                m.isOpen
-                                    ? '${m.etaMinutes} min · ${m.deliveryFeeEtb} ${AppConstants.currencyCode} fee'
-                                    : 'Closed · ${m.hoursLabel}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: m.isOpen
-                                          ? MaekelColors.food
-                                          : MaekelColors.muted,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ],
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  m.name,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${m.kind.label} · ${m.subcity} · ★ ${m.rating}',
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  m.isOpen
+                                      ? '${m.etaMinutes} min · ${m.deliveryFeeEtb} ${AppConstants.currencyCode} fee'
+                                      : 'Closed · ${m.hoursLabel}',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: m.isOpen
+                                            ? MaekelColors.food
+                                            : MaekelColors.muted,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
         ],
       ),
     );

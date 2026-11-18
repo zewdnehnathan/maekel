@@ -27,8 +27,46 @@ abstract class FoodRepository {
     required String orderId,
     required String otp,
   });
-  /// Demo controls for merchant/rider progression without separate apps.
+  /// Ops-only force advance (legacy demo).
   Future<FoodOrder> advanceOrder(String orderId);
+
+  List<SavedPlace> getPlaces();
+  Future<List<SavedPlace>> refreshPlaces();
+  Future<SavedPlace> savePlace({
+    required String label,
+    required String subcity,
+    required String details,
+  });
+  Future<void> deletePlace(String id);
+
+  Future<FoodMerchant?> getMyMerchant();
+  Future<List<FoodMerchant>> getClaimableMerchants();
+  Future<FoodMerchant> claimMerchant(String merchantId);
+  Future<FoodMerchant> setMerchantOpen(bool isOpen);
+  Future<List<FoodOrder>> getMerchantOrders();
+  Future<FoodOrder> merchantAccept(String orderId);
+  Future<FoodOrder> merchantReject(String orderId, {String reason});
+  Future<FoodOrder> merchantPreparing(String orderId);
+  Future<FoodOrder> merchantReady(String orderId);
+
+  Future<RiderJobs> getRiderJobs();
+  Future<FoodOrder> riderClaim(String orderId);
+  Future<FoodOrder> riderPickup(String orderId);
+  Future<FoodOrder> riderOnTheWay(String orderId);
+  Future<FoodOrder> riderComplete(String orderId, {required String otp});
+
+  Future<FoodOpsBoard> getOpsBoard();
+  Future<FoodMerchant> opsOnboardMerchant({
+    required String name,
+    required MerchantKind kind,
+    required String subcity,
+    List<String> coverageSubcities,
+    int deliveryFeeEtb,
+    int minOrderEtb,
+  });
+  Future<FoodOrder> opsReassign(String orderId, {String? riderId});
+  Future<FoodOrder> opsCancel(String orderId, {String reason});
+
   Stream<void> get changes;
 }
 
@@ -67,6 +105,7 @@ class InMemoryFoodRepository implements FoodRepository {
         coverUrl:
             'https://images.unsplash.com/photo-1604329760661-eeb838b49a5c?w=900',
         hoursLabel: '10:00 – 22:00',
+        coverageSubcities: ['Bole', 'CMC', 'Kirkos'],
       ),
       FoodMerchant(
         id: 'm-burger',
@@ -81,6 +120,7 @@ class InMemoryFoodRepository implements FoodRepository {
         coverUrl:
             'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=900',
         hoursLabel: '11:00 – 23:00',
+        coverageSubcities: ['Kazanchis', 'Kirkos', 'Bole'],
       ),
       FoodMerchant(
         id: 'm-mart',
@@ -95,6 +135,7 @@ class InMemoryFoodRepository implements FoodRepository {
         coverUrl:
             'https://images.unsplash.com/photo-1542838132-92c53300491e?w=900',
         hoursLabel: '08:00 – 21:00',
+        coverageSubcities: ['Bole', 'CMC', 'Yeka'],
       ),
       FoodMerchant(
         id: 'm-closed',
@@ -109,6 +150,7 @@ class InMemoryFoodRepository implements FoodRepository {
         coverUrl:
             'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=900',
         hoursLabel: '12:00 – 20:00',
+        coverageSubcities: ['Arada', 'Piassa'],
       ),
     ]);
 
@@ -350,30 +392,8 @@ class InMemoryFoodRepository implements FoodRepository {
     _cart = const FoodCart();
     _notify();
 
-    // Auto-simulate merchant → rider happy path for demo.
-    unawaited(_simulatePipeline(order.id));
+    // Manual merchant/rider flow — no auto-advance in local repo either.
     return order;
-  }
-
-  Future<void> _simulatePipeline(String orderId) async {
-    const steps = [
-      (OrderStatus.confirmed, 2),
-      (OrderStatus.preparing, 3),
-      (OrderStatus.ready, 2),
-      (OrderStatus.pickedUp, 2),
-      (OrderStatus.onTheWay, 2),
-    ];
-    for (final step in steps) {
-      await Future<void>.delayed(Duration(seconds: step.$2));
-      final idx = _orders.indexWhere((o) => o.id == orderId);
-      if (idx < 0) return;
-      if (_orders[idx].status == OrderStatus.cancelled ||
-          _orders[idx].status == OrderStatus.delivered) {
-        return;
-      }
-      _orders[idx] = _orders[idx].copyWith(status: step.$1);
-      _notify();
-    }
   }
 
   @override
@@ -430,5 +450,203 @@ class InMemoryFoodRepository implements FoodRepository {
     _orders[idx] = order.copyWith(status: next);
     _notify();
     return _orders[idx];
+  }
+
+  final _places = <SavedPlace>[];
+  String? _ownerMerchantId;
+
+  @override
+  List<SavedPlace> getPlaces() => List.unmodifiable(_places);
+
+  @override
+  Future<List<SavedPlace>> refreshPlaces() async => getPlaces();
+
+  @override
+  Future<SavedPlace> savePlace({
+    required String label,
+    required String subcity,
+    required String details,
+  }) async {
+    final place = SavedPlace(
+      id: _id('plc'),
+      label: label,
+      subcity: subcity,
+      details: details,
+    );
+    _places.insert(0, place);
+    _notify();
+    return place;
+  }
+
+  @override
+  Future<void> deletePlace(String id) async {
+    _places.removeWhere((p) => p.id == id);
+    _notify();
+  }
+
+  @override
+  Future<FoodMerchant?> getMyMerchant() async {
+    if (_ownerMerchantId == null) return null;
+    return getMerchant(_ownerMerchantId!);
+  }
+
+  @override
+  Future<List<FoodMerchant>> getClaimableMerchants() async {
+    return _merchants.where((m) => m.ownerUserId == null).toList();
+  }
+
+  @override
+  Future<FoodMerchant> claimMerchant(String merchantId) async {
+    final idx = _merchants.indexWhere((m) => m.id == merchantId);
+    if (idx < 0) throw StateError('Not found');
+    _ownerMerchantId = merchantId;
+    _merchants[idx] = _merchants[idx].copyWith(ownerUserId: 'local');
+    _notify();
+    return _merchants[idx];
+  }
+
+  @override
+  Future<FoodMerchant> setMerchantOpen(bool isOpen) async {
+    final id = _ownerMerchantId;
+    if (id == null) throw StateError('No merchant');
+    final idx = _merchants.indexWhere((m) => m.id == id);
+    _merchants[idx] = _merchants[idx].copyWith(isOpen: isOpen);
+    _notify();
+    return _merchants[idx];
+  }
+
+  @override
+  Future<List<FoodOrder>> getMerchantOrders() async {
+    final id = _ownerMerchantId;
+    if (id == null) return const [];
+    return _orders
+        .where(
+          (o) =>
+              o.merchantId == id &&
+              o.status != OrderStatus.delivered &&
+              o.status != OrderStatus.cancelled,
+        )
+        .toList();
+  }
+
+  @override
+  Future<FoodOrder> merchantAccept(String orderId) =>
+      advanceOrder(orderId);
+
+  @override
+  Future<FoodOrder> merchantReject(
+    String orderId, {
+    String reason = 'Rejected by merchant',
+  }) async {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx < 0) throw StateError('Order not found');
+    _orders[idx] = _orders[idx].copyWith(
+      status: OrderStatus.cancelled,
+      cancelledAt: DateTime.now(),
+      rejectReason: reason,
+    );
+    _notify();
+    return _orders[idx];
+  }
+
+  @override
+  Future<FoodOrder> merchantPreparing(String orderId) =>
+      advanceOrder(orderId);
+
+  @override
+  Future<FoodOrder> merchantReady(String orderId) => advanceOrder(orderId);
+
+  @override
+  Future<RiderJobs> getRiderJobs() async {
+    final available = _orders
+        .where((o) => o.status == OrderStatus.ready && o.riderId == null)
+        .toList();
+    final active = _orders
+        .where(
+          (o) =>
+              o.riderId == 'local' &&
+              (o.status == OrderStatus.ready ||
+                  o.status == OrderStatus.pickedUp ||
+                  o.status == OrderStatus.onTheWay),
+        )
+        .toList();
+    return RiderJobs(available: available, active: active);
+  }
+
+  @override
+  Future<FoodOrder> riderClaim(String orderId) async {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx < 0) throw StateError('Not found');
+    _orders[idx] = _orders[idx].copyWith(riderId: 'local');
+    _notify();
+    return _orders[idx];
+  }
+
+  @override
+  Future<FoodOrder> riderPickup(String orderId) => advanceOrder(orderId);
+
+  @override
+  Future<FoodOrder> riderOnTheWay(String orderId) => advanceOrder(orderId);
+
+  @override
+  Future<FoodOrder> riderComplete(
+    String orderId, {
+    required String otp,
+  }) =>
+      completeWithOtp(orderId: orderId, otp: otp);
+
+  @override
+  Future<FoodOpsBoard> getOpsBoard() async {
+    return FoodOpsBoard(orders: List.unmodifiable(_orders), merchants: _merchants);
+  }
+
+  @override
+  Future<FoodMerchant> opsOnboardMerchant({
+    required String name,
+    required MerchantKind kind,
+    required String subcity,
+    List<String> coverageSubcities = const [],
+    int deliveryFeeEtb = 70,
+    int minOrderEtb = 150,
+  }) async {
+    final m = FoodMerchant(
+      id: _id('m'),
+      name: name,
+      kind: kind,
+      subcity: subcity,
+      isOpen: true,
+      etaMinutes: 35,
+      deliveryFeeEtb: deliveryFeeEtb,
+      minOrderEtb: minOrderEtb,
+      rating: 4.0,
+      coverUrl:
+          'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900',
+      hoursLabel: '10:00 – 22:00',
+      coverageSubcities:
+          coverageSubcities.isEmpty ? [subcity] : coverageSubcities,
+    );
+    _merchants.add(m);
+    _notify();
+    return m;
+  }
+
+  @override
+  Future<FoodOrder> opsReassign(String orderId, {String? riderId}) async {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx < 0) throw StateError('Not found');
+    _orders[idx] = _orders[idx].copyWith(
+      riderId: riderId,
+      clearRiderId: riderId == null,
+    );
+    _notify();
+    return _orders[idx];
+  }
+
+  @override
+  Future<FoodOrder> opsCancel(
+    String orderId, {
+    String reason = 'Cancelled by support',
+  }) async {
+    return merchantReject(orderId, reason: reason);
   }
 }

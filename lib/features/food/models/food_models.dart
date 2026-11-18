@@ -25,6 +25,20 @@ class DeliveryAddress {
   final String details;
 }
 
+class SavedPlace {
+  const SavedPlace({
+    required this.id,
+    required this.label,
+    required this.subcity,
+    required this.details,
+  });
+
+  final String id;
+  final String label;
+  final String subcity;
+  final String details;
+}
+
 class MenuModifier {
   const MenuModifier({
     required this.id,
@@ -72,6 +86,8 @@ class FoodMerchant {
     required this.rating,
     required this.coverUrl,
     required this.hoursLabel,
+    this.ownerUserId,
+    this.coverageSubcities = const [],
   });
 
   final String id;
@@ -85,6 +101,31 @@ class FoodMerchant {
   final double rating;
   final String coverUrl;
   final String hoursLabel;
+  final String? ownerUserId;
+  final List<String> coverageSubcities;
+
+  bool covers(String pinSubcity) {
+    if (coverageSubcities.isEmpty) return subcity == pinSubcity;
+    return coverageSubcities.contains(pinSubcity);
+  }
+
+  FoodMerchant copyWith({bool? isOpen, String? ownerUserId}) {
+    return FoodMerchant(
+      id: id,
+      name: name,
+      kind: kind,
+      subcity: subcity,
+      isOpen: isOpen ?? this.isOpen,
+      etaMinutes: etaMinutes,
+      deliveryFeeEtb: deliveryFeeEtb,
+      minOrderEtb: minOrderEtb,
+      rating: rating,
+      coverUrl: coverUrl,
+      hoursLabel: hoursLabel,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      coverageSubcities: coverageSubcities,
+    );
+  }
 }
 
 class CartLine {
@@ -153,6 +194,8 @@ class FoodOrder {
     required this.deliveryOtp,
     required this.createdAt,
     this.cancelledAt,
+    this.riderId,
+    this.rejectReason,
   });
 
   final String id;
@@ -168,13 +211,21 @@ class FoodOrder {
   final String deliveryOtp;
   final DateTime createdAt;
   final DateTime? cancelledAt;
+  final String? riderId;
+  final String? rejectReason;
 
   int get grandTotalEtb => subtotalEtb + deliveryFeeEtb;
 
   bool get canCancel =>
       status == OrderStatus.placed || status == OrderStatus.confirmed;
 
-  FoodOrder copyWith({OrderStatus? status, DateTime? cancelledAt}) {
+  FoodOrder copyWith({
+    OrderStatus? status,
+    DateTime? cancelledAt,
+    String? riderId,
+    String? rejectReason,
+    bool clearRiderId = false,
+  }) {
     return FoodOrder(
       id: id,
       customerId: customerId,
@@ -189,8 +240,24 @@ class FoodOrder {
       deliveryOtp: deliveryOtp,
       createdAt: createdAt,
       cancelledAt: cancelledAt ?? this.cancelledAt,
+      riderId: clearRiderId ? null : (riderId ?? this.riderId),
+      rejectReason: rejectReason ?? this.rejectReason,
     );
   }
+}
+
+class RiderJobs {
+  const RiderJobs({required this.available, required this.active});
+
+  final List<FoodOrder> available;
+  final List<FoodOrder> active;
+}
+
+class FoodOpsBoard {
+  const FoodOpsBoard({required this.orders, required this.merchants});
+
+  final List<FoodOrder> orders;
+  final List<FoodMerchant> merchants;
 }
 
 extension OrderStatusLabel on OrderStatus {
@@ -217,5 +284,6 @@ extension OrderStatusLabel on OrderStatus {
 }
 
 extension MerchantKindLabel on MerchantKind {
-  String get label => this == MerchantKind.restaurant ? 'Restaurants' : 'Groceries';
+  String get label =>
+      this == MerchantKind.restaurant ? 'Restaurants' : 'Groceries';
 }

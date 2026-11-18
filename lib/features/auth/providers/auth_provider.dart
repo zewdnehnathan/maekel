@@ -28,6 +28,14 @@ class AuthSession {
       isPlatformAdmin ||
       roles.contains('market_moderator') ||
       roles.contains('market_ops');
+
+  bool get isFoodOps => isPlatformAdmin || roles.contains('food_ops');
+
+  bool get isFoodMerchant =>
+      isPlatformAdmin || isFoodOps || roles.contains('food_merchant');
+
+  bool get isFoodRider =>
+      isPlatformAdmin || isFoodOps || roles.contains('food_rider');
 }
 
 class AuthState {

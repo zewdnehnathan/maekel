@@ -29,11 +29,21 @@ const defaultUserRoles = [
   'market_seller',
 ] as const;
 
-const staffRoles = ['platform_admin', 'market_moderator', 'market_ops'] as const;
+const staffRoles = [
+  'platform_admin',
+  'market_moderator',
+  'market_ops',
+  'food_ops',
+  'food_merchant',
+  'food_rider',
+] as const;
 const grantableRoles = [
   'platform_admin',
   'market_moderator',
   'market_ops',
+  'food_ops',
+  'food_merchant',
+  'food_rider',
 ] as const;
 
 async function boot() {
@@ -326,6 +336,9 @@ async function applyBootstrapAdminRoles(
   if (!adminPhones.includes(phone)) return;
   await grantRole(userId, 'platform_admin');
   await grantRole(userId, 'market_moderator');
+  await grantRole(userId, 'food_ops');
+  await grantRole(userId, 'food_merchant');
+  await grantRole(userId, 'food_rider');
 }
 
 /**
@@ -362,6 +375,9 @@ async function reconcileStaffRoles(): Promise<void> {
     const userId = user.rows[0].id as string;
     await grantRole(userId, 'platform_admin');
     await grantRole(userId, 'market_moderator');
+    await grantRole(userId, 'food_ops');
+    await grantRole(userId, 'food_merchant');
+    await grantRole(userId, 'food_rider');
   }
 }
 

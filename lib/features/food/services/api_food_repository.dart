@@ -21,6 +21,7 @@ class ApiFoodRepository implements FoodRepository {
   final List<FoodMerchant> _merchants = [];
   final List<MenuItem> _menu = [];
   final List<FoodOrder> _orders = [];
+  final List<SavedPlace> _places = [];
   FoodCart _cart = const FoodCart();
   bool _authed = false;
 
@@ -73,6 +74,7 @@ class ApiFoodRepository implements FoodRepository {
               .cast<Map<String, dynamic>>()
               .map(_parseOrder),
         );
+      await refreshPlaces();
       _notify();
     } catch (_) {}
   }
@@ -250,6 +252,272 @@ class ApiFoodRepository implements FoodRepository {
     return _upsertOrder(_parseOrder(raw));
   }
 
+  @override
+  List<SavedPlace> getPlaces() => List.unmodifiable(_places);
+
+  @override
+  Future<List<SavedPlace>> refreshPlaces() async {
+    final raw = await _client.get('/v1/food/places', auth: true);
+    _places
+      ..clear()
+      ..addAll(
+        ((raw as Map)['items'] as List)
+            .cast<Map<String, dynamic>>()
+            .map(_parsePlace),
+      );
+    _notify();
+    return getPlaces();
+  }
+
+  @override
+  Future<SavedPlace> savePlace({
+    required String label,
+    required String subcity,
+    required String details,
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/places',
+      auth: true,
+      body: {'label': label, 'subcity': subcity, 'details': details},
+    ) as Map<String, dynamic>;
+    final place = _parsePlace(raw);
+    _places.insert(0, place);
+    _notify();
+    return place;
+  }
+
+  @override
+  Future<void> deletePlace(String id) async {
+    await _client.delete('/v1/food/places/$id', auth: true);
+    _places.removeWhere((p) => p.id == id);
+    _notify();
+  }
+
+  @override
+  Future<FoodMerchant?> getMyMerchant() async {
+    final raw = await _client.get('/v1/food/merchant/me', auth: true)
+        as Map<String, dynamic>;
+    final m = raw['merchant'];
+    if (m == null) return null;
+    return _parseMerchant(m as Map<String, dynamic>);
+  }
+
+  @override
+  Future<List<FoodMerchant>> getClaimableMerchants() async {
+    final raw = await _client.get('/v1/food/merchant/claimable', auth: true);
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseMerchant)
+        .toList();
+  }
+
+  @override
+  Future<FoodMerchant> claimMerchant(String merchantId) async {
+    final raw = await _client.post(
+      '/v1/food/merchant/claim',
+      auth: true,
+      body: {'merchantId': merchantId},
+    ) as Map<String, dynamic>;
+    final merchant = _parseMerchant(raw);
+    final idx = _merchants.indexWhere((m) => m.id == merchant.id);
+    if (idx >= 0) {
+      _merchants[idx] = merchant;
+    } else {
+      _merchants.add(merchant);
+    }
+    _notify();
+    return merchant;
+  }
+
+  @override
+  Future<FoodMerchant> setMerchantOpen(bool isOpen) async {
+    final raw = await _client.patch(
+      '/v1/food/merchant/me',
+      auth: true,
+      body: {'isOpen': isOpen},
+    ) as Map<String, dynamic>;
+    final merchant = _parseMerchant(raw);
+    final idx = _merchants.indexWhere((m) => m.id == merchant.id);
+    if (idx >= 0) _merchants[idx] = merchant;
+    _notify();
+    return merchant;
+  }
+
+  @override
+  Future<List<FoodOrder>> getMerchantOrders() async {
+    final raw = await _client.get('/v1/food/merchant/orders', auth: true);
+    final items = ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseOrder)
+        .toList();
+    for (final o in items) {
+      _upsertOrder(o);
+    }
+    return items;
+  }
+
+  @override
+  Future<FoodOrder> merchantAccept(String orderId) async {
+    final raw = await _client.post(
+      '/v1/food/merchant/orders/$orderId/accept',
+      auth: true,
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<FoodOrder> merchantReject(
+    String orderId, {
+    String reason = 'Rejected by merchant',
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/merchant/orders/$orderId/reject',
+      auth: true,
+      body: {'reason': reason},
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<FoodOrder> merchantPreparing(String orderId) async {
+    final raw = await _client.post(
+      '/v1/food/merchant/orders/$orderId/preparing',
+      auth: true,
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<FoodOrder> merchantReady(String orderId) async {
+    final raw = await _client.post(
+      '/v1/food/merchant/orders/$orderId/ready',
+      auth: true,
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<RiderJobs> getRiderJobs() async {
+    final raw = await _client.get('/v1/food/rider/jobs', auth: true)
+        as Map<String, dynamic>;
+    return RiderJobs(
+      available: ((raw['available'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(_parseOrder)
+          .toList(),
+      active: ((raw['active'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(_parseOrder)
+          .toList(),
+    );
+  }
+
+  @override
+  Future<FoodOrder> riderClaim(String orderId) async {
+    final raw = await _client.post(
+      '/v1/food/rider/jobs/$orderId/claim',
+      auth: true,
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<FoodOrder> riderPickup(String orderId) async {
+    final raw = await _client.post(
+      '/v1/food/rider/jobs/$orderId/pickup',
+      auth: true,
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<FoodOrder> riderOnTheWay(String orderId) async {
+    final raw = await _client.post(
+      '/v1/food/rider/jobs/$orderId/on-the-way',
+      auth: true,
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<FoodOrder> riderComplete(
+    String orderId, {
+    required String otp,
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/rider/jobs/$orderId/complete',
+      auth: true,
+      body: {'otp': otp},
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<FoodOpsBoard> getOpsBoard() async {
+    final raw = await _client.get('/v1/food/ops/board', auth: true)
+        as Map<String, dynamic>;
+    return FoodOpsBoard(
+      orders: ((raw['orders'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(_parseOrder)
+          .toList(),
+      merchants: ((raw['merchants'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(_parseMerchant)
+          .toList(),
+    );
+  }
+
+  @override
+  Future<FoodMerchant> opsOnboardMerchant({
+    required String name,
+    required MerchantKind kind,
+    required String subcity,
+    List<String> coverageSubcities = const [],
+    int deliveryFeeEtb = 70,
+    int minOrderEtb = 150,
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/ops/merchants',
+      auth: true,
+      body: {
+        'name': name,
+        'kind': kind.name,
+        'subcity': subcity,
+        'coverageSubcities': coverageSubcities,
+        'deliveryFeeEtb': deliveryFeeEtb,
+        'minOrderEtb': minOrderEtb,
+      },
+    ) as Map<String, dynamic>;
+    final merchant = _parseMerchant(raw);
+    _merchants.add(merchant);
+    _notify();
+    return merchant;
+  }
+
+  @override
+  Future<FoodOrder> opsReassign(String orderId, {String? riderId}) async {
+    final raw = await _client.post(
+      '/v1/food/ops/orders/$orderId/reassign',
+      auth: true,
+      body: {'riderId': riderId},
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
+  @override
+  Future<FoodOrder> opsCancel(
+    String orderId, {
+    String reason = 'Cancelled by support',
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/ops/orders/$orderId/cancel',
+      auth: true,
+      body: {'reason': reason},
+    ) as Map<String, dynamic>;
+    return _upsertOrder(_parseOrder(raw));
+  }
+
   FoodOrder _upsertOrder(FoodOrder order) {
     final idx = _orders.indexWhere((o) => o.id == order.id);
     if (idx >= 0) {
@@ -276,6 +544,7 @@ class ApiFoodRepository implements FoodRepository {
         coverUrl:
             'https://images.unsplash.com/photo-1604329760661-eeb838b49a5c?w=900',
         hoursLabel: '10:00 – 22:00',
+        coverageSubcities: ['Bole', 'CMC', 'Kirkos'],
       ),
       FoodMerchant(
         id: 'm-burger',
@@ -290,6 +559,7 @@ class ApiFoodRepository implements FoodRepository {
         coverUrl:
             'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=900',
         hoursLabel: '11:00 – 23:00',
+        coverageSubcities: ['Kazanchis', 'Kirkos', 'Bole'],
       ),
       FoodMerchant(
         id: 'm-mart',
@@ -304,6 +574,7 @@ class ApiFoodRepository implements FoodRepository {
         coverUrl:
             'https://images.unsplash.com/photo-1542838132-92c53300491e?w=900',
         hoursLabel: '08:00 – 21:00',
+        coverageSubcities: ['Bole', 'CMC', 'Yeka'],
       ),
       FoodMerchant(
         id: 'm-closed',
@@ -318,6 +589,7 @@ class ApiFoodRepository implements FoodRepository {
         coverUrl:
             'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=900',
         hoursLabel: '12:00 – 20:00',
+        coverageSubcities: ['Arada', 'Piassa'],
       ),
     ]);
     _menu.addAll([
@@ -401,7 +673,21 @@ class ApiFoodRepository implements FoodRepository {
     ]);
   }
 
+  SavedPlace _parsePlace(Map<String, dynamic> j) {
+    return SavedPlace(
+      id: j['id'] as String,
+      label: j['label'] as String,
+      subcity: j['subcity'] as String,
+      details: j['details'] as String,
+    );
+  }
+
   FoodMerchant _parseMerchant(Map<String, dynamic> j) {
+    final coverage = <String>[];
+    final rawCov = j['coverageSubcities'];
+    if (rawCov is List) {
+      coverage.addAll(rawCov.map((e) => '$e'));
+    }
     return FoodMerchant(
       id: j['id'] as String,
       name: j['name'] as String,
@@ -414,6 +700,8 @@ class ApiFoodRepository implements FoodRepository {
       rating: (j['rating'] as num).toDouble(),
       coverUrl: j['coverUrl'] as String,
       hoursLabel: j['hoursLabel'] as String,
+      ownerUserId: j['ownerUserId'] as String?,
+      coverageSubcities: coverage,
     );
   }
 
@@ -510,6 +798,8 @@ class ApiFoodRepository implements FoodRepository {
       cancelledAt: j['cancelledAt'] == null
           ? null
           : DateTime.parse(j['cancelledAt'].toString()),
+      riderId: j['riderId'] as String?,
+      rejectReason: j['rejectReason'] as String?,
     );
   }
 }

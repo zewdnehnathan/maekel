@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/widgets/glass_panel.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
@@ -18,14 +19,6 @@ class FoodOrderDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
-  final _otp = TextEditingController();
-
-  @override
-  void dispose() {
-    _otp.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final order = ref.watch(foodOrderProvider(widget.orderId));
@@ -111,7 +104,7 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Show this code to the rider. Delivered only after OTP.',
+                  'Show this code to the rider. They collect COD and enter OTP in the rider app.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -135,47 +128,17 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
               },
               child: const Text('CANCEL ORDER'),
             ),
-          if (order.status == OrderStatus.onTheWay ||
-              order.status == OrderStatus.pickedUp) ...[
+          if (ref.watch(authProvider).session?.isFoodOps == true) ...[
             const SizedBox(height: 12),
-            TextField(
-              controller: _otp,
-              style: const TextStyle(color: MaekelColors.ink, letterSpacing: 4),
-              decoration: const InputDecoration(
-                labelText: 'Rider enters customer OTP',
-              ),
-            ),
-            const SizedBox(height: 8),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: MaekelColors.food,
-                foregroundColor: MaekelColors.ink,
-              ),
-              onPressed: () async {
-                try {
-                  await ref.read(foodRepositoryProvider).completeWithOtp(
-                        orderId: order.id,
-                        otp: _otp.text,
-                      );
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('$e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('CONFIRM DELIVERY (OTP)'),
+            TextButton(
+              onPressed: order.status == OrderStatus.delivered ||
+                      order.status == OrderStatus.cancelled
+                  ? null
+                  : () =>
+                      ref.read(foodRepositoryProvider).advanceOrder(order.id),
+              child: const Text('Ops: force advance status'),
             ),
           ],
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: order.status == OrderStatus.delivered ||
-                    order.status == OrderStatus.cancelled
-                ? null
-                : () => ref.read(foodRepositoryProvider).advanceOrder(order.id),
-            child: const Text('Demo: advance status'),
-          ),
         ],
       ),
     );

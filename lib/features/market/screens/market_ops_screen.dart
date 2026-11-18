@@ -21,8 +21,22 @@ class MarketOpsScreen extends ConsumerStatefulWidget {
 
 class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
   MarketOpsQueue? _queue;
+  MarketConfig? _config;
   bool _loading = true;
   String? _error;
+
+  static const _iconChoices = <String>[
+    'phone',
+    'devices',
+    'car',
+    'home',
+    'chair',
+    'checkroom',
+    'sports',
+    'work',
+    'pets',
+    'category',
+  ];
 
   @override
   void initState() {
@@ -36,10 +50,13 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
       _error = null;
     });
     try {
-      final queue = await ref.read(marketRepositoryProvider).getOpsQueue();
+      final repo = ref.read(marketRepositoryProvider);
+      final queue = await repo.getOpsQueue();
+      final config = await repo.getConfig();
       if (!mounted) return;
       setState(() {
         _queue = queue;
+        _config = config;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -58,11 +75,18 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
   }
 
   Future<void> _approve(MarketAd ad) async {
-    await ref.read(marketRepositoryProvider).updateAdStatus(
-          ad.id,
-          status: AdStatus.approved,
-        );
-    await _load();
+    try {
+      await ref.read(marketRepositoryProvider).updateAdStatus(
+            ad.id,
+            status: AdStatus.approved,
+          );
+      await _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
   }
 
   Future<void> _reject(MarketAd ad) async {
@@ -95,12 +119,19 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
       },
     );
     if (ok == true && controller.text.trim().isNotEmpty) {
-      await ref.read(marketRepositoryProvider).updateAdStatus(
-            ad.id,
-            status: AdStatus.rejected,
-            rejectReason: controller.text.trim(),
-          );
-      await _load();
+      try {
+        await ref.read(marketRepositoryProvider).updateAdStatus(
+              ad.id,
+              status: AdStatus.rejected,
+              rejectReason: controller.text.trim(),
+            );
+        await _load();
+      } on ApiException catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     }
   }
 
@@ -108,18 +139,166 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
     MarketReportItem report, {
     required String action,
   }) async {
-    await ref.read(marketRepositoryProvider).resolveReport(
-          reportId: report.id,
-          action: action,
-          note: action == 'dismiss' ? 'Dismissed' : null,
+    try {
+      await ref.read(marketRepositoryProvider).resolveReport(
+            reportId: report.id,
+            action: action,
+            note: action == 'dismiss' ? 'Dismissed' : null,
+          );
+      await _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
+
+  Future<void> _editCategory(MarketCategory category) async {
+    final nameController = TextEditingController(text: category.name);
+    var iconName = category.iconName;
+    if (!_iconChoices.contains(iconName)) {
+      iconName = _iconChoices.first;
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: MaekelColors.panel,
+              title: Text('Edit ${category.id}'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    style: const TextStyle(color: MaekelColors.ink),
+                    decoration: const InputDecoration(labelText: 'Display name'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
+                    value: iconName,
+                    dropdownColor: MaekelColors.panel,
+                    decoration: const InputDecoration(labelText: 'Icon key'),
+                    items: [
+                      for (final icon in _iconChoices)
+                        DropdownMenuItem(value: icon, child: Text(icon)),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => iconName = v);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
-    await _load();
+      },
+    );
+
+    if (ok != true) return;
+    final name = nameController.text.trim();
+    if (name.length < 2) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name must be at least 2 characters.')),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(marketRepositoryProvider).updateCategory(
+            category.id,
+            name: name,
+            iconName: iconName,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Updated “$name”.')),
+      );
+      setState(() {});
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
+
+  Future<void> _editMaxActiveAds() async {
+    final current = _config?.maxActiveFreeAds ?? 5;
+    final controller = TextEditingController(text: '$current');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: MaekelColors.panel,
+          title: const Text('Max active free ads'),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(color: MaekelColors.ink),
+            decoration: const InputDecoration(
+              labelText: 'Limit (1–50)',
+              helperText: 'Per seller: approved + pending count',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    if (ok != true) return;
+    final value = int.tryParse(controller.text.trim());
+    if (value == null || value < 1 || value > 50) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a number between 1 and 50.')),
+      );
+      return;
+    }
+    try {
+      final updated = await ref
+          .read(marketRepositoryProvider)
+          .updateMarketConfig(maxActiveFreeAds: value);
+      if (!mounted) return;
+      setState(() => _config = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Max active ads set to $value.')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final queue = _queue;
-
+    final categories = ref.watch(marketCategoriesProvider);
     final isPlatformAdmin =
         ref.watch(authProvider).session?.isPlatformAdmin ?? false;
 
@@ -178,19 +357,22 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                               children: [
                                 Text(
                                   ad.title,
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   '${ad.priceEtb} ${AppConstants.currencyCode} · ${ad.subcity}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   ad.description,
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 10),
                                 Wrap(
@@ -222,7 +404,8 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                             .suspendSeller(
                                               sellerId: ad.sellerId,
                                               suspended: true,
-                                              note: 'Suspended from ops queue',
+                                              note:
+                                                  'Suspended from ops queue',
                                             );
                                         await _load();
                                       },
@@ -256,12 +439,14 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                               children: [
                                 Text(
                                   report.adTitle,
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   report.reason,
-                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 10),
                                 Wrap(
@@ -306,9 +491,127 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                           ),
                           const SizedBox(height: 10),
                         ],
+                      const SizedBox(height: 18),
+                      Text(
+                        'CATEGORY CONFIG (${categories.length})',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      if (categories.isEmpty)
+                        const GlassPanel(
+                          child: Text('No categories loaded.'),
+                        )
+                      else
+                        for (final category in categories) ...[
+                          GlassPanel(
+                            borderRadius: 16,
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: MaekelColors.signal
+                                      .withValues(alpha: 0.15),
+                                  child: Icon(
+                                    _iconFor(category.iconName),
+                                    color: MaekelColors.signal,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        category.name,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                      Text(
+                                        'id: ${category.id} · icon: ${category.iconName}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => _editCategory(category),
+                                  child: const Text('Edit'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'LIMITS',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      GlassPanel(
+                        borderRadius: 16,
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Max active free ads',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
+                                  Text(
+                                    'Current: ${_config?.maxActiveFreeAds ?? '—'} per seller',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _editMaxActiveAds,
+                              child: const Text('Edit'),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
     );
+  }
+
+  IconData _iconFor(String name) {
+    switch (name) {
+      case 'phone':
+        return Icons.phone_android_rounded;
+      case 'devices':
+        return Icons.devices_rounded;
+      case 'car':
+        return Icons.directions_car_rounded;
+      case 'home':
+        return Icons.home_rounded;
+      case 'chair':
+        return Icons.chair_rounded;
+      case 'checkroom':
+        return Icons.checkroom_rounded;
+      case 'sports':
+        return Icons.sports_soccer_rounded;
+      case 'work':
+        return Icons.work_outline_rounded;
+      case 'pets':
+        return Icons.pets_rounded;
+      default:
+        return Icons.category_rounded;
+    }
   }
 }
