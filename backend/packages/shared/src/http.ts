@@ -18,7 +18,12 @@ export async function createService(opts: {
     logger: true,
     bodyLimit: opts.bodyLimit ?? 1_048_576,
   });
-  await app.register(cors, { origin: true });
+  await app.register(cors, {
+    origin: true,
+    // Defaults are GET/HEAD/POST only — Flutter web uses PATCH for approve/edit.
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
 
   app.setErrorHandler((error, _req, reply) => {
     if (error instanceof AppError) {
