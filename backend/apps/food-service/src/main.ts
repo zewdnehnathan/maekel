@@ -791,7 +791,8 @@ async function boot() {
         body.minOrderEtb,
         body.coverUrl,
         body.hoursLabel,
-        body.ownerUserId ?? null,
+        // Default owner to the ops user so they land in menu console, not claim.
+        body.ownerUserId ?? user.sub,
         JSON.stringify(coverage),
       ],
     );

@@ -254,27 +254,19 @@ class _FoodMerchantConsoleScreenState
                         GlassPanel(
                           borderRadius: 16,
                           padding: const EdgeInsets.all(14),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      m.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                    Text(
-                                      '${m.kind.name} · ${m.subcity}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
-                                    ),
-                                  ],
-                                ),
+                              Text(
+                                m.name,
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${m.kind.name} · ${m.subcity}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 12),
                               FilledButton(
                                 style: FilledButton.styleFrom(
                                   backgroundColor: MaekelColors.food,
@@ -289,7 +281,7 @@ class _FoodMerchantConsoleScreenState
                                                 .claimMerchant(m.id);
                                           },
                                         ),
-                                child: const Text('Claim'),
+                                child: const Text('Claim this store'),
                               ),
                             ],
                           ),
