@@ -25,6 +25,7 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
   final _name = TextEditingController();
   final _subcity = TextEditingController(text: 'Bole');
   final _coverage = TextEditingController(text: 'Bole, CMC');
+  final _ownerPhone = TextEditingController();
   MerchantKind _kind = MerchantKind.restaurant;
 
   @override
@@ -38,6 +39,7 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
     _name.dispose();
     _subcity.dispose();
     _coverage.dispose();
+    _ownerPhone.dispose();
     super.dispose();
   }
 
@@ -100,14 +102,61 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
         .toList();
+    final ownerLocal = _ownerPhone.text.replaceAll(RegExp(r'\D'), '');
     await _run(() async {
       await ref.read(foodRepositoryProvider).opsOnboardMerchant(
             name: name,
             kind: _kind,
             subcity: subcity,
             coverageSubcities: coverage,
+            ownerPhone: ownerLocal.length == 9 ? ownerLocal : null,
           );
       _name.clear();
+      _ownerPhone.clear();
+    });
+  }
+
+  Future<void> _assignOwner(FoodMerchant merchant) async {
+    final phone = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: MaekelColors.panel,
+        title: Text('Assign owner · ${merchant.name}'),
+        content: TextField(
+          controller: phone,
+          keyboardType: TextInputType.phone,
+          style: const TextStyle(color: MaekelColors.ink),
+          decoration: const InputDecoration(
+            labelText: 'Restaurant staff phone (9 digits)',
+            prefixText: '+251 ',
+            helperText: 'Only this user can edit the menu.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: MaekelColors.food,
+              foregroundColor: MaekelColors.ink,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Assign'),
+          ),
+        ],
+      ),
+    );
+    final local = phone.text.replaceAll(RegExp(r'\D'), '');
+    phone.dispose();
+    if (ok != true || local.length != 9) return;
+    await _run(() async {
+      await ref.read(foodRepositoryProvider).opsAssignOwner(
+            merchant.id,
+            ownerPhone: local,
+          );
     });
   }
 
@@ -267,6 +316,18 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                               labelText: 'Coverage (comma-separated)',
                             ),
                           ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: _ownerPhone,
+                            keyboardType: TextInputType.phone,
+                            style: const TextStyle(color: MaekelColors.ink),
+                            decoration: const InputDecoration(
+                              labelText: 'Owner phone (restaurant staff)',
+                              prefixText: '+251 ',
+                              helperText:
+                                  'Required for menu access — only this user edits dishes.',
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           FilledButton(
                             style: FilledButton.styleFrom(
@@ -290,12 +351,37 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                       GlassPanel(
                         borderRadius: 14,
                         padding: const EdgeInsets.all(12),
-                        child: Text(
-                          '${m.name} · ${m.subcity} · '
-                          '${m.isOpen ? 'open' : 'paused'} · '
-                          'owner ${m.ownerUserId ?? 'unclaimed'} · '
-                          'covers ${m.coverageSubcities.join(', ')}',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              '${m.name} · ${m.subcity} · '
+                              '${m.isOpen ? 'open' : 'paused'}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            Text(
+                              m.ownerUserId == null
+                                  ? 'Owner: unassigned'
+                                  : 'Owner: ${m.ownerUserId}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            Text(
+                              'Covers ${m.coverageSubcities.join(', ')}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton(
+                                onPressed:
+                                    _busy ? null : () => _assignOwner(m),
+                                child: Text(
+                                  m.ownerUserId == null
+                                      ? 'Assign owner phone'
+                                      : 'Reassign owner',
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/glass_panel.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
@@ -39,12 +40,19 @@ class _FoodMerchantConsoleScreenState
     });
     try {
       final repo = ref.read(foodRepositoryProvider);
+      final isOps = ref.read(authProvider).session?.isFoodOps == true;
       final mine = await repo.getMyMerchant();
       List<FoodMerchant> claimable = const [];
       List<FoodOrder> orders = const [];
       List<MenuItem> menu = const [];
       if (mine == null) {
-        claimable = await repo.getClaimableMerchants();
+        if (isOps) {
+          try {
+            claimable = await repo.getClaimableMerchants();
+          } catch (_) {
+            claimable = const [];
+          }
+        }
       } else {
         orders = await repo.getMerchantOrders();
         menu = await repo.getMerchantMenu();
@@ -236,20 +244,35 @@ class _FoodMerchantConsoleScreenState
                   children: [
                     if (_merchant == null) ...[
                       Text(
-                        'CLAIM A STORE',
+                        ref.watch(authProvider).session?.isFoodOps == true
+                            ? 'NO STORE LINKED'
+                            : 'YOUR RESTAURANT',
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
                       GlassPanel(
                         accent: MaekelColors.food,
                         child: Text(
-                          'Link an unclaimed merchant to this account to manage menu and orders.',
+                          ref.watch(authProvider).session?.isFoodOps == true
+                              ? 'This account is not the owner of a restaurant. In Food ops, create a merchant and set Owner phone to the restaurant staff number — only they can edit that menu.'
+                              : 'No restaurant is linked to your account. Ask Food ops to assign your phone as the owner. You can only edit your own restaurant menu — never someone else’s.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      if (_claimable.isEmpty)
-                        const Text('No claimable merchants.'),
+                      if (ref.watch(authProvider).session?.isFoodOps ==
+                          true) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'UNASSIGNED STORES (ops only)',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      if (ref.watch(authProvider).session?.isFoodOps != true)
+                        const SizedBox.shrink()
+                      else if (_claimable.isEmpty)
+                        const Text('No unassigned merchants.'),
+                      if (ref.watch(authProvider).session?.isFoodOps == true)
                       for (final m in _claimable) ...[
                         GlassPanel(
                           borderRadius: 16,

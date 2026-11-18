@@ -386,18 +386,20 @@ async function boot() {
     return { merchant: mapMerchant(res.rows[0]) };
   });
 
+  // Ops-only: list unowned stores. Regular restaurant staff never browse others.
   app.get('/v1/food/merchant/claimable', async (req) => {
     const user = requireAuth(req);
-    requireRole(user, [...merchantStaff]);
+    requireRole(user, [...opsStaff]);
     const res = await pool.query(
       `SELECT * FROM merchants WHERE owner_user_id IS NULL ORDER BY name`,
     );
     return { items: res.rows.map(mapMerchant) };
   });
 
+  // Ops-only self-claim for demo. Restaurant staff get ownership via assign-owner.
   app.post('/v1/food/merchant/claim', async (req) => {
     const user = requireAuth(req);
-    requireRole(user, [...merchantStaff]);
+    requireRole(user, [...opsStaff]);
     const body = z.object({ merchantId: z.string() }).parse(req.body ?? {});
     const existing = await pool.query(
       `SELECT id FROM merchants WHERE owner_user_id = $1`,
@@ -767,6 +769,8 @@ async function boot() {
             'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900',
           ),
         ownerUserId: z.string().uuid().optional(),
+        /** Restaurant staff phone — they alone can edit this menu. */
+        ownerPhone: z.string().optional(),
       })
       .parse(req.body ?? {});
     const id =
@@ -776,6 +780,23 @@ async function boot() {
       body.coverageSubcities.length > 0
         ? body.coverageSubcities
         : [body.subcity];
+    let ownerId = body.ownerUserId ?? null;
+    if (body.ownerPhone?.trim()) {
+      ownerId = await resolveUserIdByPhone(body.ownerPhone.trim());
+    }
+    if (ownerId) {
+      const taken = await pool.query(
+        `SELECT id FROM merchants WHERE owner_user_id = $1`,
+        [ownerId],
+      );
+      if (taken.rowCount) {
+        throw new AppError(
+          'That user already owns another restaurant',
+          409,
+          'already_owner',
+        );
+      }
+    }
     await pool.query(
       `INSERT INTO merchants (
         id, name, kind, subcity, is_open, eta_minutes, delivery_fee_etb,
@@ -791,8 +812,9 @@ async function boot() {
         body.minOrderEtb,
         body.coverUrl,
         body.hoursLabel,
-        // Default owner to the ops user so they land in menu console, not claim.
-        body.ownerUserId ?? user.sub,
+        // If no staff phone given, leave unowned until ops assigns — never
+        // auto-own seed/demo stores to a random admin browsing claim lists.
+        ownerId,
         JSON.stringify(coverage),
       ],
     );
@@ -805,11 +827,34 @@ async function boot() {
     requireRole(user, [...opsStaff]);
     const { id } = req.params as { id: string };
     const body = z
-      .object({ ownerUserId: z.string().uuid().nullable() })
+      .object({
+        ownerUserId: z.string().uuid().nullable().optional(),
+        /** Local 9-digit or E.164; resolved against identity users. */
+        ownerPhone: z.string().optional(),
+      })
       .parse(req.body ?? {});
+
+    let ownerId: string | null =
+      body.ownerUserId === undefined ? null : body.ownerUserId;
+    if (body.ownerPhone?.trim()) {
+      ownerId = await resolveUserIdByPhone(body.ownerPhone.trim());
+    }
+    if (ownerId) {
+      const taken = await pool.query(
+        `SELECT id, name FROM merchants WHERE owner_user_id = $1 AND id <> $2`,
+        [ownerId, id],
+      );
+      if (taken.rowCount) {
+        throw new AppError(
+          `That user already owns ${taken.rows[0].name}`,
+          409,
+          'already_owner',
+        );
+      }
+    }
     const res = await pool.query(
       `UPDATE merchants SET owner_user_id = $2 WHERE id = $1 RETURNING *`,
-      [id, body.ownerUserId],
+      [id, ownerId],
     );
     if (!res.rowCount) throw new AppError('Not found', 404, 'not_found');
     return mapMerchant(res.rows[0]);
@@ -875,20 +920,50 @@ function coversSubcity(
   return coverage.includes(subcity);
 }
 
-async function requireOwnedMerchant(userId: string, roles: string[]) {
+/** Menu/orders mutations always require ownership of THAT restaurant only. */
+async function requireOwnedMerchant(userId: string, _roles: string[]) {
   const res = await pool.query(
     `SELECT * FROM merchants WHERE owner_user_id = $1 LIMIT 1`,
     [userId],
   );
-  if (res.rowCount) return mapMerchant(res.rows[0]);
-  if (isOps(roles)) {
+  if (!res.rowCount) {
     throw new AppError(
-      'Claim or assign a merchant first',
-      404,
+      'No restaurant linked to this account. Ask Food ops to assign you as owner.',
+      403,
       'no_merchant',
     );
   }
-  throw new AppError('No merchant linked to this account', 404, 'no_merchant');
+  return mapMerchant(res.rows[0]);
+}
+
+async function resolveUserIdByPhone(rawPhone: string): Promise<string> {
+  const digits = rawPhone.replace(/\D/g, '');
+  const e164 =
+    rawPhone.startsWith('+')
+      ? rawPhone
+      : digits.length === 9
+        ? `+251${digits}`
+        : digits.length === 12 && digits.startsWith('251')
+          ? `+${digits}`
+          : rawPhone;
+  // Identity and food share Neon host; look up in identity DB.
+  const identityPool = createPool(databaseUrl('maekel_identity'));
+  try {
+    const res = await identityPool.query(
+      `SELECT id FROM users WHERE phone_e164 = $1`,
+      [e164],
+    );
+    if (!res.rowCount) {
+      throw new AppError(
+        `No user registered with ${e164}. They must OTP once first.`,
+        404,
+        'user_not_found',
+      );
+    }
+    return res.rows[0].id as string;
+  } finally {
+    await identityPool.end().catch(() => undefined);
+  }
 }
 
 function assertMerchantOrder(

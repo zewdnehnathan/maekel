@@ -558,6 +558,7 @@ class ApiFoodRepository implements FoodRepository {
     List<String> coverageSubcities = const [],
     int deliveryFeeEtb = 70,
     int minOrderEtb = 150,
+    String? ownerPhone,
   }) async {
     final raw = await _client.post(
       '/v1/food/ops/merchants',
@@ -569,10 +570,36 @@ class ApiFoodRepository implements FoodRepository {
         'coverageSubcities': coverageSubcities,
         'deliveryFeeEtb': deliveryFeeEtb,
         'minOrderEtb': minOrderEtb,
+        if (ownerPhone != null && ownerPhone.isNotEmpty)
+          'ownerPhone': ownerPhone,
       },
     ) as Map<String, dynamic>;
     final merchant = _parseMerchant(raw);
     _merchants.add(merchant);
+    _notify();
+    return merchant;
+  }
+
+  @override
+  Future<FoodMerchant> opsAssignOwner(
+    String merchantId, {
+    String? ownerPhone,
+    String? ownerUserId,
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/ops/merchants/$merchantId/assign-owner',
+      auth: true,
+      body: {
+        if (ownerPhone != null) 'ownerPhone': ownerPhone,
+        if (ownerUserId != null) 'ownerUserId': ownerUserId,
+        if (ownerPhone == null && ownerUserId == null) 'ownerUserId': null,
+      },
+    ) as Map<String, dynamic>;
+    final merchant = _parseMerchant(raw);
+    final idx = _merchants.indexWhere((m) => m.id == merchant.id);
+    if (idx >= 0) {
+      _merchants[idx] = merchant;
+    }
     _notify();
     return merchant;
   }

@@ -109,7 +109,11 @@ class FoodMerchant {
     return coverageSubcities.contains(pinSubcity);
   }
 
-  FoodMerchant copyWith({bool? isOpen, String? ownerUserId}) {
+  FoodMerchant copyWith({
+    bool? isOpen,
+    String? ownerUserId,
+    bool clearOwner = false,
+  }) {
     return FoodMerchant(
       id: id,
       name: name,
@@ -122,7 +126,7 @@ class FoodMerchant {
       rating: rating,
       coverUrl: coverUrl,
       hoursLabel: hoursLabel,
-      ownerUserId: ownerUserId ?? this.ownerUserId,
+      ownerUserId: clearOwner ? null : (ownerUserId ?? this.ownerUserId),
       coverageSubcities: coverageSubcities,
     );
   }

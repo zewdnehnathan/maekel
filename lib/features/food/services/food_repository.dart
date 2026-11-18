@@ -80,6 +80,12 @@ abstract class FoodRepository {
     List<String> coverageSubcities,
     int deliveryFeeEtb,
     int minOrderEtb,
+    String? ownerPhone,
+  });
+  Future<FoodMerchant> opsAssignOwner(
+    String merchantId, {
+    String? ownerPhone,
+    String? ownerUserId,
   });
   Future<FoodOrder> opsReassign(String orderId, {String? riderId});
   Future<FoodOrder> opsCancel(String orderId, {String reason});
@@ -690,6 +696,7 @@ class InMemoryFoodRepository implements FoodRepository {
     List<String> coverageSubcities = const [],
     int deliveryFeeEtb = 70,
     int minOrderEtb = 150,
+    String? ownerPhone,
   }) async {
     final m = FoodMerchant(
       id: _id('m'),
@@ -704,12 +711,28 @@ class InMemoryFoodRepository implements FoodRepository {
       coverUrl:
           'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900',
       hoursLabel: '10:00 – 22:00',
+      ownerUserId: ownerPhone != null ? 'local-owner' : null,
       coverageSubcities:
           coverageSubcities.isEmpty ? [subcity] : coverageSubcities,
     );
     _merchants.add(m);
     _notify();
     return m;
+  }
+
+  @override
+  Future<FoodMerchant> opsAssignOwner(
+    String merchantId, {
+    String? ownerPhone,
+    String? ownerUserId,
+  }) async {
+    final idx = _merchants.indexWhere((m) => m.id == merchantId);
+    if (idx < 0) throw StateError('Not found');
+    _merchants[idx] = _merchants[idx].copyWith(
+      ownerUserId: ownerUserId ?? (ownerPhone != null ? 'local-owner' : null),
+    );
+    _notify();
+    return _merchants[idx];
   }
 
   @override
