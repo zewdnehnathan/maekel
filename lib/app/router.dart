@@ -18,6 +18,7 @@ import '../features/food/screens/food_screen.dart';
 import '../features/games/screens/brick_breaker_screen.dart';
 import '../features/games/screens/candy_crush_screen.dart';
 import '../features/games/screens/games_hub_screen.dart';
+import '../features/games/screens/road_fighter_screen.dart';
 import '../features/games/screens/tetris_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/market/screens/market_ad_detail_screen.dart';
@@ -65,6 +66,7 @@ abstract final class AppRoutes {
   static const brickBreaker = '/games/brick-breaker';
   static const tetris = '/games/tetris';
   static const candyCrush = '/games/candy-crush';
+  static const roadFighter = '/games/road-fighter';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -270,6 +272,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'candy-crush',
             builder: (context, state) => const CandyCrushScreen(),
+          ),
+          GoRoute(
+            path: 'road-fighter',
+            builder: (context, state) => const RoadFighterScreen(),
           ),
         ],
       ),

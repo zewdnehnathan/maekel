@@ -24,6 +24,7 @@ class GamesApi {
       ArcadeGame.tetris: parse('tetris'),
       ArcadeGame.brickBreaker: parse('brickBreaker'),
       ArcadeGame.candyCrush: parse('candyCrush'),
+      ArcadeGame.roadFighter: parse('roadFighter'),
     };
   }
 

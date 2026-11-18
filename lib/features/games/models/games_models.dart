@@ -1,16 +1,18 @@
-enum ArcadeGame { tetris, brickBreaker, candyCrush }
+enum ArcadeGame { tetris, brickBreaker, candyCrush, roadFighter }
 
 extension ArcadeGameApi on ArcadeGame {
   String get apiValue => switch (this) {
         ArcadeGame.tetris => 'tetris',
         ArcadeGame.brickBreaker => 'brickBreaker',
         ArcadeGame.candyCrush => 'candyCrush',
+        ArcadeGame.roadFighter => 'roadFighter',
       };
 
   String get label => switch (this) {
         ArcadeGame.tetris => 'Tetris',
         ArcadeGame.brickBreaker => 'Brick Breaker',
         ArcadeGame.candyCrush => 'Candy Crush',
+        ArcadeGame.roadFighter => 'Road Fighter',
       };
 }
 

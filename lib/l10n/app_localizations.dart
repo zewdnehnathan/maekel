@@ -344,6 +344,12 @@ abstract class AppLocalizations {
   /// **'Candy Crush'**
   String get candyCrush;
 
+  /// No description provided for @roadFighter.
+  ///
+  /// In en, this message translates to:
+  /// **'Road Fighter'**
+  String get roadFighter;
+
   /// No description provided for @comingSoon.
   ///
   /// In en, this message translates to:

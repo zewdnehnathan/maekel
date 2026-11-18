@@ -14,7 +14,12 @@ const port = envInt('GAMES_PORT', 3006);
 const pool = createPool(databaseUrl('maekel_games'));
 const DEFAULT_CITY = 'Addis Ababa';
 
-const gameSchema = z.enum(['tetris', 'brickBreaker', 'candyCrush']);
+const gameSchema = z.enum([
+  'tetris',
+  'brickBreaker',
+  'candyCrush',
+  'roadFighter',
+]);
 
 async function boot() {
   await migrate(pool, [
@@ -56,16 +61,18 @@ async function boot() {
       };
     }
 
-    const [tetris, brickBreaker, candyCrush] = await Promise.all([
+    const [tetris, brickBreaker, candyCrush, roadFighter] = await Promise.all([
       topScores('tetris', q.city, q.limit),
       topScores('brickBreaker', q.city, q.limit),
       topScores('candyCrush', q.city, q.limit),
+      topScores('roadFighter', q.city, q.limit),
     ]);
     return {
       city: q.city,
       tetris,
       brickBreaker,
       candyCrush,
+      roadFighter,
     };
   });
 
@@ -240,6 +247,7 @@ async function seed() {
       tetris: 4200,
       brick: 3100,
       candy: 6800,
+      road: 2400,
     },
     {
       id: 'b1000000-0000-4000-8000-000000000002',
@@ -247,6 +255,7 @@ async function seed() {
       tetris: 3600,
       brick: 4500,
       candy: 5400,
+      road: 3100,
     },
     {
       id: 'b1000000-0000-4000-8000-000000000003',
@@ -254,6 +263,7 @@ async function seed() {
       tetris: 5100,
       brick: 2800,
       candy: 7200,
+      road: 1900,
     },
   ] as const;
 
@@ -280,26 +290,37 @@ async function seed() {
          VALUES ($1,'candyCrush',$2,$3) ON CONFLICT DO NOTHING`,
         [p.id, p.candy, DEFAULT_CITY],
       );
+      await pool.query(
+        `INSERT INTO high_scores (user_id, game, score, city)
+         VALUES ($1,'roadFighter',$2,$3) ON CONFLICT DO NOTHING`,
+        [p.id, p.road, DEFAULT_CITY],
+      );
     }
     return;
   }
 
-  // If DB was seeded before candyCrush existed, backfill demo scores.
-  const candyCount = await pool.query(
-    `SELECT COUNT(*)::int AS c FROM high_scores WHERE game = 'candyCrush'`,
-  );
-  if (candyCount.rows[0].c === 0) {
-    for (const p of demo) {
-      await pool.query(
-        `INSERT INTO player_profiles (user_id, display_name, city)
-         VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
-        [p.id, p.name, DEFAULT_CITY],
-      );
-      await pool.query(
-        `INSERT INTO high_scores (user_id, game, score, city)
-         VALUES ($1,'candyCrush',$2,$3) ON CONFLICT DO NOTHING`,
-        [p.id, p.candy, DEFAULT_CITY],
-      );
+  // Backfill demo scores for games added after first seed.
+  for (const game of [
+    { key: 'candyCrush', score: (p: (typeof demo)[number]) => p.candy },
+    { key: 'roadFighter', score: (p: (typeof demo)[number]) => p.road },
+  ] as const) {
+    const existing = await pool.query(
+      `SELECT COUNT(*)::int AS c FROM high_scores WHERE game = $1`,
+      [game.key],
+    );
+    if (existing.rows[0].c === 0) {
+      for (const p of demo) {
+        await pool.query(
+          `INSERT INTO player_profiles (user_id, display_name, city)
+           VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+          [p.id, p.name, DEFAULT_CITY],
+        );
+        await pool.query(
+          `INSERT INTO high_scores (user_id, game, score, city)
+           VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
+          [p.id, game.key, game.score(p), DEFAULT_CITY],
+        );
+      }
     }
   }
 }

@@ -72,6 +72,13 @@ class GamesHubScreen extends ConsumerWidget {
                 icon: Icons.bubble_chart_rounded,
                 onTap: () => context.push(AppRoutes.candyCrush),
               ),
+              const SizedBox(height: 12),
+              _GameEntry(
+                title: l10n.roadFighter,
+                subtitle: 'Dodge · fuel up · drive farther',
+                icon: Icons.directions_car_rounded,
+                onTap: () => context.push(AppRoutes.roadFighter),
+              ),
               const SizedBox(height: 28),
               Text(
                 'ADDIS TOP 3',
@@ -109,6 +116,11 @@ class GamesHubScreen extends ConsumerWidget {
                     AddisLeaderboardCard(
                       game: ArcadeGame.candyCrush,
                       entries: data[ArcadeGame.candyCrush] ?? const [],
+                    ),
+                    const SizedBox(height: 12),
+                    AddisLeaderboardCard(
+                      game: ArcadeGame.roadFighter,
+                      entries: data[ArcadeGame.roadFighter] ?? const [],
                     ),
                   ],
                 ),

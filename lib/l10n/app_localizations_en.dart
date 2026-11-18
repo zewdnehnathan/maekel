@@ -141,6 +141,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get candyCrush => 'Candy Crush';
 
   @override
+  String get roadFighter => 'Road Fighter';
+
+  @override
   String get comingSoon => 'Coming soon';
 
   @override
