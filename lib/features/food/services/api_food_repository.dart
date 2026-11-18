@@ -376,6 +376,22 @@ class ApiFoodRepository implements FoodRepository {
   }
 
   @override
+  Future<String> uploadDishPhoto({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  }) async {
+    final raw = await _client.postMultipart(
+      '/v1/food/merchant/media',
+      bytes: bytes,
+      filename: filename,
+      contentType: contentType,
+      auth: true,
+    ) as Map<String, dynamic>;
+    return raw['url'] as String;
+  }
+
+  @override
   Future<MenuItem> createMenuItem({
     required String name,
     required int priceEtb,

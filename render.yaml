@@ -43,6 +43,8 @@ services:
         value: "5"
       - key: MARKET_PHONE_REVEAL_DAILY_LIMIT
         value: "10"
+      - key: PUBLIC_API_BASE
+        value: "https://maekel-api.onrender.com"
       # Set these in the Render dashboard from your Neon connection string:
       # POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD
       - key: POSTGRES_HOST

@@ -1,8 +1,15 @@
+import { createReadStream, createWriteStream } from 'node:fs';
+import { access, mkdir, unlink } from 'node:fs/promises';
+import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
+import { fileURLToPath } from 'node:url';
+import multipart from '@fastify/multipart';
 import {
   AppError,
   createPool,
   createService,
   databaseUrl,
+  env,
   envInt,
   listen,
   migrate,
@@ -12,6 +19,10 @@ import {
 import { z } from 'zod';
 
 const port = envInt('FOOD_PORT', 3003);
+const publicApiBase = env(
+  'PUBLIC_API_BASE',
+  env('RENDER_EXTERNAL_URL', 'http://127.0.0.1:8080'),
+).replace(/\/$/, '');
 const pool = createPool(databaseUrl('maekel_food'));
 /** When true, orders auto-advance without merchant/rider (legacy demo). */
 const autoAdvance = process.env.FOOD_AUTO_ADVANCE === 'true';
@@ -20,7 +31,11 @@ const merchantStaff = ['food_merchant', 'food_ops', 'platform_admin'] as const;
 const riderStaff = ['food_rider', 'food_ops', 'platform_admin'] as const;
 const opsStaff = ['food_ops', 'platform_admin'] as const;
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+
 async function boot() {
+  await mkdir(uploadsDir, { recursive: true });
   await migrate(pool, [
     `CREATE TABLE IF NOT EXISTS merchants (
       id TEXT PRIMARY KEY,
@@ -80,7 +95,75 @@ async function boot() {
   ]);
   await seed();
 
-  const app = await createService({ name: 'food-service', port });
+  const app = await createService({
+    name: 'food-service',
+    port,
+    bodyLimit: 12 * 1024 * 1024,
+  });
+
+  await app.register(multipart, {
+    limits: {
+      fileSize: 8 * 1024 * 1024,
+      files: 1,
+    },
+  });
+
+  // ── Dish photo upload (merchant-owned) ───────────────────────────────
+  app.post('/v1/food/merchant/media', async (req) => {
+    const user = requireAuth(req);
+    await requireOwnedMerchant(user.sub, user.roles);
+    const file = await req.file();
+    if (!file) {
+      throw new AppError('No file uploaded', 400, 'validation_error');
+    }
+    const mime = file.mimetype || '';
+    if (!mime.startsWith('image/')) {
+      throw new AppError('Only image uploads are allowed', 400, 'invalid_media');
+    }
+    const ext = extensionForMime(mime);
+    const id = crypto.randomUUID();
+    const filename = `${id}${ext}`;
+    const dest = path.join(uploadsDir, filename);
+    try {
+      await pipeline(file.file, createWriteStream(dest));
+    } catch (err) {
+      await unlink(dest).catch(() => undefined);
+      throw err;
+    }
+    if (file.file.truncated) {
+      await unlink(dest).catch(() => undefined);
+      throw new AppError('File too large (max 8MB)', 413, 'file_too_large');
+    }
+    return {
+      id,
+      url: `${publicApiBase}/v1/food/media/files/${filename}`,
+      contentType: mime,
+    };
+  });
+
+  app.get('/v1/food/media/files/:filename', async (req, reply) => {
+    const { filename } = req.params as { filename: string };
+    if (!/^[a-f0-9-]+\.(jpe?g|png|webp|gif)$/i.test(filename)) {
+      throw new AppError('Invalid media path', 400, 'validation_error');
+    }
+    const filePath = path.join(uploadsDir, filename);
+    try {
+      await access(filePath);
+    } catch {
+      throw new AppError('Media not found', 404, 'not_found');
+    }
+    const ext = path.extname(filename).toLowerCase();
+    const type =
+      ext === '.png'
+        ? 'image/png'
+        : ext === '.webp'
+          ? 'image/webp'
+          : ext === '.gif'
+            ? 'image/gif'
+            : 'image/jpeg';
+    reply.type(type);
+    return reply.send(createReadStream(filePath));
+  });
 
   // ── Catalog ──────────────────────────────────────────────────────────
   app.get('/v1/food/merchants', async (req) => {
@@ -468,11 +551,7 @@ async function boot() {
         name: z.string().min(1),
         description: z.string().default(''),
         priceEtb: z.number().int().positive(),
-        photoUrl: z
-          .string()
-          .default(
-            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700',
-          ),
+        photoUrl: z.string().min(1).optional(),
         available: z.boolean().default(true),
         modifiers: z
           .array(
@@ -491,6 +570,9 @@ async function boot() {
       name: m.name,
       priceEtb: m.priceEtb,
     }));
+    const photoUrl =
+      body.photoUrl?.trim() ||
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700';
     await pool.query(
       `INSERT INTO menu_items (
         id, merchant_id, name, description, price_etb, photo_url, available, modifiers
@@ -501,7 +583,7 @@ async function boot() {
         body.name,
         body.description,
         body.priceEtb,
-        body.photoUrl,
+        photoUrl,
         body.available,
         JSON.stringify(modifiers),
       ],
@@ -521,7 +603,7 @@ async function boot() {
         name: z.string().min(1).optional(),
         description: z.string().optional(),
         priceEtb: z.number().int().positive().optional(),
-        photoUrl: z.string().optional(),
+        photoUrl: z.string().min(1).optional(),
         available: z.boolean().optional(),
         modifiers: z
           .array(
@@ -918,6 +1000,19 @@ function coversSubcity(
   const coverage = merchant.coverageSubcities;
   if (!coverage.length) return merchant.subcity === subcity;
   return coverage.includes(subcity);
+}
+
+function extensionForMime(mime: string): string {
+  switch (mime) {
+    case 'image/png':
+      return '.png';
+    case 'image/webp':
+      return '.webp';
+    case 'image/gif':
+      return '.gif';
+    default:
+      return '.jpg';
+  }
 }
 
 /** Menu/orders mutations always require ownership of THAT restaurant only. */

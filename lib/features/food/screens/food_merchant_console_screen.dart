@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/router.dart';
@@ -99,19 +102,92 @@ class _FoodMerchantConsoleScreenState
     );
     final desc = TextEditingController(text: existing?.description ?? '');
     var available = existing?.available ?? true;
+    String? remotePhotoUrl = existing?.photoUrl;
+    List<int>? pendingBytes;
+    String? pendingFilename;
+    String? pendingContentType;
+    final picker = ImagePicker();
 
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setLocal) {
+            Future<void> pick(ImageSource source) async {
+              final file = await picker.pickImage(
+                source: source,
+                maxWidth: 1600,
+                imageQuality: 85,
+              );
+              if (file == null) return;
+              final bytes = await file.readAsBytes();
+              setLocal(() {
+                pendingBytes = bytes;
+                pendingFilename =
+                    file.name.isEmpty ? 'dish.jpg' : file.name;
+                pendingContentType = _guessContentType(file.name);
+                remotePhotoUrl = null;
+              });
+            }
+
             return AlertDialog(
               backgroundColor: MaekelColors.panel,
               title: Text(existing == null ? 'Add dish' : 'Edit dish'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SizedBox(
+                        height: 140,
+                        child: pendingBytes != null
+                            ? Image.memory(
+                                Uint8List.fromList(pendingBytes!),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              )
+                            : remotePhotoUrl != null &&
+                                    remotePhotoUrl!.isNotEmpty
+                                ? Image.network(
+                                    remotePhotoUrl!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      color: MaekelColors.panelLift,
+                                      alignment: Alignment.center,
+                                      child: const Icon(Icons.restaurant),
+                                    ),
+                                  )
+                                : Container(
+                                    color: MaekelColors.panelLift,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Add a photo',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => pick(ImageSource.gallery),
+                          icon: const Icon(Icons.photo_library_outlined, size: 18),
+                          label: const Text('Gallery'),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => pick(ImageSource.camera),
+                          icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                          label: const Text('Camera'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     TextField(
                       controller: name,
                       style: const TextStyle(color: MaekelColors.ink),
@@ -168,6 +244,10 @@ class _FoodMerchantConsoleScreenState
     final nameVal = name.text.trim();
     final priceVal = int.tryParse(price.text.trim());
     final descVal = desc.text.trim();
+    final bytes = pendingBytes;
+    final filename = pendingFilename;
+    final contentType = pendingContentType;
+    final keepRemote = remotePhotoUrl;
     name.dispose();
     price.dispose();
     desc.dispose();
@@ -178,11 +258,20 @@ class _FoodMerchantConsoleScreenState
 
     await _run(() async {
       final repo = ref.read(foodRepositoryProvider);
+      String? photoUrl = keepRemote;
+      if (bytes != null && filename != null) {
+        photoUrl = await repo.uploadDishPhoto(
+          bytes: bytes,
+          filename: filename,
+          contentType: contentType ?? 'image/jpeg',
+        );
+      }
       if (existing == null) {
         await repo.createMenuItem(
           name: nameVal,
           priceEtb: priceVal,
           description: descVal,
+          photoUrl: photoUrl,
           available: available,
         );
       } else {
@@ -191,10 +280,19 @@ class _FoodMerchantConsoleScreenState
           name: nameVal,
           priceEtb: priceVal,
           description: descVal,
+          photoUrl: photoUrl,
           available: available,
         );
       }
     });
+  }
+
+  String _guessContentType(String name) {
+    final lower = name.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
   }
 
   @override
@@ -331,21 +429,46 @@ class _FoodMerchantConsoleScreenState
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      item.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.network(
+                                      item.photoUrl,
+                                      width: 64,
+                                      height: 64,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        width: 64,
+                                        height: 64,
+                                        color: MaekelColors.panelLift,
+                                        child: const Icon(Icons.restaurant),
+                                      ),
                                     ),
                                   ),
-                                  Text(
-                                    '${item.priceEtb} ETB',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(color: MaekelColors.food),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium,
+                                        ),
+                                        Text(
+                                          '${item.priceEtb} ETB',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                color: MaekelColors.food,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),

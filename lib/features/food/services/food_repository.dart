@@ -45,6 +45,11 @@ abstract class FoodRepository {
   Future<FoodMerchant> setMerchantOpen(bool isOpen);
   Future<List<FoodOrder>> getMerchantOrders();
   Future<List<MenuItem>> getMerchantMenu();
+  Future<String> uploadDishPhoto({
+    required List<int> bytes,
+    required String filename,
+    String contentType,
+  });
   Future<MenuItem> createMenuItem({
     required String name,
     required int priceEtb,
@@ -557,6 +562,15 @@ class InMemoryFoodRepository implements FoodRepository {
     final id = _ownerMerchantId;
     if (id == null) return const [];
     return getMenu(id);
+  }
+
+  @override
+  Future<String> uploadDishPhoto({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  }) async {
+    return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700';
   }
 
   @override
