@@ -448,6 +448,144 @@ async function boot() {
     return { items: res.rows.map(mapOrder), merchant };
   });
 
+  app.get('/v1/food/merchant/menu', async (req) => {
+    const user = requireAuth(req);
+    const merchant = await requireOwnedMerchant(user.sub, user.roles);
+    const res = await pool.query(
+      `SELECT * FROM menu_items WHERE merchant_id = $1 ORDER BY name`,
+      [merchant.id],
+    );
+    return { items: res.rows.map(mapMenuItem), merchant };
+  });
+
+  app.post('/v1/food/merchant/menu', async (req) => {
+    const user = requireAuth(req);
+    const merchant = await requireOwnedMerchant(user.sub, user.roles);
+    const body = z
+      .object({
+        name: z.string().min(1),
+        description: z.string().default(''),
+        priceEtb: z.number().int().positive(),
+        photoUrl: z
+          .string()
+          .default(
+            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700',
+          ),
+        available: z.boolean().default(true),
+        modifiers: z
+          .array(
+            z.object({
+              id: z.string().optional(),
+              name: z.string().min(1),
+              priceEtb: z.number().int().nonnegative().default(0),
+            }),
+          )
+          .default([]),
+      })
+      .parse(req.body ?? {});
+    const id = `i-${crypto.randomUUID().slice(0, 8)}`;
+    const modifiers = body.modifiers.map((m, i) => ({
+      id: m.id ?? `mod-${id}-${i}`,
+      name: m.name,
+      priceEtb: m.priceEtb,
+    }));
+    await pool.query(
+      `INSERT INTO menu_items (
+        id, merchant_id, name, description, price_etb, photo_url, available, modifiers
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        id,
+        merchant.id,
+        body.name,
+        body.description,
+        body.priceEtb,
+        body.photoUrl,
+        body.available,
+        JSON.stringify(modifiers),
+      ],
+    );
+    const res = await pool.query(`SELECT * FROM menu_items WHERE id = $1`, [
+      id,
+    ]);
+    return mapMenuItem(res.rows[0]);
+  });
+
+  app.patch('/v1/food/merchant/menu/:id', async (req) => {
+    const user = requireAuth(req);
+    const merchant = await requireOwnedMerchant(user.sub, user.roles);
+    const { id } = req.params as { id: string };
+    const body = z
+      .object({
+        name: z.string().min(1).optional(),
+        description: z.string().optional(),
+        priceEtb: z.number().int().positive().optional(),
+        photoUrl: z.string().optional(),
+        available: z.boolean().optional(),
+        modifiers: z
+          .array(
+            z.object({
+              id: z.string().optional(),
+              name: z.string().min(1),
+              priceEtb: z.number().int().nonnegative().default(0),
+            }),
+          )
+          .optional(),
+      })
+      .parse(req.body ?? {});
+    const existing = await pool.query(
+      `SELECT * FROM menu_items WHERE id = $1 AND merchant_id = $2`,
+      [id, merchant.id],
+    );
+    if (!existing.rowCount) {
+      throw new AppError('Menu item not found', 404, 'not_found');
+    }
+    const cur = mapMenuItem(existing.rows[0]);
+    const modifiers =
+      body.modifiers?.map((m, i) => ({
+        id: m.id ?? `mod-${id}-${i}`,
+        name: m.name,
+        priceEtb: m.priceEtb,
+      })) ?? cur.modifiers;
+    await pool.query(
+      `UPDATE menu_items SET
+        name = $3,
+        description = $4,
+        price_etb = $5,
+        photo_url = $6,
+        available = $7,
+        modifiers = $8
+       WHERE id = $1 AND merchant_id = $2`,
+      [
+        id,
+        merchant.id,
+        body.name ?? cur.name,
+        body.description ?? cur.description,
+        body.priceEtb ?? cur.priceEtb,
+        body.photoUrl ?? cur.photoUrl,
+        body.available ?? cur.available,
+        JSON.stringify(modifiers),
+      ],
+    );
+    const res = await pool.query(`SELECT * FROM menu_items WHERE id = $1`, [
+      id,
+    ]);
+    return mapMenuItem(res.rows[0]);
+  });
+
+  app.delete('/v1/food/merchant/menu/:id', async (req) => {
+    const user = requireAuth(req);
+    const merchant = await requireOwnedMerchant(user.sub, user.roles);
+    const { id } = req.params as { id: string };
+    const res = await pool.query(
+      `DELETE FROM menu_items WHERE id = $1 AND merchant_id = $2`,
+      [id, merchant.id],
+    );
+    if (!res.rowCount) {
+      throw new AppError('Menu item not found', 404, 'not_found');
+    }
+    return { ok: true };
+  });
+
   app.post('/v1/food/merchant/orders/:id/accept', async (req) => {
     const user = requireAuth(req);
     const merchant = await requireOwnedMerchant(user.sub, user.roles);

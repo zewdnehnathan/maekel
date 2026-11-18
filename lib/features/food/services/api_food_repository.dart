@@ -357,6 +357,88 @@ class ApiFoodRepository implements FoodRepository {
   }
 
   @override
+  Future<List<MenuItem>> getMerchantMenu() async {
+    final raw = await _client.get('/v1/food/merchant/menu', auth: true);
+    final items = ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseMenuItem)
+        .toList();
+    for (final item in items) {
+      final idx = _menu.indexWhere((m) => m.id == item.id);
+      if (idx >= 0) {
+        _menu[idx] = item;
+      } else {
+        _menu.add(item);
+      }
+    }
+    _notify();
+    return items;
+  }
+
+  @override
+  Future<MenuItem> createMenuItem({
+    required String name,
+    required int priceEtb,
+    String description = '',
+    String? photoUrl,
+    bool available = true,
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/merchant/menu',
+      auth: true,
+      body: {
+        'name': name,
+        'description': description,
+        'priceEtb': priceEtb,
+        if (photoUrl != null) 'photoUrl': photoUrl,
+        'available': available,
+      },
+    ) as Map<String, dynamic>;
+    final item = _parseMenuItem(raw);
+    _menu.add(item);
+    _notify();
+    return item;
+  }
+
+  @override
+  Future<MenuItem> updateMenuItem(
+    String itemId, {
+    String? name,
+    int? priceEtb,
+    String? description,
+    String? photoUrl,
+    bool? available,
+  }) async {
+    final raw = await _client.patch(
+      '/v1/food/merchant/menu/$itemId',
+      auth: true,
+      body: {
+        if (name != null) 'name': name,
+        if (priceEtb != null) 'priceEtb': priceEtb,
+        if (description != null) 'description': description,
+        if (photoUrl != null) 'photoUrl': photoUrl,
+        if (available != null) 'available': available,
+      },
+    ) as Map<String, dynamic>;
+    final item = _parseMenuItem(raw);
+    final idx = _menu.indexWhere((m) => m.id == item.id);
+    if (idx >= 0) {
+      _menu[idx] = item;
+    } else {
+      _menu.add(item);
+    }
+    _notify();
+    return item;
+  }
+
+  @override
+  Future<void> deleteMenuItem(String itemId) async {
+    await _client.delete('/v1/food/merchant/menu/$itemId', auth: true);
+    _menu.removeWhere((m) => m.id == itemId);
+    _notify();
+  }
+
+  @override
   Future<FoodOrder> merchantAccept(String orderId) async {
     final raw = await _client.post(
       '/v1/food/merchant/orders/$orderId/accept',

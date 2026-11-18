@@ -44,6 +44,23 @@ abstract class FoodRepository {
   Future<FoodMerchant> claimMerchant(String merchantId);
   Future<FoodMerchant> setMerchantOpen(bool isOpen);
   Future<List<FoodOrder>> getMerchantOrders();
+  Future<List<MenuItem>> getMerchantMenu();
+  Future<MenuItem> createMenuItem({
+    required String name,
+    required int priceEtb,
+    String description,
+    String? photoUrl,
+    bool available,
+  });
+  Future<MenuItem> updateMenuItem(
+    String itemId, {
+    String? name,
+    int? priceEtb,
+    String? description,
+    String? photoUrl,
+    bool? available,
+  });
+  Future<void> deleteMenuItem(String itemId);
   Future<FoodOrder> merchantAccept(String orderId);
   Future<FoodOrder> merchantReject(String orderId, {String reason});
   Future<FoodOrder> merchantPreparing(String orderId);
@@ -527,6 +544,71 @@ class InMemoryFoodRepository implements FoodRepository {
               o.status != OrderStatus.cancelled,
         )
         .toList();
+  }
+
+  @override
+  Future<List<MenuItem>> getMerchantMenu() async {
+    final id = _ownerMerchantId;
+    if (id == null) return const [];
+    return getMenu(id);
+  }
+
+  @override
+  Future<MenuItem> createMenuItem({
+    required String name,
+    required int priceEtb,
+    String description = '',
+    String? photoUrl,
+    bool available = true,
+  }) async {
+    final id = _ownerMerchantId;
+    if (id == null) throw StateError('No merchant');
+    final item = MenuItem(
+      id: _id('i'),
+      merchantId: id,
+      name: name,
+      description: description,
+      priceEtb: priceEtb,
+      photoUrl: photoUrl ??
+          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700',
+      available: available,
+    );
+    _menu.add(item);
+    _notify();
+    return item;
+  }
+
+  @override
+  Future<MenuItem> updateMenuItem(
+    String itemId, {
+    String? name,
+    int? priceEtb,
+    String? description,
+    String? photoUrl,
+    bool? available,
+  }) async {
+    final idx = _menu.indexWhere((i) => i.id == itemId);
+    if (idx < 0) throw StateError('Not found');
+    final cur = _menu[idx];
+    final next = MenuItem(
+      id: cur.id,
+      merchantId: cur.merchantId,
+      name: name ?? cur.name,
+      description: description ?? cur.description,
+      priceEtb: priceEtb ?? cur.priceEtb,
+      photoUrl: photoUrl ?? cur.photoUrl,
+      available: available ?? cur.available,
+      modifiers: cur.modifiers,
+    );
+    _menu[idx] = next;
+    _notify();
+    return next;
+  }
+
+  @override
+  Future<void> deleteMenuItem(String itemId) async {
+    _menu.removeWhere((i) => i.id == itemId);
+    _notify();
   }
 
   @override
