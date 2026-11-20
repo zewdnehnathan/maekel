@@ -88,6 +88,12 @@ class MarketScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
+                  label: _priceLabel(filters),
+                  selected: filters.minPrice != null || filters.maxPrice != null,
+                  onTap: () => _pickPrice(context, ref),
+                ),
+                const SizedBox(width: 8),
+                _FilterChip(
                   label: switch (filters.sort) {
                     AdSort.newest => 'Newest',
                     AdSort.priceLow => 'Price ↑',
@@ -99,6 +105,8 @@ class MarketScreen extends ConsumerWidget {
                 if (filters.categoryId != null ||
                     filters.subcity != null ||
                     filters.condition != null ||
+                    filters.minPrice != null ||
+                    filters.maxPrice != null ||
                     filters.query.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   _FilterChip(
@@ -266,6 +274,116 @@ class MarketScreen extends ConsumerWidget {
     ref.read(marketFiltersProvider.notifier).setSubcity(
           picked.isEmpty ? null : picked,
         );
+  }
+
+  String _priceLabel(MarketFilters filters) {
+    final min = filters.minPrice;
+    final max = filters.maxPrice;
+    if (min != null && max != null) return 'ETB $min–$max';
+    if (min != null) return 'ETB $min+';
+    if (max != null) return 'Up to ETB $max';
+    return 'Price range';
+  }
+
+  Future<void> _pickPrice(BuildContext context, WidgetRef ref) async {
+    final current = ref.read(marketFiltersProvider);
+    final minController = TextEditingController(
+      text: current.minPrice?.toString() ?? '',
+    );
+    final maxController = TextEditingController(
+      text: current.maxPrice?.toString() ?? '',
+    );
+    final applied = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: MaekelColors.panel,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Price range (ETB)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: minController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: MaekelColors.ink),
+                  decoration: const InputDecoration(
+                    labelText: 'Minimum',
+                    hintText: 'Any',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: maxController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: MaekelColors.ink),
+                  decoration: const InputDecoration(
+                    labelText: 'Maximum',
+                    hintText: 'Any',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          ref
+                              .read(marketFiltersProvider.notifier)
+                              .setPriceRange();
+                          Navigator.pop(context, true);
+                        },
+                        child: const Text('Clear'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {
+                          final min = int.tryParse(minController.text.trim());
+                          final max = int.tryParse(maxController.text.trim());
+                          if (min != null && max != null && min > max) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Minimum cannot be higher than maximum.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          ref.read(marketFiltersProvider.notifier).setPriceRange(
+                                min: min,
+                                max: max,
+                              );
+                          Navigator.pop(context, true);
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    minController.dispose();
+    maxController.dispose();
+    if (applied != true) return;
   }
 
   Future<void> _pickCondition(BuildContext context, WidgetRef ref) async {

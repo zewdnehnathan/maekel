@@ -276,6 +276,13 @@ async function boot() {
     );
     if (!itemRes.rowCount) throw new AppError('Item not found', 404, 'not_found');
     const item = mapMenuItem(itemRes.rows[0]);
+    if (!item.available) {
+      throw new AppError(
+        'This item is unavailable right now.',
+        409,
+        'item_unavailable',
+      );
+    }
     const cart = await getCart(user.sub);
     if (cart.merchantId && cart.merchantId !== item.merchantId) {
       throw new AppError(
@@ -436,12 +443,14 @@ async function boot() {
     requireRole(user, [...opsStaff]);
     const { id } = req.params as { id: string };
     const order = await getOrder(id);
+    // Ops override: may mark delivered without the customer OTP (D04).
     const next: Record<string, string> = {
       placed: 'confirmed',
       confirmed: 'preparing',
       preparing: 'ready',
       ready: 'pickedUp',
       pickedUp: 'onTheWay',
+      onTheWay: 'delivered',
     };
     const status = next[order.status] ?? order.status;
     await pool.query(`UPDATE orders SET status = $2 WHERE id = $1`, [id, status]);
@@ -884,8 +893,7 @@ async function boot() {
         body.minOrderEtb,
         body.coverUrl,
         body.hoursLabel,
-        // If no staff phone given, leave unowned until ops assigns — never
-        // auto-own seed/demo stores to a random admin browsing claim lists.
+        // If no staff phone given, leave unowned until ops assigns.
         ownerId,
         JSON.stringify(coverage),
       ],
@@ -1281,45 +1289,34 @@ function mapPlace(row: Record<string, unknown>) {
 }
 
 async function seed() {
-  await pool.query(`
-    INSERT INTO merchants (
-      id, name, kind, subcity, is_open, eta_minutes, delivery_fee_etb,
-      min_order_etb, rating, cover_url, hours_label, coverage_subcities
-    ) VALUES
-    ('m-habesha','Habesha Kitfo House','restaurant','Bole',TRUE,35,80,200,4.7,'https://images.unsplash.com/photo-1604329760661-eeb838b49a5c?w=900','10:00 – 22:00','["Bole","CMC","Kirkos"]'),
-    ('m-burger','Addis Burger Lab','restaurant','Kazanchis',TRUE,28,70,150,4.5,'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=900','11:00 – 23:00','["Kazanchis","Kirkos","Bole"]'),
-    ('m-mart','Bole Fresh Mart','grocery','Bole',TRUE,40,60,250,4.3,'https://images.unsplash.com/photo-1542838132-92c53300491e?w=900','08:00 – 21:00','["Bole","CMC","Yeka"]'),
-    ('m-closed','Piassa Pasta (closed)','restaurant','Arada',FALSE,45,90,180,4.1,'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=900','12:00 – 20:00','["Arada","Piassa"]')
-    ON CONFLICT (id) DO NOTHING
-  `);
-  // Backfill coverage for older rows seeded without the column value.
-  await pool.query(`
-    UPDATE merchants SET coverage_subcities = '["Bole","CMC","Kirkos"]'::jsonb
-    WHERE id = 'm-habesha' AND (coverage_subcities = '[]'::jsonb OR coverage_subcities IS NULL)
-  `);
-  await pool.query(`
-    UPDATE merchants SET coverage_subcities = '["Kazanchis","Kirkos","Bole"]'::jsonb
-    WHERE id = 'm-burger' AND (coverage_subcities = '[]'::jsonb OR coverage_subcities IS NULL)
-  `);
-  await pool.query(`
-    UPDATE merchants SET coverage_subcities = '["Bole","CMC","Yeka"]'::jsonb
-    WHERE id = 'm-mart' AND (coverage_subcities = '[]'::jsonb OR coverage_subcities IS NULL)
-  `);
-  await pool.query(`
-    UPDATE merchants SET coverage_subcities = '["Arada","Piassa"]'::jsonb
-    WHERE id = 'm-closed' AND (coverage_subcities = '[]'::jsonb OR coverage_subcities IS NULL)
-  `);
-  await pool.query(`
-    INSERT INTO menu_items VALUES
-    ('i-kitfo','m-habesha','Special Kitfo','Minced beef, mitmita, ayib, kocho.',420,'https://images.unsplash.com/photo-1544025162-d76694265947?w=700',TRUE,'[{"id":"mod-injera","name":"Extra injera","priceEtb":40},{"id":"mod-spicy","name":"Extra spicy","priceEtb":0}]'),
-    ('i-tibs','m-habesha','Beef Tibs','Sautéed beef with rosemary & peppers.',380,'https://images.unsplash.com/photo-1432139555190-58524dae6a55?w=700',TRUE,'[]'),
-    ('i-burger','m-burger','Classic Smash Burger','Double patty, cheddar, house sauce.',320,'https://images.unsplash.com/photo-1550547660-d9450f859349?w=700',TRUE,'[{"id":"mod-fries","name":"Add fries","priceEtb":80}]'),
-    ('i-shake','m-burger','Vanilla Shake','Thick milkshake.',150,'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=700',TRUE,'[]'),
-    ('i-milk','m-mart','Fresh Milk 1L','Chilled dairy.',95,'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=700',TRUE,'[]'),
-    ('i-bread','m-mart','Sliced Bread','Soft white loaf.',55,'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=700',TRUE,'[]'),
-    ('i-eggs','m-mart','Eggs (12)','Farm eggs pack.',180,'https://images.unsplash.com/photo-1582722879054-132667174001?w=700',TRUE,'[]')
-    ON CONFLICT (id) DO NOTHING
-  `);
+  // No demo merchants/menus. Create them via Food ops + merchant console.
+  // Remove legacy demo rows if they still exist from older builds.
+  const demoMerchants = ['m-habesha', 'm-burger', 'm-mart', 'm-closed'];
+  await pool.query(`DELETE FROM orders WHERE merchant_id = ANY($1::text[])`, [
+    demoMerchants,
+  ]);
+  await pool.query(`DELETE FROM carts WHERE merchant_id = ANY($1::text[])`, [
+    demoMerchants,
+  ]);
+  await pool.query(
+    `DELETE FROM menu_items WHERE merchant_id = ANY($1::text[])
+      OR id = ANY($2::text[])`,
+    [
+      demoMerchants,
+      [
+        'i-kitfo',
+        'i-tibs',
+        'i-burger',
+        'i-shake',
+        'i-milk',
+        'i-bread',
+        'i-eggs',
+      ],
+    ],
+  );
+  await pool.query(`DELETE FROM merchants WHERE id = ANY($1::text[])`, [
+    demoMerchants,
+  ]);
 }
 
 boot().catch((err) => {

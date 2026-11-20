@@ -154,6 +154,111 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
     }
   }
 
+  Future<void> _addCategory() async {
+    final nameController = TextEditingController();
+    final idController = TextEditingController();
+    var iconName = _iconChoices.contains('category')
+        ? 'category'
+        : _iconChoices.first;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: MaekelColors.panel,
+              title: const Text('Add category'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      style: const TextStyle(color: MaekelColors.ink),
+                      decoration: const InputDecoration(
+                        labelText: 'Display name',
+                        hintText: 'e.g. Babies & Kids',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: idController,
+                      style: const TextStyle(color: MaekelColors.ink),
+                      decoration: const InputDecoration(
+                        labelText: 'Id (optional)',
+                        hintText: 'auto from name if empty',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      // ignore: deprecated_member_use
+                      value: iconName,
+                      dropdownColor: MaekelColors.panel,
+                      decoration: const InputDecoration(labelText: 'Icon key'),
+                      items: [
+                        for (final icon in _iconChoices)
+                          DropdownMenuItem(value: icon, child: Text(icon)),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setDialogState(() => iconName = v);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (ok != true) return;
+    final name = nameController.text.trim();
+    if (name.length < 2) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name must be at least 2 characters.')),
+      );
+      return;
+    }
+
+    try {
+      final created = await ref.read(marketRepositoryProvider).createCategory(
+            id: idController.text.trim().isEmpty
+                ? null
+                : idController.text.trim(),
+            name: name,
+            iconName: iconName,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added “${created.name}”.')),
+      );
+      await _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
+
   Future<void> _editCategory(MarketCategory category) async {
     final nameController = TextEditingController(text: category.name);
     var iconName = category.iconName;
@@ -492,14 +597,26 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                           const SizedBox(height: 10),
                         ],
                       const SizedBox(height: 18),
-                      Text(
-                        'CATEGORY CONFIG (${categories.length})',
-                        style: Theme.of(context).textTheme.labelLarge,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'CATEGORY CONFIG (${categories.length})',
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
+                          ),
+                          FilledButton.tonal(
+                            onPressed: _addCategory,
+                            child: const Text('Add category'),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       if (categories.isEmpty)
                         const GlassPanel(
-                          child: Text('No categories loaded.'),
+                          child: Text(
+                            'No categories yet. Add the first one to unlock Sell.',
+                          ),
                         )
                       else
                         for (final category in categories) ...[

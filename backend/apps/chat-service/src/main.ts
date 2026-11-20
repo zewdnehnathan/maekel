@@ -111,24 +111,6 @@ async function boot() {
     );
     await pool.query(`UPDATE threads SET updated_at = NOW() WHERE id = $1`, [id]);
 
-    // Demo seller auto-reply when buyer messages.
-    if (user.sub === thread.rows[0].buyer_id) {
-      setTimeout(async () => {
-        await pool.query(
-          `INSERT INTO messages (id, thread_id, sender_id, body) VALUES ($1,$2,$3,$4)`,
-          [
-            crypto.randomUUID(),
-            id,
-            thread.rows[0].seller_id,
-            'Thanks — still available. When can you meet in Addis?',
-          ],
-        );
-        await pool.query(`UPDATE threads SET updated_at = NOW() WHERE id = $1`, [
-          id,
-        ]);
-      }, 1000);
-    }
-
     return {
       id: msgId,
       threadId: id,

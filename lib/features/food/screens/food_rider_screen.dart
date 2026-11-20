@@ -120,6 +120,11 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
   }
 
   Widget _jobCard(FoodOrder order, {required bool mine}) {
+    final merchant = ref.watch(foodMerchantProvider(order.merchantId));
+    final pickupName = merchant?.name ?? 'Restaurant';
+    final pickupArea = merchant?.subcity ?? order.address.subcity;
+    final pickupHours = merchant?.hoursLabel;
+
     return GlassPanel(
       borderRadius: 16,
       padding: const EdgeInsets.all(14),
@@ -130,6 +135,30 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
             '#${order.id.substring(0, 8)} · ${order.status.label}',
             style: Theme.of(context).textTheme.titleMedium,
           ),
+          const SizedBox(height: 6),
+          Text(
+            'PICKUP',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: MaekelColors.food,
+                ),
+          ),
+          Text(
+            pickupName,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Text(
+            pickupHours == null
+                ? pickupArea
+                : '$pickupArea · $pickupHours',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'DROPOFF',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: MaekelColors.amber,
+                ),
+          ),
           Text(
             '${order.address.label} · ${order.address.subcity}',
             style: Theme.of(context).textTheme.bodyMedium,
@@ -138,9 +167,9 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
             order.address.details,
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
-            'Collect ${order.grandTotalEtb} ETB COD · merchant ${order.merchantId}',
+            'Collect ${order.grandTotalEtb} ETB COD',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: MaekelColors.food,
                 ),

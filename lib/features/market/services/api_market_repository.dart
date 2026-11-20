@@ -17,6 +17,7 @@ class ApiMarketRepository implements MarketRepository {
   final ApiClient _client;
   final _controller = StreamController<void>.broadcast();
   Timer? _poll;
+  String? _authedUserId;
 
   final List<MarketCategory> _categories = [];
   final List<MarketSeller> _sellers = [];
@@ -35,6 +36,42 @@ class ApiMarketRepository implements MarketRepository {
   }
 
   void _notify() => _controller.add(null);
+
+  /// Clears signed-in private cache (my ads, favorites, threads).
+  void clearAuthed() {
+    _authedUserId = null;
+    _favoriteIds.clear();
+    _threads.clear();
+    _messages.clear();
+    _notifications.clear();
+    _mySeller = null;
+    _notify();
+  }
+
+  Future<void> _mergeMyAds() async {
+    final myAds = await _client.get('/v1/market/my-ads', auth: true);
+    for (final raw in ((myAds as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()) {
+      final ad = _parseAd(raw);
+      final idx = _ads.indexWhere((a) => a.id == ad.id);
+      if (idx >= 0) {
+        _ads[idx] = ad;
+      } else {
+        _ads.add(ad);
+      }
+    }
+  }
+
+  Future<void> _refreshThreads() async {
+    final threads = await _client.get('/v1/chat/threads', auth: true);
+    _threads
+      ..clear()
+      ..addAll(
+        ((threads as Map)['items'] as List)
+            .cast<Map<String, dynamic>>()
+            .map(_parseThread),
+      );
+  }
 
   Future<void> refreshCatalog({bool silent = false}) async {
     try {
@@ -70,6 +107,20 @@ class ApiMarketRepository implements MarketRepository {
           ..clear()
           ..addAll(subs);
       }
+
+      // Public catalog wipe must not drop the seller's non-approved ads,
+      // and threads should stay fresh for inbox / chat.
+      if (_authedUserId != null) {
+        try {
+          await _mergeMyAds();
+          await _refreshThreads();
+          if (_mySeller != null) {
+            _upsertSeller(_mySeller!);
+          }
+        } catch (_) {
+          // Keep catalog even if authed merge fails (token expired, etc.).
+        }
+      }
       _notify();
     } catch (_) {
       if (!silent) {
@@ -79,6 +130,7 @@ class ApiMarketRepository implements MarketRepository {
   }
 
   Future<void> refreshAuthed(String userId) async {
+    _authedUserId = userId;
     try {
       final favs = await _client.get('/v1/market/favorites', auth: true);
       _favoriteIds
@@ -89,26 +141,8 @@ class ApiMarketRepository implements MarketRepository {
               .map((a) => a['id'] as String),
         );
 
-      final myAds = await _client.get('/v1/market/my-ads', auth: true);
-      for (final raw in ((myAds as Map)['items'] as List)
-          .cast<Map<String, dynamic>>()) {
-        final ad = _parseAd(raw);
-        final idx = _ads.indexWhere((a) => a.id == ad.id);
-        if (idx >= 0) {
-          _ads[idx] = ad;
-        } else {
-          _ads.add(ad);
-        }
-      }
-
-      final threads = await _client.get('/v1/chat/threads', auth: true);
-      _threads
-        ..clear()
-        ..addAll(
-          ((threads as Map)['items'] as List)
-              .cast<Map<String, dynamic>>()
-              .map(_parseThread),
-        );
+      await _mergeMyAds();
+      await _refreshThreads();
 
       try {
         final sellerRaw =
@@ -458,6 +492,33 @@ class ApiMarketRepository implements MarketRepository {
   }
 
   @override
+  Future<MarketCategory> createCategory({
+    String? id,
+    required String name,
+    required String iconName,
+  }) async {
+    final raw = await _client.post(
+      '/v1/market/ops/categories',
+      auth: true,
+      body: {
+        if (id != null && id.trim().isNotEmpty) 'id': id.trim(),
+        'name': name.trim(),
+        'iconName': iconName,
+      },
+    ) as Map<String, dynamic>;
+    final created = _parseCategory(raw);
+    final idx = _categories.indexWhere((c) => c.id == created.id);
+    if (idx >= 0) {
+      _categories[idx] = created;
+    } else {
+      _categories.add(created);
+    }
+    _categories.sort((a, b) => a.name.compareTo(b.name));
+    _notify();
+    return created;
+  }
+
+  @override
   Future<MarketCategory> updateCategory(
     String categoryId, {
     String? name,
@@ -565,10 +626,6 @@ class ApiMarketRepository implements MarketRepository {
       _threads[idx] = _threads[idx].copyWith(updatedAt: msg.sentAt);
     }
     _notify();
-    unawaited(Future<void>.delayed(const Duration(seconds: 2), () async {
-      await loadMessages(threadId);
-      _notify();
-    }));
     return msg;
   }
 
@@ -605,6 +662,7 @@ class ApiMarketRepository implements MarketRepository {
   }
 
   void _seedLocalCatalog() {
+    // Category taxonomy fallback until API refresh; no demo sellers/ads.
     _categories.addAll(const [
       MarketCategory(id: 'phones', name: 'Phones & Tablets', iconName: 'phone'),
       MarketCategory(id: 'electronics', name: 'Electronics', iconName: 'devices'),
@@ -616,133 +674,6 @@ class ApiMarketRepository implements MarketRepository {
         iconName: 'chair',
       ),
       MarketCategory(id: 'fashion', name: 'Fashion', iconName: 'checkroom'),
-    ]);
-
-    _sellers.addAll(const [
-      MarketSeller(
-        id: '00000000-0000-4000-8000-000000000001',
-        name: 'Hanna T.',
-        phoneE164: '+251911100001',
-        locationLabel: 'Bole, Addis Ababa',
-      ),
-      MarketSeller(
-        id: '00000000-0000-4000-8000-000000000002',
-        name: 'Yonas M.',
-        phoneE164: '+251911100002',
-        locationLabel: 'CMC, Addis Ababa',
-        showPhone: false,
-      ),
-      MarketSeller(
-        id: '00000000-0000-4000-8000-000000000003',
-        name: 'Sara K.',
-        phoneE164: '+251911100003',
-        locationLabel: 'Piassa, Addis Ababa',
-      ),
-    ]);
-
-    final now = DateTime.now();
-    _ads.addAll([
-      MarketAd(
-        id: 'a0000000-0000-4000-8000-000000000001',
-        sellerId: '00000000-0000-4000-8000-000000000001',
-        categoryId: 'phones',
-        title: 'iPhone 13 128GB — clean',
-        description:
-            'Unlocked iPhone 13, battery 89%. Box + cable. Meetup in Bole Atlas.',
-        priceEtb: 48500,
-        condition: AdCondition.used,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Bole',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1632661674596-df8befba448d?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(hours: 5)),
-        attributes: const {'Brand': 'Apple', 'Storage': '128GB'},
-      ),
-      MarketAd(
-        id: 'a0000000-0000-4000-8000-000000000002',
-        sellerId: '00000000-0000-4000-8000-000000000002',
-        categoryId: 'electronics',
-        title: '55" Smart TV 4K',
-        description: 'Almost new Samsung smart TV. Wall mount included.',
-        priceEtb: 62000,
-        condition: AdCondition.refurbished,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Yeka',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(days: 1)),
-        attributes: const {'Brand': 'Samsung', 'Size': '55"'},
-      ),
-      MarketAd(
-        id: 'a0000000-0000-4000-8000-000000000003',
-        sellerId: '00000000-0000-4000-8000-000000000003',
-        categoryId: 'vehicles',
-        title: 'Toyota Vitz 2008',
-        description: 'City car, AC working, duty paid. Serious buyers only.',
-        priceEtb: 980000,
-        condition: AdCondition.used,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Nifas Silk',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(days: 2)),
-        attributes: const {'Year': '2008', 'Fuel': 'Petrol'},
-      ),
-      MarketAd(
-        id: 'a0000000-0000-4000-8000-000000000004',
-        sellerId: '00000000-0000-4000-8000-000000000001',
-        categoryId: 'furniture',
-        title: 'Solid wood dining set',
-        description: '6 chairs + table. Pickup from Kirkos.',
-        priceEtb: 28000,
-        condition: AdCondition.used,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Kirkos',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1617806118233-18e1de247200?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(hours: 30)),
-      ),
-      MarketAd(
-        id: 'a0000000-0000-4000-8000-000000000005',
-        sellerId: '00000000-0000-4000-8000-000000000002',
-        categoryId: 'fashion',
-        title: 'Leather jacket — medium',
-        description: 'Genuine leather, worn twice. Cash on meetup.',
-        priceEtb: 4500,
-        condition: AdCondition.brandNew,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Arada',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(hours: 12)),
-      ),
-      MarketAd(
-        id: 'a0000000-0000-4000-8000-000000000006',
-        sellerId: '00000000-0000-4000-8000-000000000003',
-        categoryId: 'property',
-        title: 'Studio for rent — Bole',
-        description: 'Furnished studio near Edna Mall. Water + wifi included.',
-        priceEtb: 25000,
-        condition: AdCondition.used,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Bole',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(days: 3)),
-        attributes: const {'Type': 'Rent', 'Furnishing': 'Furnished'},
-      ),
     ]);
   }
 

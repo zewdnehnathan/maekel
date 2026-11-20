@@ -66,43 +66,59 @@ class FoodMerchantScreen extends ConsumerWidget {
           Text('MENU', style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 10),
           ...menu.map((item) {
+            final unavailable = !item.available;
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(10),
-                tileColor: MaekelColors.panel.withValues(alpha: 0.85),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: MaekelColors.glassBorder),
-                ),
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    item.photoUrl,
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 56,
-                      height: 56,
-                      color: MaekelColors.panelLift,
+              child: Opacity(
+                opacity: unavailable ? 0.55 : 1,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(10),
+                  tileColor: MaekelColors.panel.withValues(alpha: 0.85),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: unavailable
+                          ? MaekelColors.danger.withValues(alpha: 0.45)
+                          : MaekelColors.glassBorder,
                     ),
                   ),
-                ),
-                title: Text(item.name),
-                subtitle: Text(
-                  '${item.description}\n${item.priceEtb} ${AppConstants.currencyCode}',
-                ),
-                isThreeLine: true,
-                trailing: IconButton.filled(
-                  onPressed: !item.available
-                      ? null
-                      : () => _addItem(context, ref, item),
-                  style: IconButton.styleFrom(
-                    backgroundColor: MaekelColors.food,
-                    foregroundColor: MaekelColors.ink,
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      item.photoUrl,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 56,
+                        height: 56,
+                        color: MaekelColors.panelLift,
+                      ),
+                    ),
                   ),
-                  icon: const Icon(Icons.add_rounded),
+                  title: Text(item.name),
+                  subtitle: Text(
+                    unavailable
+                        ? 'Unavailable\n${item.priceEtb} ${AppConstants.currencyCode}'
+                        : '${item.description}\n${item.priceEtb} ${AppConstants.currencyCode}',
+                  ),
+                  isThreeLine: true,
+                  trailing: unavailable
+                      ? Text(
+                          'Unavailable',
+                          style:
+                              Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: MaekelColors.danger,
+                                  ),
+                        )
+                      : IconButton.filled(
+                          onPressed: () => _addItem(context, ref, item),
+                          style: IconButton.styleFrom(
+                            backgroundColor: MaekelColors.food,
+                            foregroundColor: MaekelColors.ink,
+                          ),
+                          icon: const Icon(Icons.add_rounded),
+                        ),
                 ),
               ),
             );

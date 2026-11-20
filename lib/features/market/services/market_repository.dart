@@ -64,6 +64,11 @@ abstract class MarketRepository {
   });
   Future<String> revealPhone(String adId);
   Future<MarketConfig> getConfig();
+  Future<MarketCategory> createCategory({
+    String? id,
+    required String name,
+    required String iconName,
+  });
   Future<MarketCategory> updateCategory(
     String categoryId, {
     String? name,
@@ -127,6 +132,7 @@ class InMemoryMarketRepository implements MarketRepository {
   }
 
   void _seed() {
+    // Category taxonomy only — no demo sellers or ads.
     _categories.addAll(const [
       MarketCategory(id: 'phones', name: 'Phones & Tablets', iconName: 'phone'),
       MarketCategory(id: 'electronics', name: 'Electronics', iconName: 'devices'),
@@ -134,133 +140,6 @@ class InMemoryMarketRepository implements MarketRepository {
       MarketCategory(id: 'property', name: 'Property', iconName: 'home'),
       MarketCategory(id: 'furniture', name: 'Home & Furniture', iconName: 'chair'),
       MarketCategory(id: 'fashion', name: 'Fashion', iconName: 'checkroom'),
-    ]);
-
-    _sellers.addAll(const [
-      MarketSeller(
-        id: 'seller-1',
-        name: 'Hanna T.',
-        phoneE164: '+251911100001',
-        locationLabel: 'Bole, Addis Ababa',
-      ),
-      MarketSeller(
-        id: 'seller-2',
-        name: 'Yonas M.',
-        phoneE164: '+251911100002',
-        locationLabel: 'CMC, Addis Ababa',
-        showPhone: false,
-      ),
-      MarketSeller(
-        id: 'seller-3',
-        name: 'Sara K.',
-        phoneE164: '+251911100003',
-        locationLabel: 'Piassa, Addis Ababa',
-      ),
-    ]);
-
-    final now = DateTime.now();
-    _ads.addAll([
-      MarketAd(
-        id: 'ad-1',
-        sellerId: 'seller-1',
-        categoryId: 'phones',
-        title: 'iPhone 13 128GB — clean',
-        description:
-            'Unlocked iPhone 13, battery 89%. Box + cable. Meetup in Bole Atlas.',
-        priceEtb: 48500,
-        condition: AdCondition.used,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Bole',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1632661674596-df8befba448d?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(hours: 5)),
-        attributes: const {'Brand': 'Apple', 'Storage': '128GB'},
-      ),
-      MarketAd(
-        id: 'ad-2',
-        sellerId: 'seller-2',
-        categoryId: 'electronics',
-        title: '55" Smart TV 4K',
-        description: 'Almost new Samsung smart TV. Wall mount included.',
-        priceEtb: 62000,
-        condition: AdCondition.refurbished,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Yeka',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(days: 1)),
-        attributes: const {'Brand': 'Samsung', 'Size': '55"'},
-      ),
-      MarketAd(
-        id: 'ad-3',
-        sellerId: 'seller-3',
-        categoryId: 'vehicles',
-        title: 'Toyota Vitz 2008',
-        description: 'City car, AC working, duty paid. Serious buyers only.',
-        priceEtb: 980000,
-        condition: AdCondition.used,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Nifas Silk',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(days: 2)),
-        attributes: const {'Year': '2008', 'Fuel': 'Petrol'},
-      ),
-      MarketAd(
-        id: 'ad-4',
-        sellerId: 'seller-1',
-        categoryId: 'furniture',
-        title: 'Solid wood dining set',
-        description: '6 chairs + table. Pickup from Kirkos.',
-        priceEtb: 28000,
-        condition: AdCondition.used,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Kirkos',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1617806118233-18e1de247200?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(hours: 30)),
-      ),
-      MarketAd(
-        id: 'ad-5',
-        sellerId: 'seller-2',
-        categoryId: 'fashion',
-        title: 'Leather jacket — medium',
-        description: 'Genuine leather, worn twice. Cash on meetup.',
-        priceEtb: 4500,
-        condition: AdCondition.brandNew,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Arada',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(hours: 12)),
-      ),
-      MarketAd(
-        id: 'ad-6',
-        sellerId: 'seller-3',
-        categoryId: 'property',
-        title: 'Studio for rent — Bole',
-        description: 'Furnished studio near Edna Mall. Water + wifi included.',
-        priceEtb: 25000,
-        condition: AdCondition.used,
-        locationLabel: 'Addis Ababa',
-        subcity: 'Bole',
-        photoUrls: const [
-          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
-        ],
-        status: AdStatus.approved,
-        createdAt: now.subtract(const Duration(days: 3)),
-        attributes: const {'Type': 'Rent', 'Furnishing': 'Furnished'},
-      ),
     ]);
   }
 
@@ -602,6 +481,36 @@ class InMemoryMarketRepository implements MarketRepository {
   Future<MarketConfig> getConfig() async => _config;
 
   @override
+  @override
+  Future<MarketCategory> createCategory({
+    String? id,
+    required String name,
+    required String iconName,
+  }) async {
+    final trimmed = name.trim();
+    final slug = (id?.trim().isNotEmpty == true)
+        ? id!.trim().toLowerCase()
+        : trimmed
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+            .replaceAll(RegExp(r'^-+|-+$'), '');
+    if (slug.isEmpty) {
+      throw StateError('Could not build a category id from the name');
+    }
+    if (_categories.any((c) => c.id == slug)) {
+      throw StateError('Category id already exists');
+    }
+    final created = MarketCategory(
+      id: slug,
+      name: trimmed,
+      iconName: iconName,
+    );
+    _categories.add(created);
+    _notify();
+    return created;
+  }
+
+  @override
   Future<MarketCategory> updateCategory(
     String categoryId, {
     String? name,
@@ -708,35 +617,6 @@ class InMemoryMarketRepository implements MarketRepository {
       _threads[idx] = _threads[idx].copyWith(updatedAt: msg.sentAt);
     }
     _notify();
-
-    // Simple seller auto-reply for demo when buyer sends.
-    ChatThread? thread;
-    for (final t in _threads) {
-      if (t.id == threadId) {
-        thread = t;
-        break;
-      }
-    }
-    if (thread != null && senderId == thread.buyerId) {
-      final sellerId = thread.sellerId;
-      unawaited(Future<void>.delayed(const Duration(seconds: 1), () {
-        _messages.add(
-          ChatMessage(
-            id: _id('msg'),
-            threadId: threadId,
-            senderId: sellerId,
-            body: 'Thanks — still available. When can you meet in Addis?',
-            sentAt: DateTime.now(),
-          ),
-        );
-        final tIdx = _threads.indexWhere((t) => t.id == threadId);
-        if (tIdx >= 0) {
-          _threads[tIdx] = _threads[tIdx].copyWith(updatedAt: DateTime.now());
-        }
-        _notify();
-      }));
-    }
-
     return msg;
   }
 

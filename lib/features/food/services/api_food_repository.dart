@@ -4,10 +4,9 @@ import '../../../core/network/api_client.dart';
 import '../models/food_models.dart';
 import 'food_repository.dart';
 
-/// HTTP food repo with an in-memory cache seeded from gateway catalogs.
+/// HTTP food repo with an in-memory cache refreshed from the API.
 class ApiFoodRepository implements FoodRepository {
   ApiFoodRepository(this._client) {
-    _seedLocalCatalog();
     unawaited(refreshCatalog());
     _poll = Timer.periodic(const Duration(seconds: 3), (_) {
       unawaited(_pollActive());
@@ -149,6 +148,9 @@ class ApiFoodRepository implements FoodRepository {
     required int quantity,
     List<String> modifierIds = const [],
   }) async {
+    if (!item.available) {
+      throw StateError('This item is unavailable right now.');
+    }
     final raw = await _client.post(
       '/v1/food/cart/items',
       auth: true,
@@ -652,150 +654,6 @@ class ApiFoodRepository implements FoodRepository {
     }
     _notify();
     return order;
-  }
-
-  void _seedLocalCatalog() {
-    _merchants.addAll(const [
-      FoodMerchant(
-        id: 'm-habesha',
-        name: 'Habesha Kitfo House',
-        kind: MerchantKind.restaurant,
-        subcity: 'Bole',
-        isOpen: true,
-        etaMinutes: 35,
-        deliveryFeeEtb: 80,
-        minOrderEtb: 200,
-        rating: 4.7,
-        coverUrl:
-            'https://images.unsplash.com/photo-1604329760661-eeb838b49a5c?w=900',
-        hoursLabel: '10:00 – 22:00',
-        coverageSubcities: ['Bole', 'CMC', 'Kirkos'],
-      ),
-      FoodMerchant(
-        id: 'm-burger',
-        name: 'Addis Burger Lab',
-        kind: MerchantKind.restaurant,
-        subcity: 'Kazanchis',
-        isOpen: true,
-        etaMinutes: 28,
-        deliveryFeeEtb: 70,
-        minOrderEtb: 150,
-        rating: 4.5,
-        coverUrl:
-            'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=900',
-        hoursLabel: '11:00 – 23:00',
-        coverageSubcities: ['Kazanchis', 'Kirkos', 'Bole'],
-      ),
-      FoodMerchant(
-        id: 'm-mart',
-        name: 'Bole Fresh Mart',
-        kind: MerchantKind.grocery,
-        subcity: 'Bole',
-        isOpen: true,
-        etaMinutes: 40,
-        deliveryFeeEtb: 60,
-        minOrderEtb: 250,
-        rating: 4.3,
-        coverUrl:
-            'https://images.unsplash.com/photo-1542838132-92c53300491e?w=900',
-        hoursLabel: '08:00 – 21:00',
-        coverageSubcities: ['Bole', 'CMC', 'Yeka'],
-      ),
-      FoodMerchant(
-        id: 'm-closed',
-        name: 'Piassa Pasta (closed)',
-        kind: MerchantKind.restaurant,
-        subcity: 'Arada',
-        isOpen: false,
-        etaMinutes: 45,
-        deliveryFeeEtb: 90,
-        minOrderEtb: 180,
-        rating: 4.1,
-        coverUrl:
-            'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=900',
-        hoursLabel: '12:00 – 20:00',
-        coverageSubcities: ['Arada', 'Piassa'],
-      ),
-    ]);
-    _menu.addAll([
-      const MenuItem(
-        id: 'i-kitfo',
-        merchantId: 'm-habesha',
-        name: 'Special Kitfo',
-        description: 'Minced beef, mitmita, ayib, kocho.',
-        priceEtb: 420,
-        photoUrl:
-            'https://images.unsplash.com/photo-1544025162-d76694265947?w=700',
-        available: true,
-        modifiers: [
-          MenuModifier(id: 'mod-injera', name: 'Extra injera', priceEtb: 40),
-          MenuModifier(id: 'mod-spicy', name: 'Extra spicy', priceEtb: 0),
-        ],
-      ),
-      const MenuItem(
-        id: 'i-tibs',
-        merchantId: 'm-habesha',
-        name: 'Beef Tibs',
-        description: 'Sautéed beef with rosemary & peppers.',
-        priceEtb: 380,
-        photoUrl:
-            'https://images.unsplash.com/photo-1432139555190-58524dae6a55?w=700',
-        available: true,
-      ),
-      const MenuItem(
-        id: 'i-burger',
-        merchantId: 'm-burger',
-        name: 'Classic Smash Burger',
-        description: 'Double patty, cheddar, house sauce.',
-        priceEtb: 320,
-        photoUrl:
-            'https://images.unsplash.com/photo-1550547660-d9450f859349?w=700',
-        available: true,
-        modifiers: [
-          MenuModifier(id: 'mod-fries', name: 'Add fries', priceEtb: 80),
-        ],
-      ),
-      const MenuItem(
-        id: 'i-shake',
-        merchantId: 'm-burger',
-        name: 'Vanilla Shake',
-        description: 'Thick milkshake.',
-        priceEtb: 150,
-        photoUrl:
-            'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=700',
-        available: true,
-      ),
-      const MenuItem(
-        id: 'i-milk',
-        merchantId: 'm-mart',
-        name: 'Fresh Milk 1L',
-        description: 'Chilled dairy.',
-        priceEtb: 95,
-        photoUrl:
-            'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=700',
-        available: true,
-      ),
-      const MenuItem(
-        id: 'i-bread',
-        merchantId: 'm-mart',
-        name: 'Sliced Bread',
-        description: 'Soft white loaf.',
-        priceEtb: 55,
-        photoUrl:
-            'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=700',
-        available: true,
-      ),
-      const MenuItem(
-        id: 'i-eggs',
-        merchantId: 'm-mart',
-        name: 'Eggs (12)',
-        description: 'Farm eggs pack.',
-        priceEtb: 180,
-        photoUrl:
-            'https://images.unsplash.com/photo-1582722879054-132667174001?w=700',
-        available: true,
-      ),
-    ]);
   }
 
   SavedPlace _parsePlace(Map<String, dynamic> j) {

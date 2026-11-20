@@ -63,14 +63,18 @@ Repeat grants if someone needs more than one staff role.
 
 ## 4. Food restaurant ownership (important)
 
+There is **no seeded restaurant/menu data**. Food browse stays empty until Food ops creates a merchant and a merchant adds dishes.
+
 Menu edits are **owner-only**. Do not rely on “Claim a store” for restaurant staff.
 
 1. Staff: grant `food_merchant` to `955555555`.
 2. That user OTP once (so they exist in the DB).
-3. Food ops (`944444444` or admin): **Food ops** → create merchant **or** Assign owner phone = `955555555`.
-4. Restaurant staff (`955555555`) opens **Merchant** → only their menu.
+3. Food ops (`944444444` or admin): **Food ops** → **create merchant** → set **Owner phone** = `955555555` (or Assign owner).
+4. Restaurant staff (`955555555`) opens **Merchant** → add dishes/prices → kitchen queue.
 
-Second restaurant test: assign `988888888` to a different merchant; confirm they cannot change the first restaurant’s dishes.
+Second restaurant test: create another merchant, assign `988888888`; confirm they cannot change the first restaurant’s dishes.
+
+Market has **no seeded ads** — default categories are seeded, and Market ops can **Add category** or Edit existing ones. Users post ads; moderators approve them.
 
 ---
 

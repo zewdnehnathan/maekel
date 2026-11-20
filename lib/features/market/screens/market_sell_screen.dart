@@ -26,6 +26,10 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
   final _title = TextEditingController();
   final _description = TextEditingController();
   final _price = TextEditingController();
+  final _brand = TextEditingController();
+  final _spec = TextEditingController();
+  final _extraKey = TextEditingController();
+  final _extraValue = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _picker = ImagePicker();
 
@@ -52,6 +56,16 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
     _title.text = ad.title;
     _description.text = ad.description;
     _price.text = '${ad.priceEtb}';
+    final specKey = _specLabelFor(ad.categoryId);
+    _brand.text = ad.attributes['Brand'] ?? '';
+    _spec.text = ad.attributes[specKey] ?? '';
+    final extra = ad.attributes.entries
+        .where((e) => e.key != 'Brand' && e.key != specKey)
+        .toList();
+    if (extra.isNotEmpty) {
+      _extraKey.text = extra.first.key;
+      _extraValue.text = extra.first.value;
+    }
     setState(() {
       _categoryId = ad.categoryId;
       _subcity = ad.subcity;
@@ -62,11 +76,44 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
     });
   }
 
+  String _specLabelFor(String? categoryId) {
+    switch (categoryId) {
+      case 'phones':
+        return 'Storage';
+      case 'vehicles':
+        return 'Year';
+      case 'property':
+        return 'Type';
+      case 'electronics':
+        return 'Size';
+      default:
+        return 'Spec';
+    }
+  }
+
+  Map<String, String> _buildAttributes() {
+    final attrs = <String, String>{};
+    final brand = _brand.text.trim();
+    final spec = _spec.text.trim();
+    final extraKey = _extraKey.text.trim();
+    final extraValue = _extraValue.text.trim();
+    if (brand.isNotEmpty) attrs['Brand'] = brand;
+    if (spec.isNotEmpty) attrs[_specLabelFor(_categoryId)] = spec;
+    if (extraKey.isNotEmpty && extraValue.isNotEmpty) {
+      attrs[extraKey] = extraValue;
+    }
+    return attrs;
+  }
+
   @override
   void dispose() {
     _title.dispose();
     _description.dispose();
     _price.dispose();
+    _brand.dispose();
+    _spec.dispose();
+    _extraKey.dispose();
+    _extraValue.dispose();
     super.dispose();
   }
 
@@ -146,6 +193,7 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
       final photoUrls = await _uploadAll();
       setState(() => _uploading = false);
       final repo = ref.read(marketRepositoryProvider);
+      final attributes = _buildAttributes();
       if (_isEdit) {
         await repo.updateAd(
           widget.editAdId!,
@@ -156,6 +204,7 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
           condition: _condition,
           subcity: _subcity!,
           photoUrls: photoUrls,
+          attributes: attributes,
         );
       } else {
         await repo.createAd(
@@ -167,6 +216,7 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
           condition: _condition,
           subcity: _subcity!,
           photoUrls: photoUrls,
+          attributes: attributes,
         );
       }
       if (!mounted) return;
@@ -349,7 +399,10 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
                 for (final c in categories)
                   DropdownMenuItem(value: c.id, child: Text(c.name)),
               ],
-              onChanged: (v) => setState(() => _categoryId = v),
+              onChanged: (v) => setState(() {
+                _categoryId = v;
+                // Keep typed spec; label updates with category.
+              }),
               validator: (v) => v == null ? 'Required' : null,
             ),
             const SizedBox(height: 12),
@@ -398,6 +451,61 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
               onChanged: (v) {
                 if (v != null) setState(() => _condition = v);
               },
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'KEY DETAILS',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _brand,
+              style: const TextStyle(color: MaekelColors.ink),
+              decoration: const InputDecoration(
+                labelText: 'Brand',
+                hintText: 'e.g. Apple, Toyota',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _spec,
+              style: const TextStyle(color: MaekelColors.ink),
+              decoration: InputDecoration(
+                labelText: _specLabelFor(_categoryId),
+                hintText: switch (_categoryId) {
+                  'phones' => 'e.g. 128GB',
+                  'vehicles' => 'e.g. 2019',
+                  'property' => 'e.g. Rent / Sale',
+                  'electronics' => 'e.g. 55 inch',
+                  _ => 'Main spec',
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _extraKey,
+                    style: const TextStyle(color: MaekelColors.ink),
+                    decoration: const InputDecoration(
+                      labelText: 'Extra detail name',
+                      hintText: 'e.g. Color',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextFormField(
+                    controller: _extraValue,
+                    style: const TextStyle(color: MaekelColors.ink),
+                    decoration: const InputDecoration(
+                      labelText: 'Value',
+                      hintText: 'e.g. Black',
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(

@@ -179,6 +179,10 @@ class AuthNotifier extends Notifier<AuthState> {
 
   void signOut() {
     _tokens.clear();
+    final market = ref.read(marketRepositoryProvider);
+    if (market is ApiMarketRepository) {
+      market.clearAuthed();
+    }
     state = const AuthState();
   }
 

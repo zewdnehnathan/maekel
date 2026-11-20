@@ -9,6 +9,7 @@ import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/maekel_app_bar.dart';
 import '../components/score_submit_helper.dart';
 import '../models/games_models.dart';
+import '../road_fighter/road_fighter_audio.dart';
 import '../road_fighter/road_fighter_engine.dart';
 
 class RoadFighterScreen extends ConsumerStatefulWidget {
@@ -21,6 +22,7 @@ class RoadFighterScreen extends ConsumerStatefulWidget {
 class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
     with SingleTickerProviderStateMixin {
   late final RoadFighterEngine _engine;
+  late final RoadFighterAudio _audio;
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
   bool _scoreSubmitted = false;
@@ -29,12 +31,14 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
   void initState() {
     super.initState();
     _engine = RoadFighterEngine();
+    _audio = RoadFighterAudio();
     _ticker = createTicker(_onTick)..start();
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    unawaited(_audio.dispose());
     super.dispose();
   }
 
@@ -48,6 +52,18 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
       return;
     }
     setState(() => _engine.update(dt));
+    final events = _engine.takeSfxEvents();
+    if (events.isNotEmpty) {
+      unawaited(_audio.handleEvents(events));
+    }
+    unawaited(
+      _audio.syncEngine(
+        running: _engine.isRunning,
+        speed: _engine.speed,
+        minSpeed: RoadFighterEngine.minSpeed,
+        maxSpeed: RoadFighterEngine.maxSpeed,
+      ),
+    );
     _maybeSubmitScore();
   }
 
@@ -65,6 +81,7 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
   }
 
   void _restart() {
+    unawaited(_audio.stopEngine());
     setState(() {
       _scoreSubmitted = false;
       _engine.reset();
@@ -80,6 +97,18 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
       appBar: MaekelAppBar(
         title: 'Road Fighter',
         actions: [
+          IconButton(
+            tooltip: _audio.isMuted ? 'Unmute' : 'Mute',
+            onPressed: () async {
+              await _audio.setMuted(!_audio.isMuted);
+              if (mounted) setState(() {});
+            },
+            icon: Icon(
+              _audio.isMuted
+                  ? Icons.volume_off_rounded
+                  : Icons.volume_up_rounded,
+            ),
+          ),
           IconButton(
             tooltip: 'Restart',
             onPressed: _restart,
@@ -100,7 +129,7 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
                     _Stat(label: 'KM', value: '${_engine.distanceMeters}'),
                     _Stat(
                       label: 'SPD',
-                      value: '${(_engine.speed / 10).round()}',
+                      value: '${_engine.displaySpeed}',
                     ),
                     const Spacer(),
                     SizedBox(
@@ -191,7 +220,9 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
                                     ),
                                   if (_engine.isGameOver)
                                     _Banner(
-                                      label: 'CRASH!',
+                                      label: _engine.endedByFuel
+                                          ? 'OUT OF FUEL'
+                                          : 'CRASH!',
                                       detail:
                                           'Score ${_engine.score} · tap to retry',
                                     ),
@@ -230,7 +261,7 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Drag or hold ◀ ▶ · dodge traffic · grab green fuel cars',
+                  '◀ ▶ dodge · purple-stripe cars change lanes · grab F for fuel',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: MaekelColors.muted,
                       ),
@@ -445,6 +476,7 @@ class _RoadPainter extends CustomPainter {
           engine.carRect(c),
           body: trafficColors[c.colorIndex % trafficColors.length],
           accent: const Color(0xFF222222),
+          laneSwitcher: c.canSwitchLanes,
         );
       }
     }
@@ -468,6 +500,7 @@ class _RoadPainter extends CustomPainter {
     Color windshield = const Color(0xFFB8D4EA),
     String? label,
     bool isPlayer = false,
+    bool laneSwitcher = false,
   }) {
     final px = 2.0;
     // Snap to pixel grid for arcade feel
@@ -529,6 +562,13 @@ class _RoadPainter extends CustomPainter {
       canvas.drawRect(
         Rect.fromLTWH(r.right - 9, r.bottom - 7, 4, 3),
         Paint()..color = const Color(0xFF4FC3F7),
+      );
+    }
+
+    if (laneSwitcher) {
+      canvas.drawRect(
+        Rect.fromLTWH(r.left + 6, r.top + 22, r.width - 12, 4),
+        Paint()..color = const Color(0xFFB388FF),
       );
     }
 

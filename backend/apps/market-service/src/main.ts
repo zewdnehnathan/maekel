@@ -809,6 +809,52 @@ async function boot() {
     return mapSeller(res.rows[0]);
   });
 
+  app.post('/v1/market/ops/categories', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, ['market_moderator', 'market_ops', 'platform_admin']);
+    const body = z
+      .object({
+        id: z
+          .string()
+          .min(2)
+          .max(40)
+          .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers, hyphens')
+          .optional(),
+        name: z.string().min(2).max(80),
+        iconName: z.string().min(2).max(40).default('category'),
+      })
+      .parse(req.body ?? {});
+    const id =
+      body.id ??
+      body.name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40);
+    if (!id) {
+      throw new AppError('Could not build a category id from the name', 400, 'invalid');
+    }
+    try {
+      const res = await pool.query(
+        `INSERT INTO categories (id, name, icon_name) VALUES ($1,$2,$3)
+         RETURNING *`,
+        [id, body.name.trim(), body.iconName],
+      );
+      return {
+        id: res.rows[0].id,
+        name: res.rows[0].name,
+        iconName: res.rows[0].icon_name,
+      };
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === '23505') {
+        throw new AppError('Category id already exists', 409, 'conflict');
+      }
+      throw err;
+    }
+  });
+
   app.patch('/v1/market/ops/categories/:id', async (req) => {
     const user = requireAuth(req);
     requireRole(user, ['market_moderator', 'market_ops', 'platform_admin']);
@@ -941,6 +987,7 @@ async function notifySeller(input: {
 }
 
 async function seed() {
+  // Category taxonomy only (required for Sell). No demo sellers or ads.
   const cats = [
     ['phones', 'Phones & Tablets', 'phone'],
     ['electronics', 'Electronics', 'devices'],
@@ -957,167 +1004,28 @@ async function seed() {
     );
   }
 
-  const sellers = [
-    [
-      '00000000-0000-4000-8000-000000000001',
-      'Hanna T.',
-      '+251911100001',
-      'Bole, Addis Ababa',
-      true,
-    ],
-    [
-      '00000000-0000-4000-8000-000000000002',
-      'Yonas M.',
-      '+251911100002',
-      'CMC, Addis Ababa',
-      false,
-    ],
-    [
-      '00000000-0000-4000-8000-000000000003',
-      'Sara K.',
-      '+251911100003',
-      'Piassa, Addis Ababa',
-      true,
-    ],
-  ] as const;
-  for (const [id, name, phone, location, showPhone] of sellers) {
-    await pool.query(
-      `INSERT INTO sellers (id, name, phone_e164, location_label, show_phone)
-       VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (id) DO NOTHING`,
-      [id, name, phone, location, showPhone],
-    );
-  }
-
-  const ads: Array<
-    [
-      string,
-      string,
-      string,
-      string,
-      string,
-      number,
-      string,
-      string,
-      string,
-      string,
-      string,
-    ]
-  > = [
-    [
-      'a0000000-0000-4000-8000-000000000001',
-      '00000000-0000-4000-8000-000000000001',
-      'phones',
-      'iPhone 13 128GB — clean',
-      'Unlocked iPhone 13, battery 89%. Box + cable. Meetup in Bole Atlas.',
-      48500,
-      'used',
-      'Bole',
-      'https://images.unsplash.com/photo-1632661674596-df8befba448d?w=800',
-      '{"Brand":"Apple","Storage":"128GB"}',
-      "NOW() - INTERVAL '5 hours'",
-    ],
-    [
-      'a0000000-0000-4000-8000-000000000002',
-      '00000000-0000-4000-8000-000000000002',
-      'electronics',
-      '55" Smart TV 4K',
-      'Almost new Samsung smart TV. Wall mount included.',
-      62000,
-      'refurbished',
-      'Yeka',
-      'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800',
-      '{"Brand":"Samsung","Size":"55\\""}',
-      "NOW() - INTERVAL '1 day'",
-    ],
-    [
-      'a0000000-0000-4000-8000-000000000003',
-      '00000000-0000-4000-8000-000000000003',
-      'vehicles',
-      'Toyota Vitz 2008',
-      'City car, AC working, duty paid. Serious buyers only.',
-      980000,
-      'used',
-      'Nifas Silk',
-      'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800',
-      '{"Year":"2008","Fuel":"Petrol"}',
-      "NOW() - INTERVAL '2 days'",
-    ],
-    [
-      'a0000000-0000-4000-8000-000000000004',
-      '00000000-0000-4000-8000-000000000001',
-      'furniture',
-      'Solid wood dining set',
-      '6 chairs + table. Pickup from Kirkos.',
-      28000,
-      'used',
-      'Kirkos',
-      'https://images.unsplash.com/photo-1617806118233-18e1de247200?w=800',
-      '{}',
-      "NOW() - INTERVAL '30 hours'",
-    ],
-    [
-      'a0000000-0000-4000-8000-000000000005',
-      '00000000-0000-4000-8000-000000000002',
-      'fashion',
-      'Leather jacket — medium',
-      'Genuine leather, worn twice. Cash on meetup.',
-      4500,
-      'brandNew',
-      'Arada',
-      'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800',
-      '{}',
-      "NOW() - INTERVAL '12 hours'",
-    ],
-    [
-      'a0000000-0000-4000-8000-000000000006',
-      '00000000-0000-4000-8000-000000000003',
-      'property',
-      'Studio for rent — Bole',
-      'Furnished studio near Edna Mall. Water + wifi included.',
-      25000,
-      'used',
-      'Bole',
-      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
-      '{"Type":"Rent","Furnishing":"Furnished"}',
-      "NOW() - INTERVAL '3 days'",
-    ],
+  // Remove legacy demo sellers/ads from older builds.
+  const demoAdIds = [
+    'a0000000-0000-4000-8000-000000000001',
+    'a0000000-0000-4000-8000-000000000002',
+    'a0000000-0000-4000-8000-000000000003',
+    'a0000000-0000-4000-8000-000000000004',
+    'a0000000-0000-4000-8000-000000000005',
+    'a0000000-0000-4000-8000-000000000006',
   ];
-
-  for (const ad of ads) {
-    const [
-      id,
-      sellerId,
-      categoryId,
-      title,
-      description,
-      price,
-      condition,
-      subcity,
-      photo,
-      attrs,
-      createdExpr,
-    ] = ad;
-    await pool.query(
-      `INSERT INTO ads (
-        id, seller_id, category_id, title, description, price_etb, condition,
-        location_label, subcity, photo_urls, status, attributes, created_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'Addis Ababa',$8,ARRAY[$9],'approved',$10::jsonb,${createdExpr})
-       ON CONFLICT (id) DO NOTHING`,
-      [
-        id,
-        sellerId,
-        categoryId,
-        title,
-        description,
-        price,
-        condition,
-        subcity,
-        photo,
-        attrs,
-      ],
-    );
-  }
+  const demoSellerIds = [
+    '00000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000003',
+  ];
+  await pool.query(
+    `DELETE FROM seller_notifications WHERE ad_id = ANY($1::uuid[]) OR seller_id = ANY($2::uuid[])`,
+    [demoAdIds, demoSellerIds],
+  );
+  await pool.query(`DELETE FROM ads WHERE id = ANY($1::uuid[])`, [demoAdIds]);
+  await pool.query(`DELETE FROM sellers WHERE id = ANY($1::uuid[])`, [
+    demoSellerIds,
+  ]);
 }
 
 boot().catch((err) => {

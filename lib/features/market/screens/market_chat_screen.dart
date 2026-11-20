@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,23 +23,47 @@ class MarketChatScreen extends ConsumerStatefulWidget {
 class _MarketChatScreenState extends ConsumerState<MarketChatScreen> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
+  Timer? _poll;
+  int _lastMessageCount = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final repo = ref.read(marketRepositoryProvider);
-      if (repo is ApiMarketRepository) {
-        await repo.loadMessages(widget.threadId);
-      }
+      await _reloadMessages(scrollToEnd: true);
+      _poll = Timer.periodic(const Duration(seconds: 2), (_) {
+        unawaited(_reloadMessages());
+      });
     });
   }
 
   @override
   void dispose() {
+    _poll?.cancel();
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  Future<void> _reloadMessages({bool scrollToEnd = false}) async {
+    final repo = ref.read(marketRepositoryProvider);
+    if (repo is! ApiMarketRepository) return;
+    await repo.loadMessages(widget.threadId);
+    if (!mounted) return;
+    final count =
+        ref.read(marketRepositoryProvider).getMessages(widget.threadId).length;
+    final shouldScroll = scrollToEnd || count > _lastMessageCount;
+    _lastMessageCount = count;
+    if (shouldScroll) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      if (_scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent + 80,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    }
   }
 
   Future<void> _send() async {
@@ -51,6 +77,8 @@ class _MarketChatScreenState extends ConsumerState<MarketChatScreen> {
           senderId: userId,
           body: text,
         );
+    _lastMessageCount =
+        ref.read(marketRepositoryProvider).getMessages(widget.threadId).length;
     await Future<void>.delayed(const Duration(milliseconds: 50));
     if (_scroll.hasClients) {
       _scroll.animateTo(

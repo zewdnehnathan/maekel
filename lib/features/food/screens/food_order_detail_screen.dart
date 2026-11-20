@@ -127,6 +127,15 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
                 }
               },
               child: const Text('CANCEL ORDER'),
+            )
+          else if (order.status != OrderStatus.delivered &&
+              order.status != OrderStatus.cancelled)
+            GlassPanel(
+              accent: MaekelColors.danger,
+              child: Text(
+                'You can no longer cancel. The shop has already started preparing this order. Contact support if you need help.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
           if (ref.watch(authProvider).session?.isFoodOps == true) ...[
             const SizedBox(height: 12),
@@ -136,7 +145,11 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
                   ? null
                   : () =>
                       ref.read(foodRepositoryProvider).advanceOrder(order.id),
-              child: const Text('Ops: force advance status'),
+              child: Text(
+                order.status == OrderStatus.onTheWay
+                    ? 'Ops: mark delivered (no OTP)'
+                    : 'Ops: force advance status',
+              ),
             ),
           ],
         ],
