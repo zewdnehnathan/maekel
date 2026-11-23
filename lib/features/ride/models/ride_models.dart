@@ -41,6 +41,8 @@ class RideDriver {
     required this.phoneE164,
     this.lat,
     this.lng,
+    this.isOnline = false,
+    this.isApproved = false,
   });
 
   final String id;
@@ -52,6 +54,8 @@ class RideDriver {
   final String phoneE164;
   final double? lat;
   final double? lng;
+  final bool isOnline;
+  final bool isApproved;
 
   LatLng? get point =>
       lat == null || lng == null ? null : LatLng(lat!, lng!);
@@ -66,6 +70,9 @@ class FareQuote {
     required this.totalEtb,
     required this.etaMinutes,
     required this.createdAt,
+    this.distanceKm,
+    this.baseEtb,
+    this.perKmEtb,
   });
 
   final String id;
@@ -75,6 +82,29 @@ class FareQuote {
   final int totalEtb;
   final int etaMinutes;
   final DateTime createdAt;
+  final double? distanceKm;
+  final int? baseEtb;
+  final double? perKmEtb;
+}
+
+class RideFareConfig {
+  const RideFareConfig({
+    required this.baseEtb,
+    required this.perKmEtb,
+    required this.minFareEtb,
+    required this.offerRadiusKm,
+    required this.etaBaseMin,
+    required this.etaMinPerKm,
+    this.vehicleClass = 'Economy',
+  });
+
+  final int baseEtb;
+  final double perKmEtb;
+  final int minFareEtb;
+  final double offerRadiusKm;
+  final double etaBaseMin;
+  final double etaMinPerKm;
+  final String vehicleClass;
 }
 
 class RideTrip {
@@ -90,6 +120,14 @@ class RideTrip {
     this.driverId,
     this.passengerRating,
     this.completedAt,
+    this.etaMinutes,
+    this.offerExpiresAt,
+    this.cancelReason,
+    this.pickupLat,
+    this.pickupLng,
+    this.dropoffLat,
+    this.dropoffLng,
+    this.distanceKm,
   });
 
   final String id;
@@ -103,6 +141,14 @@ class RideTrip {
   final String? driverId;
   final int? passengerRating;
   final DateTime? completedAt;
+  final int? etaMinutes;
+  final DateTime? offerExpiresAt;
+  final String? cancelReason;
+  final double? pickupLat;
+  final double? pickupLng;
+  final double? dropoffLat;
+  final double? dropoffLng;
+  final double? distanceKm;
 
   bool get canCancel =>
       status == TripStatus.requested ||
@@ -110,11 +156,30 @@ class RideTrip {
       status == TripStatus.assigned ||
       status == TripStatus.arriving;
 
+  bool get wasNoDriver =>
+      status == TripStatus.cancelled &&
+      (cancelReason == 'no_driver' ||
+          (cancelReason?.startsWith('no_driver') ?? false));
+
+  LatLng? get pickupPoint =>
+      pickupLat == null || pickupLng == null
+          ? null
+          : LatLng(pickupLat!, pickupLng!);
+
+  LatLng? get dropoffPoint =>
+      dropoffLat == null || dropoffLng == null
+          ? null
+          : LatLng(dropoffLat!, dropoffLng!);
+
   RideTrip copyWith({
     TripStatus? status,
     String? driverId,
     int? passengerRating,
     DateTime? completedAt,
+    int? etaMinutes,
+    DateTime? offerExpiresAt,
+    String? cancelReason,
+    bool clearOfferExpiresAt = false,
   }) {
     return RideTrip(
       id: id,
@@ -128,8 +193,35 @@ class RideTrip {
       driverId: driverId ?? this.driverId,
       passengerRating: passengerRating ?? this.passengerRating,
       completedAt: completedAt ?? this.completedAt,
+      etaMinutes: etaMinutes ?? this.etaMinutes,
+      offerExpiresAt:
+          clearOfferExpiresAt ? null : (offerExpiresAt ?? this.offerExpiresAt),
+      cancelReason: cancelReason ?? this.cancelReason,
+      pickupLat: pickupLat,
+      pickupLng: pickupLng,
+      dropoffLat: dropoffLat,
+      dropoffLng: dropoffLng,
+      distanceKm: distanceKm,
     );
   }
+}
+
+class DriverEarningsToday {
+  const DriverEarningsToday({
+    required this.totalEtb,
+    required this.trips,
+  });
+
+  final int totalEtb;
+  final List<RideTrip> trips;
+}
+
+/// Addis Ababa service area used for Ride geofencing.
+bool isInRideServiceArea(LatLng point) {
+  return point.latitude >= 8.83 &&
+      point.latitude <= 9.15 &&
+      point.longitude >= 38.62 &&
+      point.longitude <= 39.0;
 }
 
 class DriverSession {

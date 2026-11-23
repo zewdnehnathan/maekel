@@ -32,6 +32,7 @@ import '../features/market/screens/market_screen.dart';
 import '../features/market/screens/market_sell_screen.dart';
 import '../features/ride/screens/ride_driver_screen.dart';
 import '../features/ride/screens/ride_history_screen.dart';
+import '../features/ride/screens/ride_ops_screen.dart';
 import '../features/ride/screens/ride_screen.dart';
 import '../features/ride/screens/ride_trip_screen.dart';
 
@@ -43,6 +44,7 @@ abstract final class AppRoutes {
   static const ride = '/ride';
   static const rideDriver = '/ride/driver';
   static const rideHistory = '/ride/history';
+  static const rideOps = '/ride/ops';
   static const rideTrips = '/ride/trips';
   static const rideRequest = '/ride/request';
 
@@ -122,6 +124,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           !session.isFoodRider) {
         return AppRoutes.food;
       }
+      if (loc == AppRoutes.rideOps &&
+          session != null &&
+          !session.isRideOps) {
+        return AppRoutes.ride;
+      }
       return null;
     },
     routes: [
@@ -152,6 +159,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'history',
             builder: (context, state) => const RideHistoryScreen(),
+          ),
+          GoRoute(
+            path: 'ops',
+            builder: (context, state) => const RideOpsScreen(),
           ),
           GoRoute(
             path: 'request',

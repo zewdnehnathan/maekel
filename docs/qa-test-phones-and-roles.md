@@ -18,7 +18,7 @@ Staff grants now **persist across Render restarts**. If `role_grants` only shows
 
 | Local | E.164 | Roles (auto on login) | What to test |
 |-------|-------|------------------------|--------------|
-| `999999999` | `+251999999999` | `platform_admin`, `market_moderator`, `food_ops`, `food_merchant`, `food_rider` (+ default customer roles) | Staff grants, Market ops, Food ops, full admin paths |
+| `999999999` | `+251999999999` | `platform_admin`, `market_moderator`, `food_ops`, `food_merchant`, `food_rider`, `ride_ops` (+ default customer roles) | Staff grants, Market/Food/Ride ops, full admin paths |
 
 This phone is set via `ADMIN_PHONES` on Render. Log in first with it, then create/grant the accounts below.
 
@@ -45,7 +45,7 @@ Every new user also gets defaults: `ride_passenger`, `food_customer`, `market_bu
 |---|-------|-------|-------|---------|
 | 9 | `900000001` | `+251900000001` | `platform_admin` | Backup admin (only if needed) |
 
-Ride “driver” is **not** a staff role — any logged-in user can open Ride → Driver tab. Use customer #1 or #7 for that.
+Ride **driver mode** is available to any signed-in user, but they start **unapproved**. Grant `ride_ops` (or use bootstrap admin) → Ride ops → **Approve**, then the driver can go Online. Use customer #1 or #7 as the test driver.
 
 ---
 

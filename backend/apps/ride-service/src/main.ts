@@ -7,12 +7,31 @@ import {
   listen,
   migrate,
   requireAuth,
+  requireRole,
 } from '@maekel/shared';
 import { z } from 'zod';
 
 const port = envInt('RIDE_PORT', 3004);
 const pool = createPool(databaseUrl('maekel_ride'));
 const VEHICLE = 'Economy';
+const OFFER_TTL_SEC = 45;
+const opsStaff = ['ride_ops', 'platform_admin'] as const;
+
+const SERVICE_BBOX = {
+  minLat: 8.83,
+  maxLat: 9.15,
+  minLng: 38.62,
+  maxLng: 39.0,
+};
+
+const DEFAULT_CONFIG = {
+  baseEtb: 100,
+  perKmEtb: 16,
+  minFareEtb: 120,
+  offerRadiusKm: 8,
+  etaBaseMin: 5,
+  etaMinPerKm: 2.5,
+};
 
 async function boot() {
   await migrate(pool, [
@@ -35,7 +54,7 @@ async function boot() {
       photo_hint TEXT NOT NULL,
       phone_e164 TEXT NOT NULL,
       is_online BOOLEAN NOT NULL DEFAULT FALSE,
-      is_approved BOOLEAN NOT NULL DEFAULT TRUE,
+      is_approved BOOLEAN NOT NULL DEFAULT FALSE,
       last_lat DOUBLE PRECISION,
       last_lng DOUBLE PRECISION,
       last_location_at TIMESTAMPTZ
@@ -52,6 +71,11 @@ async function boot() {
       eta_minutes INT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
+    `ALTER TABLE fare_quotes ADD COLUMN IF NOT EXISTS pickup_lat DOUBLE PRECISION`,
+    `ALTER TABLE fare_quotes ADD COLUMN IF NOT EXISTS pickup_lng DOUBLE PRECISION`,
+    `ALTER TABLE fare_quotes ADD COLUMN IF NOT EXISTS dropoff_lat DOUBLE PRECISION`,
+    `ALTER TABLE fare_quotes ADD COLUMN IF NOT EXISTS dropoff_lng DOUBLE PRECISION`,
+    `ALTER TABLE fare_quotes ADD COLUMN IF NOT EXISTS distance_km NUMERIC(8,3)`,
     `CREATE TABLE IF NOT EXISTS trips (
       id UUID PRIMARY KEY,
       passenger_id UUID NOT NULL,
@@ -66,23 +90,32 @@ async function boot() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       completed_at TIMESTAMPTZ
     )`,
+    `ALTER TABLE trips ADD COLUMN IF NOT EXISTS eta_minutes INT`,
+    `ALTER TABLE trips ADD COLUMN IF NOT EXISTS offer_expires_at TIMESTAMPTZ`,
+    `ALTER TABLE trips ADD COLUMN IF NOT EXISTS cancel_reason TEXT`,
+    `ALTER TABLE trips ADD COLUMN IF NOT EXISTS pickup_lat DOUBLE PRECISION`,
+    `ALTER TABLE trips ADD COLUMN IF NOT EXISTS pickup_lng DOUBLE PRECISION`,
+    `ALTER TABLE trips ADD COLUMN IF NOT EXISTS dropoff_lat DOUBLE PRECISION`,
+    `ALTER TABLE trips ADD COLUMN IF NOT EXISTS dropoff_lng DOUBLE PRECISION`,
+    `ALTER TABLE trips ADD COLUMN IF NOT EXISTS distance_km NUMERIC(8,3)`,
+    `CREATE TABLE IF NOT EXISTS ride_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )`,
   ]);
   await seed();
+  await ensureDefaultConfig();
 
   const app = await createService({ name: 'ride-service', port });
 
   app.get('/v1/ride/places', async () => {
-    const res = await pool.query(`SELECT * FROM places ORDER BY name`);
-    return {
-      items: res.rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        subcity: r.subcity,
-        lat: r.lat == null ? null : Number(r.lat),
-        lng: r.lng == null ? null : Number(r.lng),
-      })),
-    };
+    const res = await pool.query(
+      `SELECT * FROM places WHERE id NOT LIKE 'pin-%' ORDER BY name`,
+    );
+    return { items: res.rows.map(mapPlace) };
   });
+
+  app.get('/v1/ride/config', async () => getFareConfig());
 
   app.post('/v1/ride/driver/location', async (req) => {
     const user = requireAuth(req);
@@ -92,46 +125,112 @@ async function boot() {
         lng: z.number().min(-180).max(180),
       })
       .parse(req.body ?? {});
-    const driver = await ensureDriver(user.sub, user.phone);
+    const driver = await ensureDriver(user.sub, user.phone, user.roles);
     await pool.query(
       `UPDATE drivers
        SET last_lat = $2, last_lng = $3, last_location_at = NOW()
        WHERE id = $1`,
       [driver.id, body.lat, body.lng],
     );
-    return {
-      id: driver.id,
-      lat: body.lat,
-      lng: body.lng,
-    };
+    return { id: driver.id, lat: body.lat, lng: body.lng };
   });
 
   app.post('/v1/ride/quotes', async (req) => {
     requireAuth(req);
     const body = z
-      .object({ pickupId: z.string(), dropoffId: z.string() })
+      .object({
+        pickupId: z.string().optional(),
+        dropoffId: z.string().optional(),
+        pickupLat: z.number().min(-90).max(90),
+        pickupLng: z.number().min(-180).max(180),
+        dropoffLat: z.number().min(-90).max(90),
+        dropoffLng: z.number().min(-180).max(180),
+      })
       .parse(req.body ?? {});
-    if (body.pickupId === body.dropoffId) {
+
+    if (!isInServiceArea(body.pickupLat, body.pickupLng)) {
+      throw new AppError(
+        'Pickup is outside the Addis Ababa service area',
+        400,
+        'out_of_area',
+      );
+    }
+    if (!isInServiceArea(body.dropoffLat, body.dropoffLng)) {
+      throw new AppError(
+        'Drop-off is outside the Addis Ababa service area',
+        400,
+        'out_of_area',
+      );
+    }
+
+    const distanceKm = haversineKm(
+      body.pickupLat,
+      body.pickupLng,
+      body.dropoffLat,
+      body.dropoffLng,
+    );
+    if (distanceKm < 0.2) {
+      throw new AppError(
+        'Pickup and drop-off are too close',
+        400,
+        'same_place',
+      );
+    }
+
+    const pickupId =
+      body.pickupId ??
+      (await ensurePinPlace(body.pickupLat, body.pickupLng, 'Pickup pin'));
+    const dropoffId =
+      body.dropoffId ??
+      (await ensurePinPlace(body.dropoffLat, body.dropoffLng, 'Drop-off pin'));
+    if (pickupId === dropoffId) {
       throw new AppError('Pickup and dropoff must differ', 400, 'same_place');
     }
+
+    const cfg = await getFareConfig();
+    const total = Math.max(
+      cfg.minFareEtb,
+      Math.round(cfg.baseEtb + cfg.perKmEtb * distanceKm),
+    );
+    const eta = Math.max(
+      3,
+      Math.round(cfg.etaBaseMin + cfg.etaMinPerKm * distanceKm),
+    );
+
     const id = crypto.randomUUID();
-    const total =
-      120 +
-      Math.abs(hash(body.pickupId) - hash(body.dropoffId)) % 200 +
-      50;
-    const eta = 8 + (hash(body.dropoffId) % 10);
     await pool.query(
-      `INSERT INTO fare_quotes (id, pickup_id, dropoff_id, vehicle_class, total_etb, eta_minutes)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [id, body.pickupId, body.dropoffId, VEHICLE, total, eta],
+      `INSERT INTO fare_quotes (
+        id, pickup_id, dropoff_id, vehicle_class, total_etb, eta_minutes,
+        pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [
+        id,
+        pickupId,
+        dropoffId,
+        VEHICLE,
+        total,
+        eta,
+        body.pickupLat,
+        body.pickupLng,
+        body.dropoffLat,
+        body.dropoffLng,
+        distanceKm,
+      ],
     );
     return {
       id,
-      pickupId: body.pickupId,
-      dropoffId: body.dropoffId,
+      pickupId,
+      dropoffId,
       vehicleClass: VEHICLE,
       totalEtb: total,
       etaMinutes: eta,
+      distanceKm: Number(distanceKm.toFixed(2)),
+      breakdown: {
+        baseEtb: cfg.baseEtb,
+        perKmEtb: cfg.perKmEtb,
+        minFareEtb: cfg.minFareEtb,
+        distanceKm: Number(distanceKm.toFixed(2)),
+      },
     };
   });
 
@@ -168,8 +267,9 @@ async function boot() {
     const id = crypto.randomUUID();
     await pool.query(
       `INSERT INTO trips (
-        id, passenger_id, pickup_id, dropoff_id, fare_etb, vehicle_class, status, idempotency_key
-      ) VALUES ($1,$2,$3,$4,$5,$6,'requested',$7)`,
+        id, passenger_id, pickup_id, dropoff_id, fare_etb, vehicle_class, status,
+        idempotency_key, eta_minutes, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km
+      ) VALUES ($1,$2,$3,$4,$5,$6,'requested',$7,$8,$9,$10,$11,$12,$13)`,
       [
         id,
         user.sub,
@@ -178,6 +278,12 @@ async function boot() {
         q.total_etb,
         q.vehicle_class,
         typeof idem === 'string' ? idem : null,
+        q.eta_minutes,
+        q.pickup_lat,
+        q.pickup_lng,
+        q.dropoff_lat,
+        q.dropoff_lng,
+        q.distance_km,
       ],
     );
     autoMatch(id).catch(() => undefined);
@@ -216,11 +322,18 @@ async function boot() {
     const { id } = req.params as { id: string };
     const trip = await getTrip(id);
     if (
-      !['requested', 'matching', 'assigned', 'arriving'].includes(trip.status)
+      !['requested', 'matching', 'assigned', 'arriving'].includes(
+        trip.status as string,
+      )
     ) {
       throw new AppError('Cannot cancel now', 400, 'locked');
     }
-    await pool.query(`UPDATE trips SET status = 'cancelled' WHERE id = $1`, [id]);
+    await pool.query(
+      `UPDATE trips SET status = 'cancelled', cancel_reason = 'passenger_cancel',
+        offer_expires_at = NULL
+       WHERE id = $1`,
+      [id],
+    );
     return getTrip(id);
   });
 
@@ -234,32 +347,41 @@ async function boot() {
     if (trip.status !== 'completed') {
       throw new AppError('Trip not completed', 400, 'not_completed');
     }
-    await pool.query(
-      `UPDATE trips SET passenger_rating = $2 WHERE id = $1`,
-      [id, body.stars],
-    );
+    await pool.query(`UPDATE trips SET passenger_rating = $2 WHERE id = $1`, [
+      id,
+      body.stars,
+    ]);
     return getTrip(id);
   });
 
   app.get('/v1/ride/driver/me', async (req) => {
     const user = requireAuth(req);
-    return ensureDriver(user.sub, user.phone);
+    return ensureDriver(user.sub, user.phone, user.roles);
   });
 
   app.post('/v1/ride/driver/online', async (req) => {
     const user = requireAuth(req);
     const body = z.object({ online: z.boolean() }).parse(req.body ?? {});
-    const driver = await ensureDriver(user.sub, user.phone);
+    const driver = await ensureDriver(user.sub, user.phone, user.roles);
+    if (body.online && !driver.isApproved) {
+      throw new AppError(
+        'Driver is not approved to go online. Ask Ride ops to approve your account.',
+        403,
+        'not_approved',
+      );
+    }
     await pool.query(`UPDATE drivers SET is_online = $2 WHERE id = $1`, [
       driver.id,
       body.online,
     ]);
-    return ensureDriver(user.sub, user.phone);
+    return ensureDriver(user.sub, user.phone, user.roles);
   });
 
   app.get('/v1/ride/driver/offers', async (req) => {
     const user = requireAuth(req);
-    const driver = await ensureDriver(user.sub, user.phone);
+    const driver = await ensureDriver(user.sub, user.phone, user.roles);
+    await expireStaleOffers();
+    const cfg = await getFareConfig();
     const res = await pool.query(
       `SELECT * FROM trips
        WHERE status = 'matching'
@@ -267,12 +389,27 @@ async function boot() {
        ORDER BY created_at DESC`,
       [driver.id],
     );
-    return { items: res.rows.map(mapTrip) };
+    const items = res.rows
+      .map(mapTrip)
+      .filter((trip) => {
+        if (trip.status === 'assigned') return trip.driverId === driver.id;
+        if (driver.lat == null || driver.lng == null) return false;
+        if (trip.pickupLat == null || trip.pickupLng == null) return true;
+        return (
+          haversineKm(
+            driver.lat as number,
+            driver.lng as number,
+            trip.pickupLat as number,
+            trip.pickupLng as number,
+          ) <= cfg.offerRadiusKm
+        );
+      });
+    return { items };
   });
 
   app.get('/v1/ride/driver/active', async (req) => {
     const user = requireAuth(req);
-    const driver = await ensureDriver(user.sub, user.phone);
+    const driver = await ensureDriver(user.sub, user.phone, user.roles);
     const res = await pool.query(
       `SELECT * FROM trips
        WHERE driver_id = $1
@@ -283,15 +420,80 @@ async function boot() {
     return res.rowCount ? mapTrip(res.rows[0]) : null;
   });
 
+  app.get('/v1/ride/driver/earnings/today', async (req) => {
+    const user = requireAuth(req);
+    const driver = await ensureDriver(user.sub, user.phone, user.roles);
+    const res = await pool.query(
+      `SELECT * FROM trips
+       WHERE driver_id = $1
+         AND status = 'completed'
+         AND completed_at >= date_trunc('day', NOW())
+       ORDER BY completed_at DESC`,
+      [driver.id],
+    );
+    const items = res.rows.map(mapTrip);
+    const totalEtb = items.reduce(
+      (sum, t) => sum + (t.fareEtb as number),
+      0,
+    );
+    return { totalEtb, items };
+  });
+
   app.post('/v1/ride/driver/trips/:id/accept', async (req) => {
     const user = requireAuth(req);
-    const driver = await ensureDriver(user.sub, user.phone);
+    const driver = await ensureDriver(user.sub, user.phone, user.roles);
+    if (!driver.isApproved || !driver.isOnline) {
+      throw new AppError('Go online as an approved driver first', 403, 'offline');
+    }
     const { id } = req.params as { id: string };
-    await pool.query(
-      `UPDATE trips SET driver_id = $2, status = 'assigned' WHERE id = $1`,
+    await expireStaleOffers();
+    const trip = await getTrip(id);
+    if (trip.status !== 'matching') {
+      throw new AppError('Offer is no longer available', 409, 'offer_gone');
+    }
+    if (
+      trip.offerExpiresAt &&
+      new Date(trip.offerExpiresAt as string).getTime() < Date.now()
+    ) {
+      await pool.query(
+        `UPDATE trips SET status = 'cancelled', cancel_reason = 'no_driver',
+          offer_expires_at = NULL
+         WHERE id = $1 AND status = 'matching'`,
+        [id],
+      );
+      throw new AppError('Offer expired', 409, 'offer_expired');
+    }
+    const cfg = await getFareConfig();
+    if (
+      driver.lat != null &&
+      driver.lng != null &&
+      trip.pickupLat != null &&
+      trip.pickupLng != null
+    ) {
+      const dist = haversineKm(
+        driver.lat as number,
+        driver.lng as number,
+        trip.pickupLat as number,
+        trip.pickupLng as number,
+      );
+      if (dist > cfg.offerRadiusKm) {
+        throw new AppError(
+          'Pickup is outside your offer radius',
+          403,
+          'too_far',
+        );
+      }
+    }
+    const updated = await pool.query(
+      `UPDATE trips SET driver_id = $2, status = 'assigned', offer_expires_at = NULL
+       WHERE id = $1 AND status = 'matching'
+       RETURNING *`,
       [id, driver.id],
     );
-    return getTrip(id);
+    if (!updated.rowCount) {
+      throw new AppError('Offer is no longer available', 409, 'offer_gone');
+    }
+    return mapTrip(updated.rows[0]);
   });
 
   app.post('/v1/ride/driver/trips/:id/advance', async (req) => {
@@ -304,7 +506,7 @@ async function boot() {
       arrived: 'inProgress',
       inProgress: 'completed',
     };
-    const status = next[trip.status] ?? trip.status;
+    const status = next[trip.status as string] ?? trip.status;
     await pool.query(
       `UPDATE trips SET status = $2,
         completed_at = CASE WHEN $2 = 'completed' THEN NOW() ELSE completed_at END
@@ -324,6 +526,33 @@ async function boot() {
     return getTrip(id);
   });
 
+  app.post('/v1/ride/driver/trips/:id/report', async (req) => {
+    const user = requireAuth(req);
+    const driver = await ensureDriver(user.sub, user.phone, user.roles);
+    const { id } = req.params as { id: string };
+    const body = z
+      .object({
+        reason: z.enum(['no_show', 'wrong_pin', 'other']),
+        note: z.string().max(200).optional(),
+      })
+      .parse(req.body ?? {});
+    const trip = await getTrip(id);
+    if (trip.driverId !== driver.id) {
+      throw new AppError('Not your trip', 403, 'forbidden');
+    }
+    if (['completed', 'cancelled'].includes(trip.status as string)) {
+      throw new AppError('Trip already closed', 400, 'locked');
+    }
+    const reason = `driver_report:${body.reason}`;
+    await pool.query(
+      `UPDATE trips SET status = 'cancelled', cancel_reason = $2,
+        offer_expires_at = NULL
+       WHERE id = $1`,
+      [id, body.note ? `${reason}:${body.note}` : reason],
+    );
+    return getTrip(id);
+  });
+
   app.get('/v1/ride/drivers/:id', async (req) => {
     const { id } = req.params as { id: string };
     const res = await pool.query(`SELECT * FROM drivers WHERE id = $1`, [id]);
@@ -331,13 +560,173 @@ async function boot() {
     return mapDriver(res.rows[0]);
   });
 
+  // ── Ops ──────────────────────────────────────────────────────────────
+  app.get('/v1/ride/ops/config', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, [...opsStaff]);
+    return getFareConfig();
+  });
+
+  app.patch('/v1/ride/ops/config', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, [...opsStaff]);
+    const body = z
+      .object({
+        baseEtb: z.number().int().min(0).max(5000).optional(),
+        perKmEtb: z.number().min(0).max(500).optional(),
+        minFareEtb: z.number().int().min(0).max(10000).optional(),
+        offerRadiusKm: z.number().min(1).max(50).optional(),
+        etaBaseMin: z.number().min(0).max(60).optional(),
+        etaMinPerKm: z.number().min(0).max(30).optional(),
+      })
+      .parse(req.body ?? {});
+    const current = await getFareConfig();
+    const next = { ...current, ...body };
+    await setConfig('base_etb', String(next.baseEtb));
+    await setConfig('per_km_etb', String(next.perKmEtb));
+    await setConfig('min_fare_etb', String(next.minFareEtb));
+    await setConfig('offer_radius_km', String(next.offerRadiusKm));
+    await setConfig('eta_base_min', String(next.etaBaseMin));
+    await setConfig('eta_min_per_km', String(next.etaMinPerKm));
+    return getFareConfig();
+  });
+
+  app.get('/v1/ride/ops/drivers', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, [...opsStaff]);
+    const res = await pool.query(
+      `SELECT * FROM drivers ORDER BY is_approved DESC, name ASC`,
+    );
+    return { items: res.rows.map(mapDriver) };
+  });
+
+  app.post('/v1/ride/ops/drivers/:id/approve', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, [...opsStaff]);
+    const { id } = req.params as { id: string };
+    const body = z.object({ approved: z.boolean() }).parse(req.body ?? {});
+    const res = await pool.query(
+      `UPDATE drivers SET is_approved = $2,
+        is_online = CASE WHEN $2 = FALSE THEN FALSE ELSE is_online END
+       WHERE id = $1 RETURNING *`,
+      [id, body.approved],
+    );
+    if (!res.rowCount) throw new AppError('Driver not found', 404, 'not_found');
+    return mapDriver(res.rows[0]);
+  });
+
+  app.get('/v1/ride/ops/trips/active', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, [...opsStaff]);
+    const res = await pool.query(
+      `SELECT * FROM trips
+       WHERE status NOT IN ('completed','cancelled')
+       ORDER BY created_at DESC
+       LIMIT 100`,
+    );
+    return { items: res.rows.map(mapTrip) };
+  });
+
+  app.post('/v1/ride/ops/trips/:id/cancel', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, [...opsStaff]);
+    const { id } = req.params as { id: string };
+    const body = z
+      .object({ note: z.string().max(200).optional() })
+      .parse(req.body ?? {});
+    const trip = await getTrip(id);
+    if (['completed', 'cancelled'].includes(trip.status as string)) {
+      throw new AppError('Trip already closed', 400, 'locked');
+    }
+    await pool.query(
+      `UPDATE trips SET status = 'cancelled',
+        cancel_reason = $2,
+        offer_expires_at = NULL
+       WHERE id = $1`,
+      [id, body.note ? `ops_cancel:${body.note}` : 'ops_cancel'],
+    );
+    return getTrip(id);
+  });
+
   await listen(app, port);
 }
 
-function hash(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function isInServiceArea(lat: number, lng: number): boolean {
+  return (
+    lat >= SERVICE_BBOX.minLat &&
+    lat <= SERVICE_BBOX.maxLat &&
+    lng >= SERVICE_BBOX.minLng &&
+    lng <= SERVICE_BBOX.maxLng
+  );
+}
+
+async function ensureDefaultConfig() {
+  for (const [key, value] of Object.entries({
+    base_etb: String(DEFAULT_CONFIG.baseEtb),
+    per_km_etb: String(DEFAULT_CONFIG.perKmEtb),
+    min_fare_etb: String(DEFAULT_CONFIG.minFareEtb),
+    offer_radius_km: String(DEFAULT_CONFIG.offerRadiusKm),
+    eta_base_min: String(DEFAULT_CONFIG.etaBaseMin),
+    eta_min_per_km: String(DEFAULT_CONFIG.etaMinPerKm),
+  })) {
+    await pool.query(
+      `INSERT INTO ride_config (key, value) VALUES ($1,$2)
+       ON CONFLICT (key) DO NOTHING`,
+      [key, value],
+    );
+  }
+}
+
+async function setConfig(key: string, value: string) {
+  await pool.query(
+    `INSERT INTO ride_config (key, value) VALUES ($1,$2)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [key, value],
+  );
+}
+
+async function getFareConfig() {
+  const res = await pool.query(`SELECT key, value FROM ride_config`);
+  const map = Object.fromEntries(
+    res.rows.map((r) => [r.key as string, r.value as string]),
+  );
+  return {
+    baseEtb: Number(map.base_etb ?? DEFAULT_CONFIG.baseEtb),
+    perKmEtb: Number(map.per_km_etb ?? DEFAULT_CONFIG.perKmEtb),
+    minFareEtb: Number(map.min_fare_etb ?? DEFAULT_CONFIG.minFareEtb),
+    offerRadiusKm: Number(map.offer_radius_km ?? DEFAULT_CONFIG.offerRadiusKm),
+    etaBaseMin: Number(map.eta_base_min ?? DEFAULT_CONFIG.etaBaseMin),
+    etaMinPerKm: Number(map.eta_min_per_km ?? DEFAULT_CONFIG.etaMinPerKm),
+    vehicleClass: VEHICLE,
+  };
+}
+
+async function ensurePinPlace(lat: number, lng: number, label: string) {
+  const id = `pin-${lat.toFixed(4)}-${lng.toFixed(4)}`;
+  await pool.query(
+    `INSERT INTO places (id, name, subcity, lat, lng)
+     VALUES ($1,$2,'Addis',$3,$4)
+     ON CONFLICT (id) DO UPDATE
+     SET lat = EXCLUDED.lat, lng = EXCLUDED.lng`,
+    [id, `${label} (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng],
+  );
+  return id;
 }
 
 async function getTrip(id: string) {
@@ -346,52 +735,104 @@ async function getTrip(id: string) {
   return mapTrip(res.rows[0]);
 }
 
-async function ensureDriver(userId: string, phone: string) {
+async function ensureDriver(
+  userId: string,
+  phone: string,
+  roles: string[] = [],
+) {
   const existing = await pool.query(
     `SELECT * FROM drivers WHERE user_id = $1`,
     [userId],
   );
   if (existing.rowCount) return mapDriver(existing.rows[0]);
   const id = `drv-user-${userId}`;
+  const autoApproved = roles.some((r) =>
+    ['platform_admin', 'ride_ops'].includes(r),
+  );
   await pool.query(
     `INSERT INTO drivers (id, user_id, name, rating, plate, car_model, photo_hint, phone_e164, is_online, is_approved)
-     VALUES ($1,$2,'You (Driver)',5.0,'AA-DEMO-01','Economy sedan','YO',$3,FALSE,TRUE)
+     VALUES ($1,$2,'You (Driver)',5.0,'AA-DEMO-01','Economy sedan','YO',$3,FALSE,$4)
      ON CONFLICT (id) DO NOTHING`,
-    [id, userId, phone],
+    [id, userId, phone, autoApproved],
   );
   const res = await pool.query(`SELECT * FROM drivers WHERE id = $1`, [id]);
   return mapDriver(res.rows[0]);
 }
 
 async function autoMatch(tripId: string) {
-  await sleep(2000);
-  await pool.query(
-    `UPDATE trips SET status = 'matching' WHERE id = $1 AND status = 'requested'`,
-    [tripId],
+  await sleep(1500);
+  const opened = await pool.query(
+    `UPDATE trips
+     SET status = 'matching',
+         offer_expires_at = NOW() + make_interval(secs => $2),
+         cancel_reason = NULL
+     WHERE id = $1 AND status = 'requested'
+     RETURNING *`,
+    [tripId, OFFER_TTL_SEC],
   );
+  if (!opened.rowCount) return;
+
+  const trip = mapTrip(opened.rows[0]);
+  const cfg = await getFareConfig();
   await sleep(2000);
+
   const online = await pool.query(
-    `SELECT id FROM drivers WHERE is_online = TRUE AND is_approved = TRUE LIMIT 1`,
+    `SELECT id, last_lat, last_lng FROM drivers
+     WHERE is_online = TRUE AND is_approved = TRUE
+       AND last_lat IS NOT NULL AND last_lng IS NOT NULL`,
   );
-  const seed = await pool.query(`SELECT id FROM drivers WHERE id = 'drv-1'`);
-  const driverId = online.rowCount
-    ? online.rows[0].id
-    : seed.rows[0]?.id;
-  if (!driverId) return;
+  const nearby = online.rows.filter((d) => {
+    if (trip.pickupLat == null || trip.pickupLng == null) return true;
+    return (
+      haversineKm(
+        Number(d.last_lat),
+        Number(d.last_lng),
+        trip.pickupLat as number,
+        trip.pickupLng as number,
+      ) <= cfg.offerRadiusKm
+    );
+  });
+
+  if (!nearby.length) {
+    await pool.query(
+      `UPDATE trips
+       SET status = 'cancelled',
+           cancel_reason = 'no_driver',
+           offer_expires_at = NULL
+       WHERE id = $1 AND status = 'matching'`,
+      [tripId],
+    );
+    return;
+  }
+
+  await sleep(OFFER_TTL_SEC * 1000);
+  await expireStaleOffers();
+}
+
+async function expireStaleOffers() {
   await pool.query(
-    `UPDATE trips SET status = 'assigned', driver_id = $2
-     WHERE id = $1 AND status IN ('matching','requested')`,
-    [tripId, driverId],
-  );
-  await sleep(2000);
-  await pool.query(
-    `UPDATE trips SET status = 'arriving' WHERE id = $1 AND status = 'assigned'`,
-    [tripId],
+    `UPDATE trips
+     SET status = 'cancelled',
+         cancel_reason = COALESCE(cancel_reason, 'no_driver'),
+         offer_expires_at = NULL
+     WHERE status = 'matching'
+       AND offer_expires_at IS NOT NULL
+       AND offer_expires_at < NOW()`,
   );
 }
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function mapPlace(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    name: row.name,
+    subcity: row.subcity,
+    lat: row.lat == null ? null : Number(row.lat),
+    lng: row.lng == null ? null : Number(row.lng),
+  };
 }
 
 function mapTrip(row: Record<string, unknown>) {
@@ -407,6 +848,14 @@ function mapTrip(row: Record<string, unknown>) {
     passengerRating: row.passenger_rating,
     createdAt: row.created_at,
     completedAt: row.completed_at,
+    etaMinutes: row.eta_minutes == null ? null : Number(row.eta_minutes),
+    offerExpiresAt: row.offer_expires_at ?? null,
+    cancelReason: row.cancel_reason ?? null,
+    pickupLat: row.pickup_lat == null ? null : Number(row.pickup_lat),
+    pickupLng: row.pickup_lng == null ? null : Number(row.pickup_lng),
+    dropoffLat: row.dropoff_lat == null ? null : Number(row.dropoff_lat),
+    dropoffLng: row.dropoff_lng == null ? null : Number(row.dropoff_lng),
+    distanceKm: row.distance_km == null ? null : Number(row.distance_km),
   };
 }
 

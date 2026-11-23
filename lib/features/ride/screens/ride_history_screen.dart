@@ -28,6 +28,13 @@ class RideHistoryScreen extends ConsumerWidget {
                 final trip = trips[index];
                 final pickup = repo.getPlace(trip.pickupId);
                 final dropoff = repo.getPlace(trip.dropoffId);
+                final driver = trip.driverId == null
+                    ? null
+                    : repo.getDriver(trip.driverId!);
+                final when = trip.completedAt ?? trip.createdAt;
+                final whenLabel =
+                    '${when.year}-${when.month.toString().padLeft(2, '0')}-${when.day.toString().padLeft(2, '0')}'
+                    ' ${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}';
                 return InkWell(
                   onTap: () => context.push('${AppRoutes.rideTrips}/${trip.id}'),
                   borderRadius: BorderRadius.circular(16),
@@ -57,6 +64,13 @@ class RideHistoryScreen extends ConsumerWidget {
                         Text(
                           '${trip.fareEtb} ETB cash · ${trip.vehicleClass}',
                           style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          driver == null
+                              ? whenLabel
+                              : '$whenLabel · ${driver.name} · ${driver.plate}',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),

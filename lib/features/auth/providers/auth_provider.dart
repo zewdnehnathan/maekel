@@ -37,6 +37,8 @@ class AuthSession {
 
   bool get isFoodRider =>
       isPlatformAdmin || isFoodOps || roles.contains('food_rider');
+
+  bool get isRideOps => isPlatformAdmin || roles.contains('ride_ops');
 }
 
 class AuthState {

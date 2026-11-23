@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:math';
+
+import 'package:latlong2/latlong.dart';
 
 import '../models/ride_models.dart';
 
@@ -10,6 +11,10 @@ abstract class RideRepository {
   Future<FareQuote> getQuote({
     required String pickupId,
     required String dropoffId,
+    required double pickupLat,
+    required double pickupLng,
+    required double dropoffLat,
+    required double dropoffLng,
   });
   Future<RideTrip> requestTrip({
     required String passengerId,
@@ -27,6 +32,12 @@ abstract class RideRepository {
   Future<RideTrip> acceptOffer(String tripId, String driverId);
   Future<RideTrip> driverAdvance(String tripId);
   Future<RideTrip> confirmCash(String tripId);
+  Future<DriverEarningsToday> getDriverEarningsToday(String driverId);
+  Future<RideTrip> reportTripProblem({
+    required String tripId,
+    required String reason,
+    String? note,
+  });
   Stream<void> get changes;
 }
 
@@ -41,7 +52,6 @@ class InMemoryRideRepository implements RideRepository {
   final _trips = <RideTrip>[];
   final _driverSessions = <String, DriverSession>{};
   int _seq = 300;
-  final _rng = Random();
 
   static const vehicleClass = 'Economy';
 
@@ -150,22 +160,46 @@ class InMemoryRideRepository implements RideRepository {
   Future<FareQuote> getQuote({
     required String pickupId,
     required String dropoffId,
+    required double pickupLat,
+    required double pickupLng,
+    required double dropoffLat,
+    required double dropoffLng,
   }) async {
     if (pickupId == dropoffId) {
       throw StateError('Pickup and dropoff must differ');
     }
+    if (!isInRideServiceArea(LatLng(pickupLat, pickupLng))) {
+      throw StateError('Pickup is outside the Addis Ababa service area');
+    }
+    if (!isInRideServiceArea(LatLng(dropoffLat, dropoffLng))) {
+      throw StateError('Drop-off is outside the Addis Ababa service area');
+    }
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    final base = 120 + _rng.nextInt(80);
-    final distanceFactor = (pickupId.hashCode - dropoffId.hashCode).abs() % 200;
-    final total = base + distanceFactor + 50;
+    const baseEtb = 100;
+    const perKm = 16.0;
+    const minFare = 120;
+    final distanceKm = const Distance().as(
+          LengthUnit.Meter,
+          LatLng(pickupLat, pickupLng),
+          LatLng(dropoffLat, dropoffLng),
+        ) /
+        1000.0;
+    if (distanceKm < 0.2) {
+      throw StateError('Pickup and drop-off are too close');
+    }
+    final total = (baseEtb + perKm * distanceKm).round().clamp(minFare, 100000);
+    final eta = (5 + 2.5 * distanceKm).round().clamp(3, 120);
     return FareQuote(
       id: _id('quote'),
       pickupId: pickupId,
       dropoffId: dropoffId,
       vehicleClass: vehicleClass,
       totalEtb: total,
-      etaMinutes: 8 + _rng.nextInt(10),
+      etaMinutes: eta,
       createdAt: DateTime.now(),
+      distanceKm: double.parse(distanceKm.toStringAsFixed(2)),
+      baseEtb: baseEtb,
+      perKmEtb: perKm,
     );
   }
 
@@ -188,6 +222,7 @@ class InMemoryRideRepository implements RideRepository {
       vehicleClass: quote.vehicleClass,
       status: TripStatus.requested,
       createdAt: DateTime.now(),
+      etaMinutes: quote.etaMinutes,
     );
     _trips.insert(0, trip);
     _notify();
@@ -196,38 +231,43 @@ class InMemoryRideRepository implements RideRepository {
   }
 
   Future<void> _autoMatch(String tripId) async {
-    await Future<void>.delayed(const Duration(seconds: 2));
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
     final idx = _trips.indexWhere((t) => t.id == tripId);
     if (idx < 0) return;
     if (_trips[idx].status == TripStatus.cancelled) return;
-    _trips[idx] = _trips[idx].copyWith(status: TripStatus.matching);
-    _notify();
-
-    await Future<void>.delayed(const Duration(seconds: 2));
-    final i2 = _trips.indexWhere((t) => t.id == tripId);
-    if (i2 < 0 || _trips[i2].status == TripStatus.cancelled) return;
-
-    // Prefer an online demo driver session if any; else assign seed driver.
-    String driverId = _drivers.first.id;
-    for (final session in _driverSessions.values) {
-      if (session.isOnline && session.isApproved) {
-        driverId = session.driverId;
-        break;
-      }
-    }
-    _trips[i2] = _trips[i2].copyWith(
-      status: TripStatus.assigned,
-      driverId: driverId,
+    final expires = DateTime.now().add(const Duration(seconds: 45));
+    _trips[idx] = _trips[idx].copyWith(
+      status: TripStatus.matching,
+      offerExpiresAt: expires,
     );
     _notify();
 
-    await Future<void>.delayed(const Duration(seconds: 2));
-    final i3 = _trips.indexWhere((t) => t.id == tripId);
-    if (i3 < 0 || _trips[i3].status == TripStatus.cancelled) return;
-    if (_trips[i3].status == TripStatus.assigned) {
-      _trips[i3] = _trips[i3].copyWith(status: TripStatus.arriving);
+    await Future<void>.delayed(const Duration(milliseconds: 2500));
+    final i2 = _trips.indexWhere((t) => t.id == tripId);
+    if (i2 < 0 || _trips[i2].status != TripStatus.matching) return;
+
+    final hasOnline = _driverSessions.values.any(
+      (s) => s.isOnline && s.isApproved,
+    );
+    if (!hasOnline) {
+      _trips[i2] = _trips[i2].copyWith(
+        status: TripStatus.cancelled,
+        cancelReason: 'no_driver',
+        clearOfferExpiresAt: true,
+      );
       _notify();
+      return;
     }
+
+    await Future<void>.delayed(const Duration(seconds: 45));
+    final i3 = _trips.indexWhere((t) => t.id == tripId);
+    if (i3 < 0 || _trips[i3].status != TripStatus.matching) return;
+    _trips[i3] = _trips[i3].copyWith(
+      status: TripStatus.cancelled,
+      cancelReason: 'no_driver',
+      clearOfferExpiresAt: true,
+    );
+    _notify();
   }
 
   @override
@@ -344,9 +384,24 @@ class InMemoryRideRepository implements RideRepository {
   Future<RideTrip> acceptOffer(String tripId, String driverId) async {
     final idx = _trips.indexWhere((t) => t.id == tripId);
     if (idx < 0) throw StateError('Trip not found');
-    _trips[idx] = _trips[idx].copyWith(
+    final trip = _trips[idx];
+    if (trip.status != TripStatus.matching) {
+      throw StateError('Offer is no longer available');
+    }
+    if (trip.offerExpiresAt != null &&
+        trip.offerExpiresAt!.isBefore(DateTime.now())) {
+      _trips[idx] = trip.copyWith(
+        status: TripStatus.cancelled,
+        cancelReason: 'no_driver',
+        clearOfferExpiresAt: true,
+      );
+      _notify();
+      throw StateError('Offer expired');
+    }
+    _trips[idx] = trip.copyWith(
       driverId: driverId,
       status: TripStatus.assigned,
+      clearOfferExpiresAt: true,
     );
     _notify();
     return _trips[idx];
@@ -383,6 +438,51 @@ class InMemoryRideRepository implements RideRepository {
     _trips[idx] = _trips[idx].copyWith(
       status: TripStatus.completed,
       completedAt: DateTime.now(),
+    );
+    _notify();
+    return _trips[idx];
+  }
+
+  @override
+  Future<DriverEarningsToday> getDriverEarningsToday(String driverId) async {
+    final start = DateTime.now();
+    final dayStart = DateTime(start.year, start.month, start.day);
+    final trips = _trips
+        .where(
+          (t) =>
+              t.driverId == driverId &&
+              t.status == TripStatus.completed &&
+              t.completedAt != null &&
+              !t.completedAt!.isBefore(dayStart),
+        )
+        .toList()
+      ..sort(
+        (a, b) => (b.completedAt ?? b.createdAt)
+            .compareTo(a.completedAt ?? a.createdAt),
+      );
+    final total = trips.fold<int>(0, (sum, t) => sum + t.fareEtb);
+    return DriverEarningsToday(totalEtb: total, trips: trips);
+  }
+
+  @override
+  Future<RideTrip> reportTripProblem({
+    required String tripId,
+    required String reason,
+    String? note,
+  }) async {
+    final idx = _trips.indexWhere((t) => t.id == tripId);
+    if (idx < 0) throw StateError('Trip not found');
+    if (_trips[idx].status == TripStatus.completed ||
+        _trips[idx].status == TripStatus.cancelled) {
+      throw StateError('Trip already closed');
+    }
+    final tag = note == null || note.isEmpty
+        ? 'driver_report:$reason'
+        : 'driver_report:$reason:$note';
+    _trips[idx] = _trips[idx].copyWith(
+      status: TripStatus.cancelled,
+      cancelReason: tag,
+      clearOfferExpiresAt: true,
     );
     _notify();
     return _trips[idx];

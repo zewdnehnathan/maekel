@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/widgets/glass_panel.dart';
@@ -37,12 +38,16 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
     final dropoff = repo.getPlace(trip.dropoffId);
     final driver =
         trip.driverId == null ? null : repo.getDriver(trip.driverId!);
-    final driverPoint = estimateDriverPoint(
-      status: trip.status,
-      pickup: pickup,
-      dropoff: dropoff,
-      driver: driver,
-    );
+    final liveDriver = driver?.point;
+    final driverPoint = liveDriver ??
+        estimateDriverPoint(
+          status: trip.status,
+          pickup: pickup,
+          dropoff: dropoff,
+          driver: driver,
+        );
+    final mapPickup = trip.pickupPoint ?? pickup?.point;
+    final mapDropoff = trip.dropoffPoint ?? dropoff?.point;
 
     return RideShell(
       title: 'Trip',
@@ -51,8 +56,8 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           RideMap(
-            pickupPoint: pickup?.point,
-            dropoffPoint: dropoff?.point,
+            pickupPoint: mapPickup,
+            dropoffPoint: mapDropoff,
             driverPoint: driverPoint,
             height: 300,
           ),
@@ -77,14 +82,39 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
                 const SizedBox(height: 8),
                 Text('From: ${pickup?.name ?? trip.pickupId}'),
                 Text('To: ${dropoff?.name ?? trip.dropoffId}'),
+                if (trip.etaMinutes != null &&
+                    (trip.status == TripStatus.matching ||
+                        trip.status == TripStatus.assigned ||
+                        trip.status == TripStatus.arriving ||
+                        trip.status == TripStatus.requested)) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Driver ETA about ${trip.etaMinutes} min',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: MaekelColors.signal,
+                        ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Text(
-                  'Pay cash at complete — fare locked at request.',
+                  trip.wasNoDriver
+                      ? 'No driver was available. Go back and try again.'
+                      : 'Pay cash at complete — fare locked at request.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
             ),
           ),
+          if (trip.wasNoDriver) ...[
+            const SizedBox(height: 14),
+            GlassPanel(
+              accent: MaekelColors.danger,
+              child: Text(
+                'No online drivers nearby. Ask a test driver to go Online on Drive, then Request again.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          ],
           if (driver != null) ...[
             const SizedBox(height: 14),
             GlassPanel(
@@ -110,8 +140,24 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
                           '${driver.carModel} · ${driver.plate} · ★ ${driver.rating}',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
+                        if (trip.etaMinutes != null)
+                          Text(
+                            'Arriving in about ${trip.etaMinutes} min',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                       ],
                     ),
+                  ),
+                  IconButton.filled(
+                    onPressed: () => launchUrl(
+                      Uri(scheme: 'tel', path: driver.phoneE164),
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: MaekelColors.ride,
+                      foregroundColor: MaekelColors.voidBlack,
+                    ),
+                    icon: const Icon(Icons.call_rounded),
+                    tooltip: 'Call driver',
                   ),
                 ],
               ),

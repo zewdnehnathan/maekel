@@ -1,11 +1,13 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
+import '../../auth/providers/auth_provider.dart';
 
-class RideShell extends StatelessWidget {
+class RideShell extends ConsumerWidget {
   const RideShell({
     super.key,
     required this.title,
@@ -26,9 +28,10 @@ class RideShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final loc = GoRouterState.of(context).uri.toString();
     final index = _indexFor(loc);
+    final isOps = ref.watch(authProvider).session?.isRideOps == true;
 
     return Scaffold(
       body: FuturisticBackdrop(
@@ -59,6 +62,13 @@ class RideShell extends StatelessWidget {
                             ),
                       ),
                     ),
+                    if (isOps)
+                      IconButton(
+                        onPressed: () => context.push(AppRoutes.rideOps),
+                        icon: const Icon(Icons.admin_panel_settings_rounded),
+                        color: MaekelColors.ride,
+                        tooltip: 'Ride ops',
+                      ),
                     ...?actions,
                   ],
                 ),

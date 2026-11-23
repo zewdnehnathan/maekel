@@ -69,9 +69,14 @@ class ApiRideRepository implements RideRepository {
               .cast<Map<String, dynamic>>()
               .map(_parseTrip),
         );
+      for (final t in List.of(_trips)) {
+        await _ensureDriverCached(t.driverId);
+      }
       final active = await _client.get('/v1/ride/trips/active', auth: true);
       if (active is Map<String, dynamic>) {
-        _upsertTrip(_parseTrip(active));
+        final trip = _parseTrip(active);
+        _upsertTrip(trip);
+        await _ensureDriverCached(trip.driverId);
       }
       final me = await _client.get('/v1/ride/driver/me', auth: true)
           as Map<String, dynamic>;
@@ -87,22 +92,45 @@ class ApiRideRepository implements RideRepository {
       } else {
         _drivers.add(driver);
       }
+      try {
+        final offers = await _client.get('/v1/ride/driver/offers', auth: true);
+        for (final raw in ((offers as Map)['items'] as List)
+            .cast<Map<String, dynamic>>()) {
+          _upsertTrip(_parseTrip(raw), notify: false);
+        }
+        final driverActive =
+            await _client.get('/v1/ride/driver/active', auth: true);
+        if (driverActive is Map<String, dynamic>) {
+          _upsertTrip(_parseTrip(driverActive), notify: false);
+        }
+      } catch (_) {}
       _notify();
     } catch (_) {}
   }
 
   Future<void> _pollActive() async {
     if (!_authed) return;
-    final hasActive = _trips.any(
-      (t) =>
-          t.status != TripStatus.completed && t.status != TripStatus.cancelled,
-    );
-    if (!hasActive) return;
     try {
       final active = await _client.get('/v1/ride/trips/active', auth: true);
       if (active is Map<String, dynamic>) {
-        _upsertTrip(_parseTrip(active));
+        final trip = _parseTrip(active);
+        _upsertTrip(trip, notify: false);
+        // Refresh live GPS for the assigned driver.
+        if (trip.driverId != null) {
+          try {
+            final raw = await _client.get('/v1/ride/drivers/${trip.driverId}')
+                as Map<String, dynamic>;
+            final driver = _parseDriver(raw);
+            final idx = _drivers.indexWhere((d) => d.id == driver.id);
+            if (idx >= 0) {
+              _drivers[idx] = driver;
+            } else {
+              _drivers.add(driver);
+            }
+          } catch (_) {}
+        }
       }
+
       final history = await _client.get('/v1/ride/trips', auth: true);
       final list = ((history as Map)['items'] as List)
           .cast<Map<String, dynamic>>()
@@ -111,7 +139,42 @@ class ApiRideRepository implements RideRepository {
       for (final t in list) {
         _upsertTrip(t, notify: false);
       }
+
+      // Keep Drive offers/active fresh for two-phone / role-switch flows.
+      if (_driverSession != null) {
+        try {
+          final offers = await _client.get(
+            '/v1/ride/driver/offers',
+            auth: true,
+          );
+          for (final raw in ((offers as Map)['items'] as List)
+              .cast<Map<String, dynamic>>()) {
+            _upsertTrip(_parseTrip(raw), notify: false);
+          }
+          final driverActive =
+              await _client.get('/v1/ride/driver/active', auth: true);
+          if (driverActive is Map<String, dynamic>) {
+            _upsertTrip(_parseTrip(driverActive), notify: false);
+          }
+        } catch (_) {}
+      }
+
       _notify();
+    } catch (_) {}
+  }
+
+  Future<void> _ensureDriverCached(String? driverId) async {
+    if (driverId == null || getDriver(driverId) != null) return;
+    try {
+      final raw =
+          await _client.get('/v1/ride/drivers/$driverId') as Map<String, dynamic>;
+      final driver = _parseDriver(raw);
+      final idx = _drivers.indexWhere((d) => d.id == driver.id);
+      if (idx >= 0) {
+        _drivers[idx] = driver;
+      } else {
+        _drivers.add(driver);
+      }
     } catch (_) {}
   }
 
@@ -141,12 +204,24 @@ class ApiRideRepository implements RideRepository {
   Future<FareQuote> getQuote({
     required String pickupId,
     required String dropoffId,
+    required double pickupLat,
+    required double pickupLng,
+    required double dropoffLat,
+    required double dropoffLng,
   }) async {
     final raw = await _client.post(
       '/v1/ride/quotes',
       auth: true,
-      body: {'pickupId': pickupId, 'dropoffId': dropoffId},
+      body: {
+        'pickupId': pickupId,
+        'dropoffId': dropoffId,
+        'pickupLat': pickupLat,
+        'pickupLng': pickupLng,
+        'dropoffLat': dropoffLat,
+        'dropoffLng': dropoffLng,
+      },
     ) as Map<String, dynamic>;
+    final breakdown = raw['breakdown'] as Map<String, dynamic>?;
     return FareQuote(
       id: raw['id'] as String,
       pickupId: raw['pickupId'] as String,
@@ -155,6 +230,9 @@ class ApiRideRepository implements RideRepository {
       totalEtb: (raw['totalEtb'] as num).toInt(),
       etaMinutes: (raw['etaMinutes'] as num).toInt(),
       createdAt: DateTime.now(),
+      distanceKm: (raw['distanceKm'] as num?)?.toDouble(),
+      baseEtb: (breakdown?['baseEtb'] as num?)?.toInt(),
+      perKmEtb: (breakdown?['perKmEtb'] as num?)?.toDouble(),
     );
   }
 
@@ -305,6 +383,43 @@ class ApiRideRepository implements RideRepository {
     return _upsertTrip(_parseTrip(raw));
   }
 
+  @override
+  Future<DriverEarningsToday> getDriverEarningsToday(String driverId) async {
+    final raw = await _client.get(
+      '/v1/ride/driver/earnings/today',
+      auth: true,
+    ) as Map<String, dynamic>;
+    final trips = ((raw['items'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(_parseTrip)
+        .toList();
+    for (final t in trips) {
+      _upsertTrip(t, notify: false);
+    }
+    _notify();
+    return DriverEarningsToday(
+      totalEtb: (raw['totalEtb'] as num?)?.toInt() ?? 0,
+      trips: trips,
+    );
+  }
+
+  @override
+  Future<RideTrip> reportTripProblem({
+    required String tripId,
+    required String reason,
+    String? note,
+  }) async {
+    final raw = await _client.post(
+      '/v1/ride/driver/trips/$tripId/report',
+      auth: true,
+      body: {
+        'reason': reason,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      },
+    ) as Map<String, dynamic>;
+    return _upsertTrip(_parseTrip(raw));
+  }
+
   RideTrip _upsertTrip(RideTrip trip, {bool notify = true}) {
     final idx = _trips.indexWhere((t) => t.id == trip.id);
     if (idx >= 0) {
@@ -408,6 +523,8 @@ class ApiRideRepository implements RideRepository {
       phoneE164: j['phoneE164'] as String,
       lat: (j['lat'] as num?)?.toDouble(),
       lng: (j['lng'] as num?)?.toDouble(),
+      isOnline: j['isOnline'] as bool? ?? false,
+      isApproved: j['isApproved'] as bool? ?? false,
     );
   }
 
@@ -426,6 +543,120 @@ class ApiRideRepository implements RideRepository {
       completedAt: j['completedAt'] == null
           ? null
           : DateTime.parse(j['completedAt'].toString()),
+      etaMinutes: (j['etaMinutes'] as num?)?.toInt(),
+      offerExpiresAt: j['offerExpiresAt'] == null
+          ? null
+          : DateTime.tryParse(j['offerExpiresAt'].toString()),
+      cancelReason: j['cancelReason'] as String?,
+      pickupLat: (j['pickupLat'] as num?)?.toDouble(),
+      pickupLng: (j['pickupLng'] as num?)?.toDouble(),
+      dropoffLat: (j['dropoffLat'] as num?)?.toDouble(),
+      dropoffLng: (j['dropoffLng'] as num?)?.toDouble(),
+      distanceKm: (j['distanceKm'] as num?)?.toDouble(),
+    );
+  }
+
+  Future<void> postDriverLocation({
+    required double lat,
+    required double lng,
+  }) async {
+    await _client.post(
+      '/v1/ride/driver/location',
+      auth: true,
+      body: {'lat': lat, 'lng': lng},
+    );
+  }
+
+  Future<RideFareConfig> getFareConfig() async {
+    final raw = await _client.get('/v1/ride/config') as Map<String, dynamic>;
+    return _parseFareConfig(raw);
+  }
+
+  Future<RideFareConfig> updateFareConfig(RideFareConfig config) async {
+    final raw = await _client.patch(
+      '/v1/ride/ops/config',
+      auth: true,
+      body: {
+        'baseEtb': config.baseEtb,
+        'perKmEtb': config.perKmEtb,
+        'minFareEtb': config.minFareEtb,
+        'offerRadiusKm': config.offerRadiusKm,
+        'etaBaseMin': config.etaBaseMin,
+        'etaMinPerKm': config.etaMinPerKm,
+      },
+    ) as Map<String, dynamic>;
+    return _parseFareConfig(raw);
+  }
+
+  Future<List<RideDriver>> getOpsDrivers() async {
+    final raw = await _client.get('/v1/ride/ops/drivers', auth: true);
+    final items = ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseDriver)
+        .toList();
+    for (final d in items) {
+      final idx = _drivers.indexWhere((x) => x.id == d.id);
+      if (idx >= 0) {
+        _drivers[idx] = d;
+      } else {
+        _drivers.add(d);
+      }
+    }
+    _notify();
+    return items;
+  }
+
+  Future<RideDriver> setDriverApproved({
+    required String driverId,
+    required bool approved,
+  }) async {
+    final raw = await _client.post(
+      '/v1/ride/ops/drivers/$driverId/approve',
+      auth: true,
+      body: {'approved': approved},
+    ) as Map<String, dynamic>;
+    final driver = _parseDriver(raw);
+    final idx = _drivers.indexWhere((d) => d.id == driver.id);
+    if (idx >= 0) {
+      _drivers[idx] = driver;
+    } else {
+      _drivers.add(driver);
+    }
+    _notify();
+    return driver;
+  }
+
+  Future<List<RideTrip>> getOpsActiveTrips() async {
+    final raw = await _client.get('/v1/ride/ops/trips/active', auth: true);
+    final items = ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseTrip)
+        .toList();
+    for (final t in items) {
+      _upsertTrip(t, notify: false);
+    }
+    _notify();
+    return items;
+  }
+
+  Future<RideTrip> opsCancelTrip(String tripId, {String? note}) async {
+    final raw = await _client.post(
+      '/v1/ride/ops/trips/$tripId/cancel',
+      auth: true,
+      body: {if (note != null && note.isNotEmpty) 'note': note},
+    ) as Map<String, dynamic>;
+    return _upsertTrip(_parseTrip(raw));
+  }
+
+  RideFareConfig _parseFareConfig(Map<String, dynamic> raw) {
+    return RideFareConfig(
+      baseEtb: (raw['baseEtb'] as num).toInt(),
+      perKmEtb: (raw['perKmEtb'] as num).toDouble(),
+      minFareEtb: (raw['minFareEtb'] as num).toInt(),
+      offerRadiusKm: (raw['offerRadiusKm'] as num).toDouble(),
+      etaBaseMin: (raw['etaBaseMin'] as num).toDouble(),
+      etaMinPerKm: (raw['etaMinPerKm'] as num).toDouble(),
+      vehicleClass: raw['vehicleClass'] as String? ?? 'Economy',
     );
   }
 }

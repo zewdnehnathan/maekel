@@ -33,6 +33,14 @@ class _RideScreenState extends ConsumerState<RideScreen> {
   LatLng? _myLocation;
   String? _locationNote;
   bool _didAutoLocate = false;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -62,6 +70,20 @@ class _RideScreenState extends ConsumerState<RideScreen> {
     try {
       final point = await getDeviceLatLng();
       if (!mounted) return;
+      if (!isInRideServiceArea(point)) {
+        setState(() {
+          _myLocation = point;
+          _pickupPoint = point;
+          _pickupId = null;
+          _usingGpsPickup = true;
+          _pickingPickup = false;
+          _quote = null;
+          _didAutoLocate = true;
+          _locationNote =
+              'Your location is outside the Addis Ababa service area. Rides can only be requested in Addis.';
+        });
+        return;
+      }
       final nearest = nearestPlace(point, places);
       setState(() {
         _myLocation = point;
@@ -88,6 +110,22 @@ class _RideScreenState extends ConsumerState<RideScreen> {
 
   void _onMapTap(LatLng point, List<RidePlace> places) {
     setState(() {
+      if (!isInRideServiceArea(point)) {
+        _quote = null;
+        if (_pickingPickup || _pickupPoint == null) {
+          _pickupPoint = point;
+          _pickupId = null;
+          _usingGpsPickup = false;
+          _pickingPickup = false;
+        } else {
+          _dropoffPoint = point;
+          _dropoffId = null;
+        }
+        _locationNote =
+            'Outside the Addis Ababa service area. Move the pin closer to the city to request a ride.';
+        return;
+      }
+
       if (_pickingPickup || _pickupPoint == null) {
         _pickupPoint = point;
         _pickupId = places.isEmpty ? null : nearestPlace(point, places).id;
@@ -234,6 +272,45 @@ class _RideScreenState extends ConsumerState<RideScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          TextField(
+            controller: _searchController,
+            enabled: active == null,
+            style: const TextStyle(color: MaekelColors.ink),
+            decoration: InputDecoration(
+              labelText: _pickingPickup
+                  ? 'Search pickup place'
+                  : 'Search drop-off place',
+              hintText: 'Bole, Piassa, Airport…',
+              prefixIcon: const Icon(Icons.search_rounded),
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+          ),
+          if (_searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...places
+                .where((p) {
+                  final q = _searchQuery.toLowerCase();
+                  return p.name.toLowerCase().contains(q) ||
+                      p.subcity.toLowerCase().contains(q);
+                })
+                .take(6)
+                .map(
+                  (p) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: ListTile(
+                      dense: true,
+                      tileColor: MaekelColors.panel,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      title: Text(p.name),
+                      subtitle: Text(p.subcity),
+                      onTap: () => _selectPlace(p),
+                    ),
+                  ),
+                ),
+          ],
+          const SizedBox(height: 12),
           GlassPanel(
             accent: MaekelColors.ride,
             child: Column(
@@ -293,9 +370,16 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                         ),
                   ),
                   Text(
-                    'Binding quote · ETA ${_quote!.etaMinutes} min to pickup',
+                    _quote!.distanceKm == null
+                        ? 'Binding quote · ETA ${_quote!.etaMinutes} min'
+                        : 'Binding quote · ${_quote!.distanceKm!.toStringAsFixed(1)} km · ETA ${_quote!.etaMinutes} min',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  if (_quote!.baseEtb != null && _quote!.perKmEtb != null)
+                    Text(
+                      'Fare = max(min, ${_quote!.baseEtb} + ${_quote!.perKmEtb}×km)',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _requesting || active != null ? null : _request,
@@ -317,11 +401,32 @@ class _RideScreenState extends ConsumerState<RideScreen> {
   }
 
   Future<void> _getQuote() async {
+    if (_pickupId == null ||
+        _dropoffId == null ||
+        _pickupPoint == null ||
+        _dropoffPoint == null) {
+      return;
+    }
+    if (!isInRideServiceArea(_pickupPoint!) ||
+        !isInRideServiceArea(_dropoffPoint!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pickup or drop-off is outside the Addis Ababa service area.',
+          ),
+        ),
+      );
+      return;
+    }
     setState(() => _quoting = true);
     try {
       final quote = await ref.read(rideRepositoryProvider).getQuote(
             pickupId: _pickupId!,
             dropoffId: _dropoffId!,
+            pickupLat: _pickupPoint!.latitude,
+            pickupLng: _pickupPoint!.longitude,
+            dropoffLat: _dropoffPoint!.latitude,
+            dropoffLng: _dropoffPoint!.longitude,
           );
       if (mounted) setState(() => _quote = quote);
     } catch (e) {
@@ -333,6 +438,24 @@ class _RideScreenState extends ConsumerState<RideScreen> {
     } finally {
       if (mounted) setState(() => _quoting = false);
     }
+  }
+
+  void _selectPlace(RidePlace place) {
+    setState(() {
+      if (_pickingPickup || _pickupPoint == null) {
+        _pickupPoint = place.point;
+        _pickupId = place.id;
+        _usingGpsPickup = false;
+        _pickingPickup = false;
+      } else {
+        _dropoffPoint = place.point;
+        _dropoffId = place.id;
+      }
+      _quote = null;
+      _locationNote = null;
+      _searchQuery = '';
+      _searchController.clear();
+    });
   }
 
   Future<void> _request() async {

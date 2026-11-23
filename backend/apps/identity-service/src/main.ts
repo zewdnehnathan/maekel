@@ -36,6 +36,7 @@ const staffRoles = [
   'food_ops',
   'food_merchant',
   'food_rider',
+  'ride_ops',
 ] as const;
 const grantableRoles = [
   'platform_admin',
@@ -44,6 +45,7 @@ const grantableRoles = [
   'food_ops',
   'food_merchant',
   'food_rider',
+  'ride_ops',
 ] as const;
 
 async function boot() {
@@ -339,6 +341,7 @@ async function applyBootstrapAdminRoles(
   await grantRole(userId, 'food_ops');
   await grantRole(userId, 'food_merchant');
   await grantRole(userId, 'food_rider');
+  await grantRole(userId, 'ride_ops');
 }
 
 /**
@@ -378,6 +381,7 @@ async function reconcileStaffRoles(): Promise<void> {
     await grantRole(userId, 'food_ops');
     await grantRole(userId, 'food_merchant');
     await grantRole(userId, 'food_rider');
+    await grantRole(userId, 'ride_ops');
   }
 }
 

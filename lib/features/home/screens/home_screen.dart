@@ -161,7 +161,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           if (session.isPlatformAdmin ||
                               session.isMarketModerator ||
-                              session.isFoodOps) ...[
+                              session.isFoodOps ||
+                              session.isRideOps) ...[
                             const SizedBox(height: 10),
                             Wrap(
                               spacing: 8,
@@ -185,6 +186,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       size: 18,
                                     ),
                                     label: const Text('Food ops'),
+                                  ),
+                                if (session.isRideOps)
+                                  TextButton.icon(
+                                    onPressed: () =>
+                                        context.push(AppRoutes.rideOps),
+                                    icon: const Icon(
+                                      Icons.local_taxi_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Ride ops'),
                                   ),
                                 if (session.isPlatformAdmin)
                                   TextButton.icon(
