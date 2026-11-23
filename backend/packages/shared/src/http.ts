@@ -22,7 +22,15 @@ export async function createService(opts: {
     origin: true,
     // Defaults are GET/HEAD/POST only — Flutter web uses PATCH for approve/edit.
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    // Idempotency-Key is required for Ride place-trip; omitting it makes browsers
+    // fail the preflight with a opaque "Failed to fetch" from Pages/Netlify.
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Idempotency-Key',
+      'X-Requested-With',
+    ],
   });
 
   app.setErrorHandler((error, _req, reply) => {
