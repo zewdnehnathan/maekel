@@ -15,6 +15,7 @@ const services = [
   ['ride', '@maekel/ride-service'],
   ['chat', '@maekel/chat-service'],
   ['games', '@maekel/games-service'],
+  ['events', '@maekel/events-service'],
   ['gateway', '@maekel/gateway'],
 ];
 

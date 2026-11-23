@@ -1,6 +1,6 @@
-# Food & Market — QA remaining (as of 20 Nov 2026)
+# Food & Market — production MVP bar (as of 23 Nov 2026)
 
-Snapshot against [mvp-qa-guide.md](./mvp-qa-guide.md) Groups D, E, and F.
+Against [mvp-cut-ride-food-market.md](./mvp-cut-ride-food-market.md) and [mvp-qa-guide.md](./mvp-qa-guide.md) Groups D–F.
 
 Phones / roles: [qa-test-phones-and-roles.md](./qa-test-phones-and-roles.md).
 
@@ -8,42 +8,43 @@ Phones / roles: [qa-test-phones-and-roles.md](./qa-test-phones-and-roles.md).
 
 ## Status
 
-| Area | Stories ready | Notes |
-|------|---------------|--------|
-| Food D + E | **7 / 7** | D04 ops force-deliver without OTP implemented (rider path still OTP-only) |
-| Market F | **6 / 6** | F02 real chat + F06 my-ads cache merge fixed |
-
-**Setup only (not a code gap):** Food still needs create merchant → assign owner → menu → grant `food_rider`. No demo shops.
-
-**Deploy needed for demo host:**
-
-- `food-service` — ops advance may mark `onTheWay` → `delivered`
-- `chat-service` — remove demo seller auto-reply
-
-Until those redeploy, local/API client fixes for F06 + chat polling still help; D04 last step and fake chat replies need the service builds above.
+| Module | QA stories | Product-MVP bar |
+|--------|------------|-----------------|
+| Food D + E | **7 / 7** | **Yes** (same bar as Ride/Market for the cut) |
+| Market F | **6 / 6** | **Yes** |
 
 ---
 
-## Soft (optional, not blocking AC)
+## Food production bar (this ship)
 
-**D02 modifiers:** Customer UI can pick options if present; merchant create/edit menu does not expose modifiers yet. Cart AC still passes without them.
+| Capability | Implementation |
+|------------|----------------|
+| Coverage browse | Pin/subcity filter; restaurants + groceries |
+| Cart / COD | Single-shop cart; fee + total before place; COD |
+| OTP handover | Rider complete with OTP; ops can force-deliver |
+| Cancel | Blocked after preparing |
+| Merchant console | Accept/reject/prepare/ready; pause; menu + photos |
+| **Live kitchen** | Merchant console polls orders/menu every **3s** |
+| **Live rider** | Rider board polls available/active every **3s** |
+| **Live ops** | Food ops board polls every **4s** |
+| **Modifiers** | Merchant add/edit dish **options** (name + ETB); customer picker already works |
+| Thin ops | Onboard merchant, assign owner, reassign rider, support cancel |
+
+**Setup (not a code gap):** create merchant → assign owner → menu → grant `food_rider`.
+
+### Still post-MVP for Food
+- Push / FCM (polling used, same pattern as Ride)
+- Distance-band delivery fees (flat merchant fee OK for cut)
+- Live rider map, ratings polish, digital wallet
 
 ---
 
-## What was fixed (20 Nov 2026)
+## Market (unchanged — already on bar)
 
-### F06 — Manage my listings
-Catalog poll no longer wipes pending / rejected / sold. After each public catalog refresh, signed-in users re-merge `/v1/market/my-ads` (and threads). Sign-out clears private cache.
-
-### F02 — Open listing + contact seller
-Removed demo seller auto-reply (chat-service + in-memory). Chat screen polls messages every 2s while open. Inbox threads refresh with the market poll when signed in.
-
-### D04 — Follow order + delivery code
-Ops force-advance can move `onTheWay` → `delivered` without OTP. Rider complete remains OTP-gated. Order detail button label: “Ops: mark delivered (no OTP)” on that step.
+Browse → sell → moderate → chat/call → favorites / My ads → ops. Soft only: offline retry, push, chat ACL hardening.
 
 ---
 
-## Ready checklist
+## Deploy note
 
-- Food: pin coverage, COD checkout, cancel rules, merchant console, rider OTP handover, ops deliver override
-- Market: categories + filters, favorites, sell → pending → approve, real two-way chat (after chat-service deploy), My ads statuses, ops reports / reject reason
+Food production-bar changes are **Flutter-side** (poll + modifiers UI). Redeploy web/APK when ready; food-service already accepts `modifiers` on menu create/patch.

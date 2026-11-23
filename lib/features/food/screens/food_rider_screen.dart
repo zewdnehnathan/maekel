@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -21,18 +23,30 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
   bool _loading = true;
   bool _busy = false;
   String? _error;
+  Timer? _poll;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!_busy && mounted) unawaited(_load(silent: true));
+    });
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final jobs = await ref.read(foodRepositoryProvider).getRiderJobs();
       if (!mounted) return;
@@ -40,15 +54,16 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
         _available = jobs.available;
         _active = jobs.active;
         _loading = false;
+        if (!silent) _error = null;
       });
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || silent) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || silent) return;
       setState(() {
         _error = '$e';
         _loading = false;

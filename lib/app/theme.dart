@@ -23,6 +23,7 @@ abstract final class MaekelColors {
   static const Color market = Color(0xFFFFB347);
   static const Color food = Color(0xFFFF5C7A);
   static const Color games = Color(0xFF6EC8FF);
+  static const Color events = Color(0xFFC4A1FF);
 
   // Legacy aliases used by older stubs (map into new system)
   static const Color forest = signalDim;

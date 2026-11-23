@@ -39,6 +39,8 @@ services:
         value: http://127.0.0.1:3005
       - key: GAMES_URL
         value: http://127.0.0.1:3006
+      - key: EVENTS_URL
+        value: http://127.0.0.1:3007
       - key: MARKET_MAX_ACTIVE_ADS
         value: "5"
       - key: MARKET_PHONE_REVEAL_DAILY_LIMIT

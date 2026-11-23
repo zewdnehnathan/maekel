@@ -14,7 +14,8 @@ $dbs = @(
   "maekel_food",
   "maekel_ride",
   "maekel_chat",
-  "maekel_games"
+  "maekel_games",
+  "maekel_events"
 )
 
 foreach ($db in $dbs) {

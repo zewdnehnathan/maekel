@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -21,6 +23,7 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
   bool _loading = true;
   bool _busy = false;
   String? _error;
+  Timer? _poll;
 
   final _name = TextEditingController();
   final _subcity = TextEditingController(text: 'Bole');
@@ -32,10 +35,14 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _poll = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!_busy && mounted) unawaited(_load(silent: true));
+    });
   }
 
   @override
   void dispose() {
+    _poll?.cancel();
     _name.dispose();
     _subcity.dispose();
     _coverage.dispose();
@@ -43,11 +50,13 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final board = await ref.read(foodRepositoryProvider).getOpsBoard();
       if (!mounted) return;
@@ -55,15 +64,16 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
         _orders = board.orders;
         _merchants = board.merchants;
         _loading = false;
+        if (!silent) _error = null;
       });
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || silent) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || silent) return;
       setState(() {
         _error = '$e';
         _loading = false;

@@ -258,6 +258,10 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
                                   value: 'ride_ops',
                                   child: Text('Ride ops'),
                                 ),
+                                DropdownMenuItem(
+                                  value: 'events_ops',
+                                  child: Text('Events ops'),
+                                ),
                               ],
                               onChanged: (v) {
                                 if (v != null) setState(() => _role = v);

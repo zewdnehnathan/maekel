@@ -18,7 +18,7 @@ Staff grants now **persist across Render restarts**. If `role_grants` only shows
 
 | Local | E.164 | Roles (auto on login) | What to test |
 |-------|-------|------------------------|--------------|
-| `999999999` | `+251999999999` | `platform_admin`, `market_moderator`, `food_ops`, `food_merchant`, `food_rider`, `ride_ops` (+ default customer roles) | Staff grants, Market/Food/Ride ops, full admin paths |
+| `999999999` | `+251999999999` | `platform_admin`, `market_moderator`, `food_ops`, `food_merchant`, `food_rider`, `ride_ops`, `events_ops` (+ default customer roles) | Staff grants, Market/Food/Ride/Events ops, full admin paths |
 
 This phone is set via `ADMIN_PHONES` on Render. Log in first with it, then create/grant the accounts below.
 
@@ -26,11 +26,11 @@ This phone is set via `ADMIN_PHONES` on Render. Log in first with it, then creat
 
 ## 2. Suggested test roster (create these)
 
-Every new user also gets defaults: `ride_passenger`, `food_customer`, `market_buyer`, `market_seller`.
+Every new user also gets defaults: `ride_passenger`, `food_customer`, `market_buyer`, `market_seller`, `events_attendee`, `events_organizer`.
 
 | # | Local (type in app) | E.164 | Grant these roles (Staff) | Persona | What to test |
 |---|---------------------|-------|---------------------------|---------|--------------|
-| 1 | `911111111` | `+251911111111` | *(none — defaults only)* | Everyday customer | Ride passenger, Food order, Market buy/sell |
+| 1 | `911111111` | `+251911111111` | *(none — defaults only)* | Everyday customer | Ride passenger, Food order, Market buy/sell, Events RSVP/host |
 | 2 | `922222222` | `+251922222222` | `market_moderator` | Market reviewer | Market ops: approve/reject ads, reports, categories |
 | 3 | `933333333` | `+251933333333` | `market_ops` | Market ops (non-moderator label) | Same Market ops access as moderator |
 | 4 | `944444444` | `+251944444444` | `food_ops` | Food ops | Food ops board, onboard merchant, assign owner, support cancel |
@@ -38,6 +38,7 @@ Every new user also gets defaults: `ride_passenger`, `food_customer`, `market_bu
 | 6 | `966666666` | `+251966666666` | `food_rider` | Food rider | Claim job → pickup → on the way → OTP + COD |
 | 7 | `977777777` | `+251977777777` | *(defaults only)* | Second customer | Place orders against restaurant #5; Market buyer |
 | 8 | `988888888` | `+251988888888` | `food_merchant` | Second restaurant | Prove they **cannot** edit restaurant #5’s menu |
+| 10 | `900000010` | `+251900000010` | `events_ops` | Events moderator | Approve/reject/cancel events; suspend organizer |
 
 **Optional**
 

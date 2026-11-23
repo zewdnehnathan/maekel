@@ -80,13 +80,8 @@ class ApiFoodRepository implements FoodRepository {
 
   Future<void> _pollActive() async {
     if (!_authed) return;
-    final hasActive = _orders.any(
-      (o) =>
-          o.status != OrderStatus.delivered &&
-          o.status != OrderStatus.cancelled,
-    );
-    if (!hasActive && _cart.isEmpty) return;
     try {
+      // Always refresh customer orders so status stays live.
       final ordersRaw = await _client.get('/v1/food/orders', auth: true);
       _orders
         ..clear()
@@ -400,6 +395,7 @@ class ApiFoodRepository implements FoodRepository {
     String description = '',
     String? photoUrl,
     bool available = true,
+    List<MenuModifier> modifiers = const [],
   }) async {
     final raw = await _client.post(
       '/v1/food/merchant/menu',
@@ -410,6 +406,14 @@ class ApiFoodRepository implements FoodRepository {
         'priceEtb': priceEtb,
         if (photoUrl != null) 'photoUrl': photoUrl,
         'available': available,
+        'modifiers': [
+          for (final m in modifiers)
+            {
+              if (m.id.isNotEmpty) 'id': m.id,
+              'name': m.name,
+              'priceEtb': m.priceEtb,
+            },
+        ],
       },
     ) as Map<String, dynamic>;
     final item = _parseMenuItem(raw);
@@ -426,6 +430,7 @@ class ApiFoodRepository implements FoodRepository {
     String? description,
     String? photoUrl,
     bool? available,
+    List<MenuModifier>? modifiers,
   }) async {
     final raw = await _client.patch(
       '/v1/food/merchant/menu/$itemId',
@@ -436,6 +441,15 @@ class ApiFoodRepository implements FoodRepository {
         if (description != null) 'description': description,
         if (photoUrl != null) 'photoUrl': photoUrl,
         if (available != null) 'available': available,
+        if (modifiers != null)
+          'modifiers': [
+            for (final m in modifiers)
+              {
+                if (m.id.isNotEmpty) 'id': m.id,
+                'name': m.name,
+                'priceEtb': m.priceEtb,
+              },
+          ],
       },
     ) as Map<String, dynamic>;
     final item = _parseMenuItem(raw);

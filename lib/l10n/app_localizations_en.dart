@@ -68,6 +68,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moduleFoodDesc => 'Order from local kitchens';
 
   @override
+  String get moduleEvents => 'Events';
+
+  @override
+  String get moduleEventsDesc => 'Discover and host in Addis';
+
+  @override
   String get moduleGames => 'Games';
 
   @override

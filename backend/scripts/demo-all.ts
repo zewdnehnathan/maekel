@@ -18,6 +18,7 @@ async function main(): Promise<void> {
   await import('../apps/ride-service/src/main.ts');
   await import('../apps/chat-service/src/main.ts');
   await import('../apps/games-service/src/main.ts');
+  await import('../apps/events-service/src/main.ts');
   await import('../apps/gateway/src/main.ts');
 }
 

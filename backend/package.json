@@ -2,7 +2,7 @@
   "name": "maekel-backend",
   "private": true,
   "version": "0.1.0",
-  "description": "Maekel MVP microservices (identity, market, food, ride, chat, gateway)",
+  "description": "Maekel MVP microservices (identity, market, food, ride, chat, games, events, gateway)",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -15,8 +15,9 @@
     "dev:ride": "npm run dev -w @maekel/ride-service",
     "dev:chat": "npm run dev -w @maekel/chat-service",
     "dev:games": "npm run dev -w @maekel/games-service",
+    "dev:events": "npm run dev -w @maekel/events-service",
     "dev:gateway": "npm run dev -w @maekel/gateway",
-    "dev:all": "npx concurrently -k -n identity,market,food,ride,chat,games,gateway -c cyan,magenta,yellow,green,blue,red,white \"npm:dev:identity\" \"npm:dev:market\" \"npm:dev:food\" \"npm:dev:ride\" \"npm:dev:chat\" \"npm:dev:games\" \"npm:dev:gateway\"",
+    "dev:all": "npx concurrently -k -n identity,market,food,ride,chat,games,events,gateway -c cyan,magenta,yellow,green,blue,red,white,gray \"npm:dev:identity\" \"npm:dev:market\" \"npm:dev:food\" \"npm:dev:ride\" \"npm:dev:chat\" \"npm:dev:games\" \"npm:dev:events\" \"npm:dev:gateway\"",
     "start:demo": "tsx ./scripts/demo-all.ts",
     "start:demo:multiproc": "node ./scripts/start-demo.mjs",
     "db:init": "powershell -ExecutionPolicy Bypass -File ./scripts/init-dbs.ps1"

@@ -1,7 +1,7 @@
 # Maekel System Architecture
 
 **Product:** Maekel — Addis Ababa super app (Flutter)  
-**Modules:** Ride · Food · Market · (Games stub client-only for now)  
+**Modules:** Ride · Food · Market · Events · Games  
 **Backend style:** **Microservice per product module**, plus shared platform services  
 **Aligned to:** [MVP cut](./mvp-cut-ride-food-market.md), [Ride FRD](./ride-functional-requirements.md), [Food FRD](./food-delivery-functional-requirements.md), [Market FRD](./market-functional-requirements.md)  
 **Version:** 0.1  

@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_providers.dart';
 import '../../../core/network/token_store.dart';
+import '../../events/services/api_events_repository.dart';
 import '../../food/services/api_food_repository.dart';
 import '../../market/services/api_market_repository.dart';
 import '../../ride/services/api_ride_repository.dart';
@@ -39,6 +40,8 @@ class AuthSession {
       isPlatformAdmin || isFoodOps || roles.contains('food_rider');
 
   bool get isRideOps => isPlatformAdmin || roles.contains('ride_ops');
+
+  bool get isEventsOps => isPlatformAdmin || roles.contains('events_ops');
 }
 
 class AuthState {
@@ -168,6 +171,7 @@ class AuthNotifier extends Notifier<AuthState> {
     final market = ref.read(marketRepositoryProvider);
     final food = ref.read(foodRepositoryProvider);
     final ride = ref.read(rideRepositoryProvider);
+    final events = ref.read(eventsRepositoryProvider);
     if (market is ApiMarketRepository) {
       await market.refreshAuthed(userId);
     }
@@ -177,6 +181,9 @@ class AuthNotifier extends Notifier<AuthState> {
     if (ride is ApiRideRepository) {
       await ride.refreshAuthed(userId);
     }
+    if (events is ApiEventsRepository) {
+      await events.refreshAuthed();
+    }
   }
 
   void signOut() {
@@ -184,6 +191,10 @@ class AuthNotifier extends Notifier<AuthState> {
     final market = ref.read(marketRepositoryProvider);
     if (market is ApiMarketRepository) {
       market.clearAuthed();
+    }
+    final events = ref.read(eventsRepositoryProvider);
+    if (events is ApiEventsRepository) {
+      events.clearAuthed();
     }
     state = const AuthState();
   }

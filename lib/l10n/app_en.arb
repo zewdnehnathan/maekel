@@ -19,6 +19,8 @@
   "moduleMarketDesc": "Buy and sell nearby",
   "moduleFood": "Food",
   "moduleFoodDesc": "Order from local kitchens",
+  "moduleEvents": "Events",
+  "moduleEventsDesc": "Discover and host in Addis",
   "moduleGames": "Games",
   "moduleGamesDesc": "Quick play breaks",
   "currencyEtb": "ETB",

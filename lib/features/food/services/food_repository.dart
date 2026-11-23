@@ -53,9 +53,10 @@ abstract class FoodRepository {
   Future<MenuItem> createMenuItem({
     required String name,
     required int priceEtb,
-    String description,
+    String description = '',
     String? photoUrl,
-    bool available,
+    bool available = true,
+    List<MenuModifier> modifiers = const [],
   });
   Future<MenuItem> updateMenuItem(
     String itemId, {
@@ -64,6 +65,7 @@ abstract class FoodRepository {
     String? description,
     String? photoUrl,
     bool? available,
+    List<MenuModifier>? modifiers,
   });
   Future<void> deleteMenuItem(String itemId);
   Future<FoodOrder> merchantAccept(String orderId);
@@ -436,6 +438,7 @@ class InMemoryFoodRepository implements FoodRepository {
     String description = '',
     String? photoUrl,
     bool available = true,
+    List<MenuModifier> modifiers = const [],
   }) async {
     final id = _ownerMerchantId;
     if (id == null) throw StateError('No merchant');
@@ -448,6 +451,14 @@ class InMemoryFoodRepository implements FoodRepository {
       photoUrl: photoUrl ??
           'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700',
       available: available,
+      modifiers: [
+        for (var i = 0; i < modifiers.length; i++)
+          MenuModifier(
+            id: modifiers[i].id.isEmpty ? _id('mod') : modifiers[i].id,
+            name: modifiers[i].name,
+            priceEtb: modifiers[i].priceEtb,
+          ),
+      ],
     );
     _menu.add(item);
     _notify();
@@ -462,6 +473,7 @@ class InMemoryFoodRepository implements FoodRepository {
     String? description,
     String? photoUrl,
     bool? available,
+    List<MenuModifier>? modifiers,
   }) async {
     final idx = _menu.indexWhere((i) => i.id == itemId);
     if (idx < 0) throw StateError('Not found');
@@ -474,7 +486,7 @@ class InMemoryFoodRepository implements FoodRepository {
       priceEtb: priceEtb ?? cur.priceEtb,
       photoUrl: photoUrl ?? cur.photoUrl,
       available: available ?? cur.available,
-      modifiers: cur.modifiers,
+      modifiers: modifiers ?? cur.modifiers,
     );
     _menu[idx] = next;
     _notify();

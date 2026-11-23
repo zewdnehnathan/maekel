@@ -24,6 +24,7 @@ CREATE DATABASE maekel_food;
 CREATE DATABASE maekel_ride;
 CREATE DATABASE maekel_chat;
 CREATE DATABASE maekel_games;
+CREATE DATABASE maekel_events;
 ```
 
 3. From Neon **Connection details**, note:

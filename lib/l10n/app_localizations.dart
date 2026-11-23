@@ -212,6 +212,18 @@ abstract class AppLocalizations {
   /// **'Order from local kitchens'**
   String get moduleFoodDesc;
 
+  /// No description provided for @moduleEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get moduleEvents;
+
+  /// No description provided for @moduleEventsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover and host in Addis'**
+  String get moduleEventsDesc;
+
   /// No description provided for @moduleGames.
   ///
   /// In en, this message translates to:

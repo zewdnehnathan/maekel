@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,18 +31,30 @@ class _FoodMerchantConsoleScreenState
   bool _loading = true;
   bool _busy = false;
   String? _error;
+  Timer? _poll;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!_busy && mounted) unawaited(_load(silent: true));
+    });
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final repo = ref.read(foodRepositoryProvider);
       final mine = await repo.getMyMerchant();
@@ -57,15 +70,16 @@ class _FoodMerchantConsoleScreenState
         _orders = orders;
         _menu = menu;
         _loading = false;
+        if (!silent) _error = null;
       });
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || silent) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || silent) return;
       setState(() {
         _error = '$e';
         _loading = false;
@@ -107,6 +121,17 @@ class _FoodMerchantConsoleScreenState
     String? pendingFilename;
     String? pendingContentType;
     final picker = ImagePicker();
+    final modNameControllers = <TextEditingController>[
+      for (final m in existing?.modifiers ?? const <MenuModifier>[])
+        TextEditingController(text: m.name),
+    ];
+    final modPriceControllers = <TextEditingController>[
+      for (final m in existing?.modifiers ?? const <MenuModifier>[])
+        TextEditingController(text: '${m.priceEtb}'),
+    ];
+    final modIds = <String>[
+      for (final m in existing?.modifiers ?? const <MenuModifier>[]) m.id,
+    ];
 
     final saved = await showDialog<bool>(
       context: context,
@@ -218,6 +243,68 @@ class _FoodMerchantConsoleScreenState
                       activeThumbColor: MaekelColors.food,
                       onChanged: (v) => setLocal(() => available = v),
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          'OPTIONS',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            setLocal(() {
+                              modIds.add('');
+                              modNameControllers
+                                  .add(TextEditingController());
+                              modPriceControllers
+                                  .add(TextEditingController(text: '0'));
+                            });
+                          },
+                          child: const Text('Add option'),
+                        ),
+                      ],
+                    ),
+                    for (var i = 0; i < modNameControllers.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: TextField(
+                                controller: modNameControllers[i],
+                                style: const TextStyle(color: MaekelColors.ink),
+                                decoration: const InputDecoration(
+                                  labelText: 'Option name',
+                                  hintText: 'e.g. Extra cheese',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: modPriceControllers[i],
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(color: MaekelColors.ink),
+                                decoration: const InputDecoration(
+                                  labelText: 'ETB',
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setLocal(() {
+                                  modIds.removeAt(i);
+                                  modNameControllers.removeAt(i).dispose();
+                                  modPriceControllers.removeAt(i).dispose();
+                                });
+                              },
+                              icon: const Icon(Icons.close_rounded),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -244,6 +331,20 @@ class _FoodMerchantConsoleScreenState
     final nameVal = name.text.trim();
     final priceVal = int.tryParse(price.text.trim());
     final descVal = desc.text.trim();
+    final modifiers = <MenuModifier>[];
+    for (var i = 0; i < modNameControllers.length; i++) {
+      final modName = modNameControllers[i].text.trim();
+      if (modName.isEmpty) continue;
+      final modPrice =
+          int.tryParse(modPriceControllers[i].text.trim()) ?? 0;
+      modifiers.add(
+        MenuModifier(
+          id: i < modIds.length ? modIds[i] : '',
+          name: modName,
+          priceEtb: modPrice < 0 ? 0 : modPrice,
+        ),
+      );
+    }
     final bytes = pendingBytes;
     final filename = pendingFilename;
     final contentType = pendingContentType;
@@ -251,6 +352,12 @@ class _FoodMerchantConsoleScreenState
     name.dispose();
     price.dispose();
     desc.dispose();
+    for (final c in modNameControllers) {
+      c.dispose();
+    }
+    for (final c in modPriceControllers) {
+      c.dispose();
+    }
 
     if (saved != true || nameVal.isEmpty || priceVal == null || priceVal <= 0) {
       return;
@@ -273,6 +380,7 @@ class _FoodMerchantConsoleScreenState
           description: descVal,
           photoUrl: photoUrl,
           available: available,
+          modifiers: modifiers,
         );
       } else {
         await repo.updateMenuItem(
@@ -282,6 +390,7 @@ class _FoodMerchantConsoleScreenState
           description: descVal,
           photoUrl: photoUrl,
           available: available,
+          modifiers: modifiers,
         );
       }
     });
@@ -467,6 +576,13 @@ class _FoodMerchantConsoleScreenState
                                                 color: MaekelColors.food,
                                               ),
                                         ),
+                                        if (item.modifiers.isNotEmpty)
+                                          Text(
+                                            '${item.modifiers.length} option(s)',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
+                                          ),
                                       ],
                                     ),
                                   ),

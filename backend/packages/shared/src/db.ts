@@ -1,6 +1,6 @@
 import pg from 'pg';
 
-import { postgresSslEnabled } from './config.js';
+import { databaseUrl, postgresSslEnabled } from './config.js';
 
 const { Pool } = pg;
 
@@ -19,6 +19,39 @@ export function createPool(connectionString: string): Db {
         }
       : undefined,
   });
+}
+
+/**
+ * Create `dbName` if missing by connecting to a maintenance DB first.
+ * Tries `neondb` (Neon default) then `postgres`.
+ */
+export async function ensureDatabase(dbName: string): Promise<void> {
+  if (!/^[a-zA-Z0-9_]+$/.test(dbName)) {
+    throw new Error(`Invalid database name: ${dbName}`);
+  }
+  const candidates = ['neondb', 'postgres'];
+  let lastError: unknown;
+  for (const adminDb of candidates) {
+    const pool = createPool(databaseUrl(adminDb));
+    try {
+      const exists = await pool.query(
+        `SELECT 1 FROM pg_database WHERE datname = $1`,
+        [dbName],
+      );
+      if (exists.rowCount === 0) {
+        await pool.query(`CREATE DATABASE ${dbName}`);
+        console.log(`[db] created database ${dbName}`);
+      }
+      await pool.end();
+      return;
+    } catch (err) {
+      lastError = err;
+      await pool.end().catch(() => undefined);
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`Could not ensure database ${dbName}`);
 }
 
 export async function migrate(pool: Db, statements: string[]): Promise<void> {

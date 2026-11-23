@@ -162,7 +162,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           if (session.isPlatformAdmin ||
                               session.isMarketModerator ||
                               session.isFoodOps ||
-                              session.isRideOps) ...[
+                              session.isRideOps ||
+                              session.isEventsOps) ...[
                             const SizedBox(height: 10),
                             Wrap(
                               spacing: 8,
@@ -196,6 +197,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       size: 18,
                                     ),
                                     label: const Text('Ride ops'),
+                                  ),
+                                if (session.isEventsOps)
+                                  TextButton.icon(
+                                    onPressed: () =>
+                                        context.push(AppRoutes.eventsOps),
+                                    icon: const Icon(
+                                      Icons.event_available_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Events ops'),
                                   ),
                                 if (session.isPlatformAdmin)
                                   TextButton.icon(
@@ -248,11 +259,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         onTap: () => context.push(AppRoutes.food),
                       ),
                       ModuleCard(
+                        title: l10n.moduleEvents,
+                        subtitle: l10n.moduleEventsDesc,
+                        icon: Icons.event_rounded,
+                        accent: MaekelColors.events,
+                        delay: const Duration(milliseconds: 420),
+                        onTap: () => context.push(AppRoutes.events),
+                      ),
+                      ModuleCard(
                         title: l10n.moduleGames,
                         subtitle: l10n.moduleGamesDesc,
                         icon: Icons.videogame_asset_rounded,
                         accent: MaekelColors.games,
-                        delay: const Duration(milliseconds: 420),
+                        delay: const Duration(milliseconds: 520),
                         onTap: () => context.push(AppRoutes.games),
                       ),
                     ],

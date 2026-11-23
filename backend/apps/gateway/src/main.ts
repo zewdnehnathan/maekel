@@ -24,6 +24,7 @@ async function boot() {
     { prefix: '/v1/ride', upstream: env('RIDE_URL', 'http://127.0.0.1:3004') },
     { prefix: '/v1/chat', upstream: env('CHAT_URL', 'http://127.0.0.1:3005') },
     { prefix: '/v1/games', upstream: env('GAMES_URL', 'http://127.0.0.1:3006') },
+    { prefix: '/v1/events', upstream: env('EVENTS_URL', 'http://127.0.0.1:3007') },
   ];
 
   for (const route of routes) {

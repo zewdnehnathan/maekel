@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/events/services/api_events_repository.dart';
+import '../../features/events/services/events_repository.dart';
 import '../../features/food/services/api_food_repository.dart';
 import '../../features/food/services/food_repository.dart';
 import '../../features/market/services/api_market_repository.dart';
@@ -31,6 +33,12 @@ final foodRepositoryProvider = Provider<FoodRepository>((ref) {
 
 final rideRepositoryProvider = Provider<RideRepository>((ref) {
   final repo = ApiRideRepository(ref.watch(apiClientProvider));
+  ref.onDispose(repo.dispose);
+  return repo;
+});
+
+final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
+  final repo = ApiEventsRepository(ref.watch(apiClientProvider));
   ref.onDispose(repo.dispose);
   return repo;
 });

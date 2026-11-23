@@ -6,6 +6,12 @@ import '../features/admin/screens/admin_staff_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/otp_screen.dart';
 import '../features/auth/screens/phone_screen.dart';
+import '../features/events/screens/event_detail_screen.dart';
+import '../features/events/screens/events_create_screen.dart';
+import '../features/events/screens/events_my_screen.dart';
+import '../features/events/screens/events_ops_screen.dart';
+import '../features/events/screens/events_screen.dart';
+import '../features/events/screens/events_tickets_screen.dart';
 import '../features/food/screens/food_cart_screen.dart';
 import '../features/food/screens/food_checkout_screen.dart';
 import '../features/food/screens/food_merchant_console_screen.dart';
@@ -69,6 +75,12 @@ abstract final class AppRoutes {
   static const tetris = '/games/tetris';
   static const candyCrush = '/games/candy-crush';
   static const roadFighter = '/games/road-fighter';
+
+  static const events = '/events';
+  static const eventsMine = '/events/mine';
+  static const eventsTickets = '/events/tickets';
+  static const eventsCreate = '/events/create';
+  static const eventsOps = '/events/ops';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -128,6 +140,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           session != null &&
           !session.isRideOps) {
         return AppRoutes.ride;
+      }
+      if (loc == AppRoutes.eventsOps &&
+          session != null &&
+          !session.isEventsOps) {
+        return AppRoutes.events;
       }
       return null;
     },
@@ -287,6 +304,36 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'road-fighter',
             builder: (context, state) => const RoadFighterScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.events,
+        builder: (context, state) => const EventsScreen(),
+        routes: [
+          GoRoute(
+            path: 'mine',
+            builder: (context, state) => const EventsMyScreen(),
+          ),
+          GoRoute(
+            path: 'tickets',
+            builder: (context, state) => const EventsTicketsScreen(),
+          ),
+          GoRoute(
+            path: 'create',
+            builder: (context, state) => EventsCreateScreen(
+              editEventId: state.uri.queryParameters['edit'],
+            ),
+          ),
+          GoRoute(
+            path: 'ops',
+            builder: (context, state) => const EventsOpsScreen(),
+          ),
+          GoRoute(
+            path: ':id',
+            builder: (context, state) => EventDetailScreen(
+              eventId: state.pathParameters['id']!,
+            ),
           ),
         ],
       ),

@@ -27,6 +27,8 @@ const defaultUserRoles = [
   'food_customer',
   'market_buyer',
   'market_seller',
+  'events_attendee',
+  'events_organizer',
 ] as const;
 
 const staffRoles = [
@@ -37,6 +39,7 @@ const staffRoles = [
   'food_merchant',
   'food_rider',
   'ride_ops',
+  'events_ops',
 ] as const;
 const grantableRoles = [
   'platform_admin',
@@ -46,6 +49,7 @@ const grantableRoles = [
   'food_merchant',
   'food_rider',
   'ride_ops',
+  'events_ops',
 ] as const;
 
 async function boot() {
@@ -149,8 +153,10 @@ async function boot() {
     }
 
     const userId = user.rows[0].id as string;
-    // Returning users created before market_seller existed.
+    // Returning users created before market_seller / events roles existed.
     await grantRole(userId, 'market_seller');
+    await grantRole(userId, 'events_attendee');
+    await grantRole(userId, 'events_organizer');
     await applyBootstrapAdminRoles(userId, phone);
 
     const roles = await listRoles(userId);
@@ -342,6 +348,7 @@ async function applyBootstrapAdminRoles(
   await grantRole(userId, 'food_merchant');
   await grantRole(userId, 'food_rider');
   await grantRole(userId, 'ride_ops');
+  await grantRole(userId, 'events_ops');
 }
 
 /**
@@ -382,6 +389,7 @@ async function reconcileStaffRoles(): Promise<void> {
     await grantRole(userId, 'food_merchant');
     await grantRole(userId, 'food_rider');
     await grantRole(userId, 'ride_ops');
+    await grantRole(userId, 'events_ops');
   }
 }
 
