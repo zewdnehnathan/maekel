@@ -106,6 +106,11 @@ ThemeData buildMaekelTheme() {
         fontWeight: FontWeight.w600,
         color: MaekelColors.ink,
       ),
+      titleSmall: GoogleFonts.spaceGrotesk(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: MaekelColors.ink,
+      ),
       bodyLarge: GoogleFonts.sora(
         fontSize: 16,
         height: 1.5,

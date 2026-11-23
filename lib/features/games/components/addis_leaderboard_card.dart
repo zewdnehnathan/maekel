@@ -93,7 +93,10 @@ class AddisLeaderboardCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         e.displayName,
-                        style: Theme.of(context).textTheme.titleSmall,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: MaekelColors.ink,
+                              fontWeight: FontWeight.w600,
+                            ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
