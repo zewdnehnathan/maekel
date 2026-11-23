@@ -58,3 +58,6 @@ backend/apps/market-service/build/
 
 # Local Netlify folder
 .netlify
+
+.wrangler/
+
