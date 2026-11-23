@@ -1,6 +1,7 @@
 # Maekel QA — Step-by-step guided runbook
 
 **Purpose:** Walk a tester through Maekel end-to-end with **exact phones, roles, screens, and clicks**.  
+**PDF copy:** [`qa-step-by-step-guide.pdf`](./qa-step-by-step-guide.pdf)  
 **Companion checklist stories:** [mvp-qa-guide.md](./mvp-qa-guide.md)  
 **Phone / role reference:** [qa-test-phones-and-roles.md](./qa-test-phones-and-roles.md)  
 **Module bars:** [qa-ride-remaining.md](./qa-ride-remaining.md) · [qa-food-market-remaining.md](./qa-food-market-remaining.md) · [qa-events-remaining.md](./qa-events-remaining.md)

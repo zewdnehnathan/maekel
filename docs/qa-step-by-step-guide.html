@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Maekel QA Step-by-step Guide</title>
+  <style>
+    @page { size: A4; margin: 16mm 14mm; }
+    body { font-family: "Segoe UI", Calibri, Arial, sans-serif; font-size: 10.5pt; line-height: 1.4; color: #1a1a1a; max-width: 920px; margin: 0 auto; padding: 20px; }
+    h1, h2, h3, h4 { color: #0a1018; page-break-after: avoid; }
+    h1 { font-size: 20pt; border-bottom: 2px solid #2ef3c5; padding-bottom: 8px; }
+    h2 { font-size: 14pt; margin-top: 1.4em; border-bottom: 1px solid #d0d7de; padding-bottom: 4px; }
+    h3 { font-size: 12pt; margin-top: 1.1em; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0 14px; font-size: 9pt; page-break-inside: avoid; }
+    th, td { border: 1px solid #c9d1d9; padding: 5px 7px; text-align: left; vertical-align: top; }
+    th { background: #eef6f4; }
+    code { font-family: Consolas, monospace; font-size: 0.9em; background: #eef2f6; padding: 1px 4px; border-radius: 3px; }
+    pre { background: #f3f6f9; border: 1px solid #c9d1d9; padding: 10px; border-radius: 8px; font-size: 8.5pt; white-space: pre-wrap; page-break-inside: avoid; }
+    ul, ol { margin: 6px 0 10px 18px; }
+    li { margin: 2px 0; }
+    hr { border: none; border-top: 1px solid #d0d7de; margin: 18px 0; }
+    a { color: #0b6e4f; }
+    strong { color: #111; }
+  </style>
+</head>
+<body>
+<h1 id="maekel-qa-step-by-step-guided-runbook">Maekel QA — Step-by-step guided runbook</h1>
+<p><strong>Purpose:</strong> Walk a tester through Maekel end-to-end with <strong>exact phones, roles, screens, and clicks</strong>.<br />
+<strong>Companion checklist stories:</strong> <a href="./mvp-qa-guide.md">mvp-qa-guide.md</a><br />
+<strong>Phone / role reference:</strong> <a href="./qa-test-phones-and-roles.md">qa-test-phones-and-roles.md</a><br />
+<strong>Module bars:</strong> <a href="./qa-ride-remaining.md">qa-ride-remaining.md</a> · <a href="./qa-food-market-remaining.md">qa-food-market-remaining.md</a> · <a href="./qa-events-remaining.md">qa-events-remaining.md</a></p>
+<p><strong>Version:</strong> 1.0 · <strong>Date:</strong> 23 Nov 2026<br />
+<strong>App:</strong> https://maekel.pages.dev/<br />
+<strong>Backup app:</strong> https://zewdnehnathan.github.io/maekel/<br />
+<strong>API:</strong> https://maekel-api.onrender.com  </p>
+<hr />
+<h2 id="0-before-you-start">0. Before you start</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OTP (always)</td>
+<td><code>123456</code></td>
+</tr>
+<tr>
+<td>Phone entry</td>
+<td><strong>9 local digits only</strong> (app adds <code>+251</code>)</td>
+</tr>
+<tr>
+<td>Sessions</td>
+<td>Use <strong>2 browsers</strong> or <strong>1 normal + 1 Incognito</strong> so two roles can act at once</td>
+</tr>
+<tr>
+<td>Cold start</td>
+<td>Render free tier may sleep — first API call can take <strong>30–60s</strong>. Wait, then retry.</td>
+</tr>
+<tr>
+<td>After every Staff grant</td>
+<td>Target user must <strong>Sign out → OTP again</strong> or the new role will not appear</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pass / fail rule:</strong> Tick every checkbox. A module is done only when its golden path and the listed fail checks pass.</p>
+<hr />
+<h2 id="1-who-is-who-test-roster">1. Who is who (test roster)</h2>
+<p>Create these accounts once (Section 2). Keep this table open while testing.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Local phone</th>
+<th>Role(s) to grant</th>
+<th>Persona</th>
+<th>Use for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A</strong></td>
+<td><code>999999999</code></td>
+<td><em>(auto)</em> <code>platform_admin</code>, all ops</td>
+<td>Bootstrap admin</td>
+<td>Staff grants, Ride/Food/Market/Events ops</td>
+</tr>
+<tr>
+<td><strong>C1</strong></td>
+<td><code>911111111</code></td>
+<td><em>(defaults only)</em></td>
+<td>Everyday customer</td>
+<td>Ride passenger, Food order, Market sell/buy, Events host/RSVP</td>
+</tr>
+<tr>
+<td><strong>C2</strong></td>
+<td><code>977777777</code></td>
+<td><em>(defaults only)</em></td>
+<td>Second customer</td>
+<td>Food second order, Events guest, Market buyer</td>
+</tr>
+<tr>
+<td><strong>D</strong></td>
+<td><code>911111112</code></td>
+<td><em>(defaults)</em> then Ride ops <strong>Approve</strong> as driver</td>
+<td>Ride driver</td>
+<td>Drive online, accept trips <em>(or reuse C2 after approve)</em></td>
+</tr>
+<tr>
+<td><strong>MM</strong></td>
+<td><code>922222222</code></td>
+<td><code>market_moderator</code></td>
+<td>Market reviewer</td>
+<td>Approve / reject ads</td>
+</tr>
+<tr>
+<td><strong>FO</strong></td>
+<td><code>944444444</code></td>
+<td><code>food_ops</code></td>
+<td>Food ops</td>
+<td>Create restaurant, assign owner</td>
+</tr>
+<tr>
+<td><strong>FM</strong></td>
+<td><code>955555555</code></td>
+<td><code>food_merchant</code></td>
+<td>Restaurant</td>
+<td>Menu + kitchen queue</td>
+</tr>
+<tr>
+<td><strong>FR</strong></td>
+<td><code>966666666</code></td>
+<td><code>food_rider</code></td>
+<td>Food rider</td>
+<td>Claim → OTP delivery</td>
+</tr>
+<tr>
+<td><strong>FM2</strong></td>
+<td><code>988888888</code></td>
+<td><code>food_merchant</code></td>
+<td>Second restaurant</td>
+<td>Isolation (cannot edit FM’s menu)</td>
+</tr>
+<tr>
+<td><strong>EO</strong></td>
+<td><code>900000010</code></td>
+<td><code>events_ops</code></td>
+<td>Events ops</td>
+<td>Approve / reject events</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Defaults every new user already gets:</strong> <code>ride_passenger</code>, <code>food_customer</code>, <code>market_buyer</code>, <code>market_seller</code>, <code>events_attendee</code>, <code>events_organizer</code>.</p>
+<p><strong>Tip:</strong> Admin <strong>A</strong> already has <code>ride_ops</code> and is auto-approved as a Ride driver — you can use <strong>A</strong> as the driver for the first Ride pass if you want fewer accounts.</p>
+<hr />
+<h2 id="2-setup-create-accounts-and-grant-roles">2. Setup — create accounts and grant roles</h2>
+<h3 id="21-create-each-phone-2-minutes-each">2.1 Create each phone (2 minutes each)</h3>
+<ol>
+<li>Open https://maekel.pages.dev/  </li>
+<li>Enter local digits (e.g. <code>911111111</code>) → <strong>Continue</strong>  </li>
+<li>OTP <code>123456</code> → <strong>Verify</strong>  </li>
+<li>Confirm you land on <strong>Home</strong> (tiles: Ride, Market, Food, Events, Games)  </li>
+<li><strong>Sign out</strong> (power icon) before creating the next account  </li>
+</ol>
+<p>Do this for: <code>911111111</code>, <code>977777777</code>, <code>922222222</code>, <code>944444444</code>, <code>955555555</code>, <code>966666666</code>, <code>988888888</code>, <code>900000010</code>, and optionally <code>911111112</code> (driver).</p>
+<p>Also log in once as admin <code>999999999</code> so Staff works.</p>
+<h3 id="22-grant-staff-roles-as-admin-a">2.2 Grant staff roles (as Admin A)</h3>
+<ol>
+<li>Sign in as <strong><code>999999999</code></strong>  </li>
+<li>Home → <strong>Staff</strong>  </li>
+<li>For each row below: enter <strong>local 9 digits</strong> → choose role → <strong>Grant</strong>  </li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Grant to</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>922222222</code></td>
+<td><code>market_moderator</code></td>
+</tr>
+<tr>
+<td><code>944444444</code></td>
+<td><code>food_ops</code></td>
+</tr>
+<tr>
+<td><code>955555555</code></td>
+<td><code>food_merchant</code></td>
+</tr>
+<tr>
+<td><code>966666666</code></td>
+<td><code>food_rider</code></td>
+</tr>
+<tr>
+<td><code>988888888</code></td>
+<td><code>food_merchant</code></td>
+</tr>
+<tr>
+<td><code>900000010</code></td>
+<td><code>events_ops</code></td>
+</tr>
+</tbody>
+</table>
+<ol start="4">
+<li>Tell each of those users to <strong>Sign out → OTP again</strong>.  </li>
+</ol>
+<p><strong>Checks</strong>
+- [ ] Staff list shows the grants<br />
+- [ ] After re-OTP, Home shows the correct ops shortcut (Market ops / Food ops / Events ops) when that role is present  </p>
+<hr />
+<h2 id="3-group-a-sign-in-and-home">3. Group A — Sign-in and Home</h2>
+<p><strong>Actor:</strong> C1 <code>911111111</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Open app signed out</td>
+<td>Phone screen</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Enter <code>911111111</code> → Continue</td>
+<td>OTP screen</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Enter wrong OTP e.g. <code>000000</code></td>
+<td>Clear error, stay signed out</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Enter <code>123456</code></td>
+<td>Home loads</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Open Ride, back to Home, open Food, Market, Events</td>
+<td>No re-login; no crash</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Sign out</td>
+<td>Back to phone screen</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Checks</strong>
+- [ ] Wrong OTP fails clearly<br />
+- [ ] Correct OTP → Home<br />
+- [ ] Module tiles work without signing in again<br />
+- [ ] Sign out clears session  </p>
+<hr />
+<h2 id="4-group-bc-ride-passenger-driver">4. Group B+C — Ride (passenger + driver)</h2>
+<p><strong>Actors</strong>
+- Passenger: <strong>C1</strong> <code>911111111</code> (Browser 1)<br />
+- Driver: <strong>A</strong> <code>999999999</code> <em>or</em> dedicated driver after Ride ops Approve (Browser 2)  </p>
+<h3 id="41-approve-a-driver-if-not-using-admin">4.1 Approve a driver (if not using admin)</h3>
+<ol>
+<li>Browser 2: sign in as future driver (<code>911111112</code> or <code>977777777</code>) → Home → <strong>Ride</strong> → <strong>Drive</strong>  </li>
+<li>Confirm they <strong>cannot</strong> go Online (unapproved).  </li>
+<li>Browser 1 (or admin): sign in as <strong>A</strong> <code>999999999</code> → Home → <strong>Ride ops</strong> → find driver → <strong>Approve</strong>.  </li>
+<li>Driver: Sign out → OTP again → Ride → Drive → <strong>Online</strong>.  </li>
+</ol>
+<p><strong>Checks</strong>
+- [ ] Unapproved driver blocked from Online<br />
+- [ ] After Approve + re-OTP, Online works  </p>
+<h3 id="42-passenger-quote-request">4.2 Passenger quote + request</h3>
+<p><strong>Passenger (C1)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Home → <strong>Ride</strong></td>
+<td>Map / request UI</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Set <strong>pickup</strong> (GPS or search e.g. Bole) and <strong>dropoff</strong> (another Addis place)</td>
+<td>Pins set</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Get quote</td>
+<td>Price in ETB, distance, ETA; Economy class</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Tap <strong>Request</strong></td>
+<td>Searching / matching state</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Wait for match (driver Online nearby)</td>
+<td>Driver name / car / ETA</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Driver (A or approved D)</strong> — keep Online before passenger requests</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Ride → Drive → <strong>Online</strong></td>
+<td>Ready for offers</td>
+</tr>
+<tr>
+<td>2</td>
+<td>When offer appears</td>
+<td>See pickup area + fare; accept within TTL (~45s)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Accept</strong></td>
+<td>Trip assigned</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Arrived</strong> → <strong>Start</strong> → <strong>Complete</strong></td>
+<td>Status advances</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Confirm cash</td>
+<td>Earnings today updates</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Passenger finish</strong></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6</td>
+<td>Follow map while assigned / in progress</td>
+<td>Driver marker updates (poll)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>After complete, <strong>rate</strong> 1–5</td>
+<td>Rating saved</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Ride → <strong>Trips / History</strong></td>
+<td>Trip shows fare, time, driver</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-ride-fail-edge-checks">4.3 Ride fail / edge checks</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Passenger Request with <strong>no</strong> Online driver</td>
+<td>Clear no-driver / timeout message</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Passenger <strong>Cancel</strong> before trip starts</td>
+<td>Trip cancelled; driver freed</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Double-tap Request</td>
+<td>Only <strong>one</strong> active trip</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Pins far outside Addis</td>
+<td>Blocked / out of service message</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Module done when</strong>
+- [ ] Full cash trip C1 ↔ driver completes<br />
+- [ ] History + rating work<br />
+- [ ] No-driver and cancel paths are clear  </p>
+<hr />
+<h2 id="5-group-de-food-customer-kitchen-rider">5. Group D+E — Food (customer + kitchen + rider)</h2>
+<p>Food has <strong>no seed restaurants</strong>. You must create one before ordering.</p>
+<h3 id="51-ops-create-restaurant-and-assign-owner">5.1 Ops: create restaurant and assign owner</h3>
+<p><strong>Actor:</strong> FO <code>944444444</code> (or Admin A)</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Sign in → Home → <strong>Food ops</strong></td>
+<td>Ops board</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Create merchant</strong> (name, area, fee as prompted)</td>
+<td>Merchant appears</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Set <strong>Owner phone</strong> = <code>955555555</code> (Assign owner)</td>
+<td>Owner linked</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Confirm FM <code>955555555</code> has re-OTP’d after <code>food_merchant</code> grant</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-merchant-menu-modifiers">5.2 Merchant: menu + modifiers</h3>
+<p><strong>Actor:</strong> FM <code>955555555</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Home → Food → <strong>Merchant / Console</strong></td>
+<td>Own store only</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Add dish (name, price ETB, available)</td>
+<td>Dish listed</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Add <strong>option</strong> / modifier (e.g. Extra sauce +20 ETB)</td>
+<td>Option saved</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Optionally add photo</td>
+<td>Image shows on customer menu</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Isolation check (FM2 <code>988888888</code>)</strong><br />
+Create/assign a <strong>second</strong> merchant to <code>988888888</code>. Confirm they <strong>cannot</strong> edit FM’s dishes.</p>
+<h3 id="53-customer-order-cod">5.3 Customer order (COD)</h3>
+<p><strong>Actor:</strong> C1 <code>911111111</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Food → set delivery pin / place</td>
+<td>Shops for that area</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Open the restaurant → add item + modifier</td>
+<td>Cart totals include option</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Cart → see fee + total → Checkout <strong>COD</strong></td>
+<td>Order placed</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Open order detail</td>
+<td>Status + <strong>delivery OTP</strong> visible — <strong>write it down</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="54-kitchen-queue-live-poll-3s">5.4 Kitchen queue (live poll ~3s)</h3>
+<p><strong>Actor:</strong> FM <code>955555555</code> (keep console open)</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>New order appears without hard refresh</td>
+<td>Live board</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Accept</strong> → <strong>Preparing</strong> → <strong>Ready</strong></td>
+<td>Status moves; customer order updates</td>
+</tr>
+</tbody>
+</table>
+<h3 id="55-rider-delivery-otp-cod">5.5 Rider delivery (OTP + COD)</h3>
+<p><strong>Actor:</strong> FR <code>966666666</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Food → <strong>Rider</strong></td>
+<td>See ready jobs</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Claim</strong></td>
+<td>Pickup shows restaurant name/address</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Pickup → On the way</td>
+<td>Customer status updates</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Complete with <strong>customer OTP</strong> + confirm COD amount</td>
+<td>Delivered</td>
+</tr>
+</tbody>
+</table>
+<h3 id="56-food-fail-checks">5.6 Food fail checks</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Customer cancel after <strong>Preparing</strong></td>
+<td>Cancel blocked + clear message</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Rider wrong OTP</td>
+<td>Rejected; order not delivered</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Food ops force-deliver (no OTP) if supported</td>
+<td>Ops override works</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Unavailable menu item</td>
+<td>Cannot add / clear block</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Module done when</strong>
+- [ ] Merchant created + owned by FM<br />
+- [ ] Order → kitchen → rider OTP complete<br />
+- [ ] Second merchant cannot edit first menu<br />
+- [ ] Cancel-after-preparing blocked  </p>
+<hr />
+<h2 id="6-group-f-market-sell-moderate-buy">6. Group F — Market (sell + moderate + buy)</h2>
+<p>Categories are seeded; <strong>ads are not</strong>.</p>
+<h3 id="61-seller-posts">6.1 Seller posts</h3>
+<p><strong>Actor:</strong> C1 <code>911111111</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Home → <strong>Market</strong> → Sell / post</td>
+<td>Form</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Fill title, price ETB, category, subcity, photos if available → Submit</td>
+<td>Ad <strong>pending</strong></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>My ads</strong></td>
+<td>Sees own ad (pending)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-moderator-approves">6.2 Moderator approves</h3>
+<p><strong>Actor:</strong> MM <code>922222222</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Home → <strong>Market ops</strong></td>
+<td>Pending queue</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Approve</strong> the ad</td>
+<td>Removed from pending</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Optionally reject another test ad with reason</td>
+<td>Seller sees rejected</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-buyer-finds-and-contacts">6.3 Buyer finds and contacts</h3>
+<p><strong>Actor:</strong> C2 <code>977777777</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Market → browse / search</td>
+<td>Approved ad visible</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Open ad → Favorite</td>
+<td>In Favorites</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Chat and/or Call</td>
+<td>Message thread and/or <code>tel:</code> works</td>
+</tr>
+</tbody>
+</table>
+<h3 id="64-market-fail-checks">6.4 Market fail checks</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Browse before approve</td>
+<td>Pending ad <strong>not</strong> in public catalog</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Report ad (as buyer)</td>
+<td>Report reaches ops queue</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Seller marks sold / unpublish</td>
+<td>Ad leaves active browse</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Module done when</strong>
+- [ ] Post → approve → browse → favorite → chat/call<br />
+- [ ] Pending ads hidden from public  </p>
+<hr />
+<h2 id="7-group-g-events-host-ops-guest">7. Group G — Events (host + ops + guest)</h2>
+<h3 id="71-host-creates-event">7.1 Host creates event</h3>
+<p><strong>Actor:</strong> C1 <code>911111111</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Home → <strong>Events</strong> → <strong>+</strong> / Host → Create</td>
+<td>Form</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Title, category, subcity, venue, start time, capacity, price <code>0</code> (free) or pay-at-door → Submit</td>
+<td>Status <strong>pending</strong></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Host</strong> tab</td>
+<td>Event listed pending</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-ops-approve">7.2 Ops approve</h3>
+<p><strong>Actor:</strong> EO <code>900000010</code> (or Admin A)</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Home → <strong>Events ops</strong></td>
+<td>Pending queue (polls ~4s)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Approve</strong></td>
+<td>Event becomes live</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-guest-rsvp">7.3 Guest RSVP</h3>
+<p><strong>Actor:</strong> C2 <code>977777777</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Events → Browse</td>
+<td>Approved event visible</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Open → <strong>RSVP</strong></td>
+<td>Ticket code shown — <strong>write it down</strong></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Tickets</strong> tab</td>
+<td>Ticket listed</td>
+</tr>
+</tbody>
+</table>
+<h3 id="74-host-check-in">7.4 Host check-in</h3>
+<p><strong>Actor:</strong> C1 (host)</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Host → event → <strong>Attendees</strong></td>
+<td>Guest ticket listed</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Check in by ticket code or one-tap</td>
+<td>Status <strong>checked_in</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="75-events-fail-checks">7.5 Events fail checks</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Browse before approve</td>
+<td>Pending event hidden</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ops <strong>Reject</strong> with reason</td>
+<td>Host sees reason</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Guest cancel RSVP (if reserved)</td>
+<td>Seat freed</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Ops force cancel / suspend organizer</td>
+<td>Live event stops</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Module done when</strong>
+- [ ] Create → approve → RSVP → check-in works<br />
+- [ ] Pending hidden from browse  </p>
+<hr />
+<h2 id="8-ops-staff-smoke-admin-a">8. Ops &amp; Staff smoke (Admin A)</h2>
+<p><strong>Actor:</strong> <code>999999999</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Home shows ops shortcuts</td>
+<td>Market / Food / Ride / Events ops + Staff</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Staff</strong> grant + revoke a test role</td>
+<td>Persists after refresh</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Ride ops: fare params readable/editable</td>
+<td>Config saves</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Food ops: order board visible</td>
+<td>Can cancel / reassign if needed</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Events ops: pending + live lists</td>
+<td>Approve/reject works</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-suggested-one-day-schedule">9. Suggested one-day schedule</h2>
+<table>
+<thead>
+<tr>
+<th>Block</th>
+<th>Focus</th>
+<th>Actors</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0:00–0:20</td>
+<td>Section 2 setup + grants</td>
+<td>A + all phones OTP once</td>
+</tr>
+<tr>
+<td>0:20–0:50</td>
+<td><strong>Ride</strong> golden path + cancel/no-driver</td>
+<td>C1 + driver</td>
+</tr>
+<tr>
+<td>0:50–1:40</td>
+<td><strong>Food</strong> onboard → menu → order → rider</td>
+<td>FO + FM + C1 + FR</td>
+</tr>
+<tr>
+<td>1:40–2:10</td>
+<td><strong>Market</strong> post → approve → chat</td>
+<td>C1 + MM + C2</td>
+</tr>
+<tr>
+<td>2:10–2:40</td>
+<td><strong>Events</strong> create → approve → RSVP → check-in</td>
+<td>C1 + EO + C2</td>
+</tr>
+<tr>
+<td>2:40–3:00</td>
+<td>Fail checks + Admin smoke</td>
+<td>A</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-final-release-gate">10. Final release gate</h2>
+<p>Only call this QA pass <strong>green</strong> if all are true:</p>
+<ul>
+<li>[ ] Section 2 roster exists; re-OTP after grants  </li>
+<li>[ ] Ride: cash trip complete + history/rate  </li>
+<li>[ ] Food: ops merchant + kitchen + rider OTP delivery  </li>
+<li>[ ] Market: pending → approved → browse → contact  </li>
+<li>[ ] Events: pending → approved → RSVP → check-in  </li>
+<li>[ ] Role isolation: second food merchant cannot edit first menu  </li>
+<li>[ ] No critical “Failed to fetch” / crash on happy paths (wake API if slept)  </li>
+</ul>
+<p><strong>Not required to fail the gate:</strong> Games polish, push notifications, mobile money, QR tickets, road-network routing.</p>
+<hr />
+<h2 id="11-quick-troubleshooting">11. Quick troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First action hangs</td>
+<td>Wait 60s (Render wake), hard refresh, retry</td>
+</tr>
+<tr>
+<td>Role button missing after grant</td>
+<td>Sign out → OTP again</td>
+</tr>
+<tr>
+<td>Food browse empty</td>
+<td>FO must create merchant + FM must add dishes</td>
+</tr>
+<tr>
+<td>Market empty</td>
+<td>Seller must post; MM must approve</td>
+</tr>
+<tr>
+<td>Events empty</td>
+<td>Host create; EO approve</td>
+</tr>
+<tr>
+<td>Ride never matches</td>
+<td>Driver Online + approved + near pickup (offer radius)</td>
+</tr>
+<tr>
+<td><code>Failed to fetch</code> on trip place</td>
+<td>Confirm API CORS includes <code>Idempotency-Key</code> (shipped); hard refresh app</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Print or keep this file open beside two browser windows. Tick as you go.</em></p>
+</body>
+</html>
