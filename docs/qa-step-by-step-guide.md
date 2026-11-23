@@ -2,6 +2,7 @@
 
 **Purpose:** Walk a tester through Maekel end-to-end with **exact phones, roles, screens, and clicks**.  
 **PDF copy:** [`qa-step-by-step-guide.pdf`](./qa-step-by-step-guide.pdf)  
+**User stories checklist:** [mvp-qa-guide.md](./mvp-qa-guide.md) · [`mvp-qa-guide.pdf`](./mvp-qa-guide.pdf)  
 
 **Version:** 1.0 · **Date:** 23 Nov 2026  
 **App:** https://maekel.pages.dev/  

@@ -1,363 +1,471 @@
-# Maekel First-Release Testing Guide & Checklist
+# Maekel User Stories & Acceptance Checklist
 
-**What Maekel is:** One mobile app with three main parts — Ride (like a taxi call), Food (order food or groceries), and Market (buy and sell used or new items).  
-**Version:** 0.4  
-**Where it launches:** Addis Ababa  
-**Money:** Ethiopian Birr  
-**Phone numbers:** Ethiopia numbers starting with +251  
-**PDF copy:** [`mvp-qa-guide.pdf`](./mvp-qa-guide.pdf)
+**What Maekel is:** One app for Addis Ababa with Ride, Food, Market, and Events — one phone number, many roles.  
+**Version:** 1.0  
+**Aligned with:** [qa-step-by-step-guide.md](./qa-step-by-step-guide.md) (click-by-click runbook)  
+**PDF copy:** [`mvp-qa-guide.pdf`](./mvp-qa-guide.pdf)  
+**App:** https://maekel.pages.dev/ · **API:** https://maekel-api.onrender.com/ · **OTP:** `123456`
 
-**How to use this checklist**  
-1. Read each short story (what the user wants).  
-2. Tick every box under **What must be true**.  
-3. A story is finished only when every box is ticked.  
-4. If something critical is broken (see “How serious is the problem?” at the end), do not call the first release ready.
-
----
-
-## 1. What “first release ready” means
-
-When we say the first release is ready, a person with one phone number can:
-
-| Step | Part of the app | What they can do |
-|------|-----------------|------------------|
-| 1 | Sign-in and Home | Enter phone number, get a verification code, open Home, then open Ride, Food, and Market without signing in again |
-| 2 | Ride | Request a car, see the driver on the map, pay with cash, and leave a rating. The same phone can also be used as a driver after approval |
-| 3 | Food | Order from a restaurant or grocery, pay with cash on delivery, and confirm handover with a delivery verification code |
-| 4 | Market | Post an item for sale, wait for approval, then buyers can find it, chat, and call |
-
-**Not required for the first release** (do not fail the release if these are missing): playable games, reward points, paid “boost” ads, pharmacy or parcel delivery, booking a ride for later, live map of the food delivery person, ordering from two shops in one cart.
+**How to use**
+1. Run steps in the [step-by-step runbook](./qa-step-by-step-guide.md) using the phones below.  
+2. Tick every box under **What must be true** for each story.  
+3. A story passes only when every box is ticked.  
+4. Do not call the release ready if any **Critical** item in §10 is open.
 
 ---
 
-## 2. Suggested test people (phone accounts)
+## 1. What “ready” means
 
-Use different phones or accounts so you can play each role.
+With one Maekel login a tester can:
 
-| Label | Who they act as | Notes |
-|-------|-----------------|-------|
-| Person 1 | Everyday customer | Passenger, food customer, and Market buyer/seller |
-| Person 2 | Ride driver | Must be approved before they can go online; can also try passenger mode on the same phone |
-| Person 3 | Restaurant or shop | Accepts and prepares food orders |
-| Person 4 | Food delivery person | Collects the order and finishes delivery with the customer’s verification code |
-| Person 5 | Reviewer / admin | Approves Market ads and can suspend a bad user |
+| # | Module | Done when |
+|---|--------|-----------|
+| 1 | Sign-in / Home | Phone + OTP → Home; open Ride, Food, Market, Events without signing in again |
+| 2 | Ride | Quote → request → matched driver → live map → cash complete → rate + history |
+| 3 | Food | Ops creates shop → merchant menu → COD order → kitchen → rider OTP handover |
+| 4 | Market | Post ad → moderator approve → browse → favorite → chat/call |
+| 5 | Events | Host create → ops approve → guest RSVP → host check-in |
 
-**Important rule:** One phone number = one Maekel account. The same person can be a passenger and a driver, or a buyer and a seller, without creating a second account.
-
----
-
-## 3. Pictures (also in the PDF)
-
-1. How the app connects to the system  
-2. One phone, many roles  
-3. Ride trip steps  
-4. Food order steps and delivery verification code  
-5. Market: post → review → show to buyers → chat  
-6. Drivers, food delivery people, and Market sellers are separate groups  
-7. Final “ready to release” gate  
+**Not required to fail readiness:** Games polish, push notifications, mobile money, QR tickets, road-network routing, surge, scheduled rides.
 
 ---
 
-## 4. User stories and checklists
+## 2. Test people (phones & roles)
 
-Mark each empty box when you have checked it yourself.
+Same roster as the runbook §1. Create once (runbook §2), then reuse.
+
+| Label | Local phone | Roles | Acts as |
+|-------|-------------|-------|---------|
+| **A** | `999999999` | Admin + all ops (auto) | Staff, Ride/Food/Market/Events ops; can drive |
+| **C1** | `911111111` | Defaults only | Passenger, food customer, Market seller/buyer, Events host |
+| **C2** | `977777777` | Defaults only | Second customer, Market buyer, Events guest |
+| **D** | `911111112` | Defaults + Ride ops **Approve** | Ride driver *(or use A)* |
+| **MM** | `922222222` | `market_moderator` | Market reviewer |
+| **FO** | `944444444` | `food_ops` | Food ops |
+| **FM** | `955555555` | `food_merchant` | Restaurant kitchen |
+| **FR** | `966666666` | `food_rider` | Food delivery |
+| **FM2** | `988888888` | `food_merchant` | Second restaurant (isolation) |
+| **EO** | `900000010` | `events_ops` | Events moderator |
+
+**Defaults on every new OTP:** `ride_passenger`, `food_customer`, `market_buyer`, `market_seller`, `events_attendee`, `events_organizer`.
+
+**Rule:** After every Staff grant → that user **Sign out → OTP again**.
 
 ---
 
-### Group A — Sign-in and Home
+## 3. Group A — Sign-in and Home
 
-#### Story A01 — Sign in with phone and verification code
-**As a** new customer, **I want to** sign in with my Ethiopian phone number and a verification code, **so that** I can use Maekel with one account.
+*Runbook §3 · Actor C1*
 
+#### Story A01 — Sign in with phone and OTP
+**As a** new customer, **I want to** sign in with my Ethiopian number and OTP, **so that** I use one Maekel account.
+
+**Actors:** C1 `911111111`  
 **What must be true**
-- [ ] I can enter a valid Ethiopian mobile number (country code +251)
-- [ ] After I enter the correct verification code, I reach the Home screen
-- [ ] If the code is wrong, I see a clear error and I am not signed in
-- [ ] After I sign in once, opening Ride, Food, or Market does not ask me to sign in again
-- [ ] When I sign out, I return to the sign-in screen and my session is cleared
+- [ ] I enter 9 local digits; country is +251
+- [ ] Wrong OTP shows a clear error and I stay signed out
+- [ ] Correct OTP `123456` opens Home
+- [ ] Sign out returns me to the phone screen and clears the session
 
-#### Story A02 — Home screen shortcuts
-**As a** signed-in customer, **I want** clear buttons for Ride, Food, and Market, **so that** I can open each part quickly.
+#### Story A02 — Home shortcuts
+**As a** signed-in customer, **I want** clear tiles for Ride, Market, Food, and Events, **so that** I open each module quickly.
 
+**Actors:** C1  
 **What must be true**
-- [ ] Home shows the Maekel name and entries for Ride, Food, and Market
-- [ ] Tapping each entry opens that part without the app crashing
-- [ ] Games can be a simple placeholder and must not block the first release
-- [ ] Leaving a part and returning to Home keeps me signed in
+- [ ] Home shows Maekel branding and tiles for Ride, Market, Food, Events (Games may exist)
+- [ ] Each tile opens without crash
+- [ ] Moving between modules does not ask for OTP again
 
-#### Story A03 — Same phone, different roles
-**As a** customer, **I want** one phone number to work as passenger and driver, and as buyer and seller (and food roles when allowed), **so that** I do not need two accounts.
+#### Story A03 — One phone, many roles
+**As a** customer, **I want** one number for passenger/driver and buyer/seller (and food/events roles when granted), **so that** I do not need two accounts.
 
+**Actors:** C1 + A (grants)  
 **What must be true**
-- [ ] The same account can use Ride as a passenger and, after approval, as a driver
-- [ ] The same account can browse Market and also sell / manage my ads
-- [ ] Switching role does not require registering a second phone number
-- [ ] Special roles (driver, shop, food delivery person, reviewer) stay blocked until someone approves them
+- [ ] Same account can use Ride as passenger and, after Ride ops approve, as driver
+- [ ] Same account can buy and sell on Market
+- [ ] Staff roles stay blocked until granted and re-OTP’d
+- [ ] After grant + re-OTP, the matching ops shortcut appears on Home when expected
 
-#### Story A04 — Saved addresses
-**As a** customer, **I want to** save places I use often, **so that** ordering food (and setting a pickup) is faster.
+#### Story A04 — Staff grants persist
+**As an** admin, **I want** role grants to stick, **so that** QA accounts keep working after API restarts.
 
+**Actors:** A `999999999`  
 **What must be true**
-- [ ] I can save at least one place with a name (for example Home or Work)
-- [ ] Food checkout can use a saved place
-- [ ] If a place is outside the delivery area, I see a clear message
+- [ ] Staff can grant `market_moderator`, `food_ops`, `food_merchant`, `food_rider`, `events_ops`, `ride_ops`
+- [ ] Grants appear on the Staff list after refresh
+- [ ] Target must re-OTP before the role works in the app
 
 ---
 
-### Group B — Ride (passenger)
+## 4. Group B — Ride (passenger)
+
+*Runbook §4 · Passenger C1 · Driver A or approved D*
 
 #### Story B01 — Choose pickup and drop-off
-**As a** passenger, **I want to** set where I am picked up and where I go, **so that** I can request a trip in Addis Ababa.
+**As a** passenger, **I want to** set pickup and drop-off in Addis, **so that** I can request a trip.
 
+**Actors:** C1  
 **What must be true**
-- [ ] Pickup can use my phone location, or I can move the pin / search for a place
-- [ ] I can set drop-off by search or by moving the pin
-- [ ] Outside the service area, I cannot request a trip, and the message is easy to understand
+- [ ] Pickup via GPS, map pin, or place search
+- [ ] Drop-off via pin or search
+- [ ] Outside the service area, request is blocked with a clear message
 
-#### Story B02 — See the price before I request
-**As a** passenger, **I want to** see the trip price in Ethiopian Birr before I request, **so that** I am not surprised later.
+#### Story B02 — See price before request
+**As a** passenger, **I want** an ETB quote before Request, **so that** I am not surprised later.
 
+**Actors:** C1  
 **What must be true**
-- [ ] After I set pickup and drop-off, the price is shown in Ethiopian Birr
-- [ ] The first release shows one car type only (for example a normal sedan)
-- [ ] I cannot tap Request until I have seen the price
-- [ ] On a normal successful trip, the price at the end matches the price I saw before Request
+- [ ] Quote shows total ETB, distance, and ETA
+- [ ] One vehicle class (Economy) in this release
+- [ ] Request is not available until a quote is shown
+- [ ] On a normal completed trip, end fare matches the quote
 
 #### Story B03 — Request and get a driver
-**As a** passenger, **I want to** request a ride and be matched with a driver, **so that** someone comes to pick me up.
+**As a** passenger, **I want to** request and be matched, **so that** a driver comes for me.
 
+**Actors:** C1 + Online approved driver  
 **What must be true**
-- [ ] After Request, I see a “looking for driver” (or similar) state
-- [ ] When matched, I see the driver’s name, photo or placeholder, rating, car, plate number, and how soon they arrive
-- [ ] If I tap Request twice by mistake, only one trip is created
-- [ ] If no driver is found, I see a clear message and I can try again
+- [ ] After Request I see searching / matching
+- [ ] When matched I see driver identity (name/car/plate or clear summary) and ETA
+- [ ] Double Request does not create two active trips
+- [ ] If no driver is found, I see a clear message and can try again
 
 #### Story B04 — Follow the trip on the map
-**As a** passenger, **I want to** see the driver on the map, **so that** I know when they are coming and where we are going.
+**As a** passenger, **I want** live trip status on the map, **so that** I know progress.
 
+**Actors:** C1  
 **What must be true**
-- [ ] After a driver is assigned, the map shows them moving toward pickup
-- [ ] Status moves through: assigned → arriving → arrived → trip in progress → finished or cancelled
-- [ ] During the trip, the map shows progress toward drop-off
-- [ ] If I go back to Home during a trip, I can open the active trip again (for example a badge or “trip in progress”)
+- [ ] After assign, map/status updates toward pickup
+- [ ] Status moves: assigned → arriving/arrived → in progress → completed/cancelled
+- [ ] Driver position refreshes while online (polling is OK)
+- [ ] I can reopen an active trip if I leave and come back
 
 #### Story B05 — Contact the driver
 **As a** passenger, **I want to** contact my driver, **so that** we can coordinate pickup.
 
+**Actors:** C1  
 **What must be true**
-- [ ] After matching, I can call (masked number is fine) **or** use in-app chat — at least one of these must work
+- [ ] After match, Call (`tel:`) and/or in-app contact works (at least one)
 
 #### Story B06 — Cancel before the trip starts
-**As a** passenger, **I want to** cancel before the trip starts, **so that** I am not forced to ride.
+**As a** passenger, **I want to** cancel before the trip is in progress, **so that** I am not forced to ride.
 
+**Actors:** C1  
 **What must be true**
-- [ ] Cancel is available before the trip is in progress
-- [ ] After cancel, the trip shows as cancelled and the driver is freed for other trips
+- [ ] Cancel is available before in-progress
+- [ ] After cancel, trip is cancelled and the driver is free for other offers
 
-#### Story B07 — Pay cash, rate, and see past trips
-**As a** passenger, **I want to** pay with cash, rate the driver, and see my past trips, **so that** the trip feels complete.
+#### Story B07 — Cash, rate, and history
+**As a** passenger, **I want to** pay cash, rate, and see past trips, **so that** the trip feels complete.
 
+**Actors:** C1  
 **What must be true**
-- [ ] At the end, both passenger and driver see the cash amount clearly
-- [ ] I can leave a rating from 1 to 5 after the trip
-- [ ] The trip appears in my history with price, time, and driver summary
+- [ ] Cash amount is clear at complete
+- [ ] I can rate 1–5 after complete
+- [ ] History shows fare, time, and driver summary
 
 ---
 
-### Group C — Ride (driver)
+## 5. Group C — Ride (driver & ops)
 
-#### Story C01 — Go online and receive trip offers
-**As an** approved driver, **I want to** go online and receive trip offers, **so that** I can earn money.
+*Runbook §4.1–4.2 · Driver A or D · Ops A*
 
+#### Story C01 — Go online and receive offers
+**As an** approved driver, **I want to** go online and get offers, **so that** I can earn.
+
+**Actors:** D (or A)  
 **What must be true**
-- [ ] A driver who is not approved cannot go online
-- [ ] Online / offline switch works; offline means no new offers
-- [ ] An offer shows roughly where pickup is, the price estimate, and a time limit to accept
+- [ ] Unapproved driver cannot go Online
+- [ ] After Ride ops Approve (+ re-OTP if needed), Online works
+- [ ] Offline means no new offers
+- [ ] Offer shows pickup area, fare estimate, and accept time limit (~45s)
 
-#### Story C02 — Finish the driver steps for a trip
-**As a** driver, **I want to** accept → mark arrived → start → complete, **so that** the trip steps are correct.
+#### Story C02 — Complete driver trip steps
+**As a** driver, **I want to** Accept → Arrived → Start → Complete + cash confirm, **so that** the trip closes correctly.
 
+**Actors:** Driver matched to C1  
 **What must be true**
-- [ ] Accept links me to the passenger’s trip
-- [ ] I can mark Arrived, Start, and Complete in that order
-- [ ] When paying by cash, I can confirm I collected the money
-- [ ] Today’s earnings list updates after I complete a trip
-- [ ] Reporting a problem (passenger no-show, wrong pin) does not crash the app
+- [ ] Accept links me to the passenger trip
+- [ ] Arrived → Start → Complete work in order
+- [ ] Cash confirm works
+- [ ] Today’s earnings updates after complete
+- [ ] Report problem (e.g. no-show) does not crash the app
+
+#### Story C03 — Ride ops thin control
+**As** Ride ops, **I want to** approve drivers and manage fare params, **so that** supply and pricing stay under control.
+
+**Actors:** A  
+**What must be true**
+- [ ] Approve / suspend drivers from Ride ops
+- [ ] Force-cancel an active trip when needed
+- [ ] Fare config (base / per-km / min) is readable and savable
 
 ---
 
-### Group D — Food (customer)
+## 6. Group D — Food (customer)
 
-#### Story D01 — See shops that can deliver to me
-**As a** customer, **I want to** see restaurants and grocery shops that deliver to my pin, **so that** I only browse what I can order.
+*Runbook §5.3 · Actor C1 · Prerequisite: FO+FM setup (§5.1–5.2)*
 
+#### Story D01 — See shops that deliver to me
+**As a** customer, **I want** restaurants/groceries for my pin, **so that** I only browse what I can order.
+
+**Actors:** C1  
 **What must be true**
-- [ ] I set or confirm a delivery place before or when I start browsing
-- [ ] Only shops that can deliver to that place are shown
-- [ ] First release includes restaurants/food and groceries
-- [ ] Each shop shows name, open or closed, and a hint about fee or delivery time
-- [ ] Outside the delivery area, I see a clear empty or blocked message
+- [ ] I set/confirm a delivery place before or while browsing
+- [ ] Shops for that area appear (after ops created a merchant)
+- [ ] Empty / out-of-area messaging is clear when nothing applies
 
 #### Story D02 — Build a cart from one shop
-**As a** customer, **I want to** add items with amounts and options from one shop, **so that** I can check out a single order.
+**As a** customer, **I want** items with quantities and options from one shop, **so that** I can check out one order.
 
+**Actors:** C1  
 **What must be true**
-- [ ] Each item shows price in Ethiopian Birr and whether it is available
+- [ ] Item shows ETB price and availability
 - [ ] Unavailable items cannot be added (or are clearly blocked)
-- [ ] The cart shows items, subtotal, delivery fee, and total
-- [ ] In the first release, one cart is for one shop only
+- [ ] Modifiers/options adjust the line total
+- [ ] Cart shows items, subtotal, delivery fee, and total
+- [ ] One cart = one shop in this release
 
-#### Story D03 — Place an order and pay with cash on delivery
-**As a** customer, **I want to** confirm my address and place an order paid with cash when it arrives, **so that** the shop can prepare my food.
+#### Story D03 — Place COD order
+**As a** customer, **I want to** place a cash-on-delivery order, **so that** the shop can prepare.
 
+**Actors:** C1  
 **What must be true**
-- [ ] Before I place the order, I see the exact delivery fee
-- [ ] Paying with cash on delivery is available
-- [ ] After I place the order, I get an order number and status “confirmed” (or clear equivalent)
-- [ ] If a shop has a minimum order amount, it is enforced
+- [ ] Delivery fee and total are clear before place
+- [ ] COD is available
+- [ ] After place I get order id/status and a **delivery OTP** on the order detail
 
-#### Story D04 — Follow the order and confirm with a delivery code
-**As a** customer, **I want to** follow my order status and confirm handover with a delivery verification code, **so that** delivery is safer.
+#### Story D04 — Follow order and OTP handover
+**As a** customer, **I want** status updates and OTP handover, **so that** delivery is safer.
 
+**Actors:** C1 (+ FR completes)  
 **What must be true**
-- [ ] Status moves: confirmed → preparing → picked up → on the way → delivered or cancelled
-- [ ] I receive a delivery verification code
-- [ ] The order cannot show as delivered unless the delivery person enters the correct code (unless an admin specially overrides)
-- [ ] The order appears in my order history
+- [ ] Status moves through confirmed → preparing → ready/picked up → on the way → delivered (or clear equivalents)
+- [ ] Order cannot show delivered without correct OTP (unless ops force-deliver)
+- [ ] Order appears in history
 
-#### Story D05 — Cancel only before the shop starts preparing
-**As a** customer, **I want to** cancel only before the shop starts preparing, **so that** shops do not waste food and time.
+#### Story D05 — Cancel only before preparing
+**As a** customer, **I want to** cancel only before preparing, **so that** shops do not waste food.
 
+**Actors:** C1  
 **What must be true**
-- [ ] I can cancel while the order is still only confirmed
-- [ ] After preparing has started, cancel is blocked and the message is clear
+- [ ] Cancel works while still only confirmed
+- [ ] After preparing starts, cancel is blocked with a clear message
 
 ---
 
-### Group E — Food (shop and delivery person)
+## 7. Group E — Food (ops, kitchen, rider)
 
-#### Story E01 — Shop accepts and prepares the order
-**As a** shop, **I want to** accept and prepare orders, **so that** a delivery person can pick them up.
+*Runbook §5.1–5.5 · FO / FM / FR / FM2*
 
+#### Story E01 — Ops onboard merchant and owner
+**As** Food ops, **I want to** create a merchant and assign an owner phone, **so that** kitchen staff can manage their menu.
+
+**Actors:** FO `944444444` (or A), owner FM `955555555`  
 **What must be true**
-- [ ] A new order is visible (and ideally notifies me)
-- [ ] I can accept or reject
-- [ ] I can mark preparing and ready for pickup
-- [ ] I can pause my shop so new orders stop
+- [ ] Create merchant from Food ops
+- [ ] Assign owner phone `955555555`
+- [ ] Owner only reaches their console after `food_merchant` grant + re-OTP
+- [ ] Ops uses Food ops board, not “claiming” another store’s console as primary flow
 
-#### Story E02 — Delivery person finishes with the verification code
-**As a** food delivery person, **I want to** pick up the order and finish delivery with the customer’s verification code, **so that** cash-on-delivery handovers are checked.
+#### Story E02 — Merchant menu and kitchen
+**As** restaurant staff, **I want to** manage menu (with options) and advance orders, **so that** riders can pick up.
 
+**Actors:** FM `955555555`  
 **What must be true**
-- [ ] I see where to pick up and where to drop off
-- [ ] I can mark picked up and on the way
-- [ ] Finishing the delivery requires the customer’s verification code
-- [ ] When paying by cash, the amount to collect is shown
-- [ ] Food delivery people are a separate group from Ride drivers (the app does not mix the two job lists)
+- [ ] Add/edit dishes with ETB prices and availability
+- [ ] Add modifiers/options (name + ETB)
+- [ ] New orders appear on the console without hard refresh (live poll OK)
+- [ ] Accept → Preparing → Ready works
+- [ ] Pause shop stops new orders when designed
+
+#### Story E03 — Merchant isolation
+**As** second restaurant staff, **I must not** edit another restaurant’s menu.
+
+**Actors:** FM2 `988888888` vs FM  
+**What must be true**
+- [ ] FM2 only sees/edits their assigned merchant
+- [ ] FM2 cannot change FM’s dishes
+
+#### Story E04 — Rider OTP delivery
+**As a** food rider, **I want to** claim ready jobs and complete with customer OTP + COD, **so that** handover is checked.
+
+**Actors:** FR `966666666`  
+**What must be true**
+- [ ] Ready jobs appear on Rider board (live poll OK)
+- [ ] Pickup shows clear merchant name/address
+- [ ] Pickup → on the way → complete requires correct customer OTP
+- [ ] Wrong OTP is rejected; order not delivered
+- [ ] COD amount to collect is clear
+- [ ] Food riders are separate from Ride drivers (job lists do not mix)
+
+#### Story E05 — Food ops support actions
+**As** Food ops, **I want** thin support tools, **so that** stuck orders can be unblocked.
+
+**Actors:** FO or A  
+**What must be true**
+- [ ] Ops board shows orders
+- [ ] Support cancel / reassign rider when available
+- [ ] Force-deliver without OTP works when designed
 
 ---
 
-### Group F — Market (buy and sell)
+## 8. Group F — Market
 
-#### Story F01 — Browse and search listings
-**As a** buyer, **I want to** browse categories and search or filter listings, **so that** I find items near me.
+*Runbook §6 · C1 seller · MM moderator · C2 buyer*
 
+#### Story F01 — Browse and search
+**As a** buyer, **I want to** browse and search approved ads, **so that** I find items near me.
+
+**Actors:** C2  
 **What must be true**
-- [ ] At least four to six main categories are available
-- [ ] Keyword search works
-- [ ] I can filter by place, price, and condition (new/used) as designed
-- [ ] Each card shows a photo, price in Ethiopian Birr, title, and place
-- [ ] Only **approved** listings appear in public browse and search
+- [ ] Seeded categories are available
+- [ ] Keyword / filters (subcity, price as designed) work
+- [ ] Cards show title, price ETB, place (photo when provided)
+- [ ] Only **approved** ads appear in public browse
 
-#### Story F02 — Open a listing and contact the seller
-**As a** buyer, **I want to** open a listing and chat or call the seller, **so that** we can agree on a meetup.
+#### Story F02 — Contact seller
+**As a** buyer, **I want to** chat or call the seller, **so that** we can arrange meetup.
 
+**Actors:** C2  
 **What must be true**
-- [ ] Detail page shows photos, description, key details, and seller info
-- [ ] Safety tips appear before the first contact (or an equally clear warning)
-- [ ] In-app chat sends and receives text messages
-- [ ] Call button works according to the seller’s phone visibility setting
-- [ ] Chat shows a safety reminder (for example: do not pay before you see the item)
+- [ ] Detail shows description and seller context
+- [ ] In-app chat sends/receives (no fake auto-reply as the only path)
+- [ ] Call works per design (`tel:` / reveal)
+- [ ] Safety guidance is visible around contact
 
-#### Story F03 — Save favorite listings
-**As a** buyer, **I want to** save favorites, **so that** I can find them again later.
+#### Story F03 — Favorites
+**As a** buyer, **I want** favorites, **so that** I can return to ads later.
 
+**Actors:** C2  
 **What must be true**
-- [ ] I can add and remove a favorite from the list or detail page
-- [ ] My favorites list shows what I saved
+- [ ] Add/remove favorite from detail
+- [ ] Favorites list shows saved approved ads
 
-#### Story F04 — Post something for sale
-**As a** seller, **I want to** post a listing with photos and details, **so that** buyers can find it after it is approved.
+#### Story F04 — Post for sale
+**As a** seller, **I want to** post an ad, **so that** buyers can find it after approval.
 
+**Actors:** C1  
 **What must be true**
-- [ ] Sell flow covers: category → photos → title and description → price → key details → place → submit
-- [ ] I can upload more than one photo
-- [ ] After submit, the listing is **waiting for review** and is **not** shown to the public yet
-- [ ] If there is a maximum number of active free listings, it is enforced
+- [ ] Sell flow covers category, details, price, place, photos as designed
+- [ ] After submit, status is **pending** and ad is **not** public
+- [ ] My ads shows the pending listing
 
-#### Story F05 — Review listings before they go public
-**As a** reviewer, **I want to** approve or reject listings, **so that** only safe ads go live.
+#### Story F05 — Moderate listings
+**As a** Market moderator, **I want to** approve or reject ads, **so that** only safe ads go live.
 
+**Actors:** MM `922222222`  
 **What must be true**
-- [ ] I can see a list of listings waiting for review
-- [ ] Approve makes the listing public and notifies the seller
-- [ ] Reject keeps it off public search and shows the seller a reason
-- [ ] A report from a buyer is visible to the review team
+- [ ] Ops queue shows pending ads
+- [ ] Approve makes the ad public
+- [ ] Reject keeps it off browse and can show a reason to the seller
+- [ ] Buyer reports appear for ops handling
 
-#### Story F06 — Manage my listings
-**As a** seller, **I want to** manage my listings, **so that** I can edit them, close them, or mark them sold.
+#### Story F06 — Manage my ads
+**As a** seller, **I want to** manage my ads, **so that** I can edit, close, or mark sold.
 
+**Actors:** C1  
 **What must be true**
-- [ ] “My ads” shows active, waiting, rejected, and sold (or clear equivalent names)
-- [ ] Edit works (big changes may need review again)
-- [ ] Mark sold or delete closes the listing in a clear way
+- [ ] My ads shows pending / approved / rejected / sold (or clear equivalents)
+- [ ] Edit works (material edits may re-pending)
+- [ ] Sold / unpublish removes the ad from active browse
 
 ---
 
-### Group G — Across the whole app / ready to release
+## 9. Group G — Events
 
-#### Story G01 — One sign-in for the whole app
-**As a** customer, **I want** one sign-in for Ride, Food, and Market, **so that** Maekel feels like one product.
+*Runbook §7 · Host C1 · Ops EO · Guest C2*
 
+#### Story G01 — Host creates an event
+**As an** organizer, **I want to** create an event for review, **so that** guests can discover it after approval.
+
+**Actors:** C1  
 **What must be true**
-- [ ] After I sign in once, moving between Ride, Food, and Market never asks for a new verification code
+- [ ] Create form covers title, category, subcity, venue, time, capacity, free or pay-at-door price
+- [ ] Submit creates **pending** event
+- [ ] Host tab lists my pending/live events
 
-#### Story G02 — Stop a bad user
-**As an** admin, **I want to** suspend a user, **so that** we can stop abuse.
+#### Story G02 — Ops approve or reject
+**As** Events ops, **I want to** approve or reject pending events, **so that** only valid events go live.
 
+**Actors:** EO `900000010` (or A)  
 **What must be true**
-- [ ] A suspended user cannot request rides, place food orders, or post Market ads (as designed)
-- [ ] Their public Market ads can be taken down when needed
+- [ ] Ops queue shows pending (live poll OK)
+- [ ] Approve makes the event visible in Browse
+- [ ] Reject with reason is visible to the host
+- [ ] Force cancel / suspend organizer stops live events when used
 
-#### Story G03 — Final ready-to-release checklist
-**As** the person signing off the first release, **I want** one final list, **so that** we know we can launch.
+#### Story G03 — Guest RSVP and tickets
+**As a** guest, **I want to** RSVP and keep a ticket code, **so that** I can attend.
 
+**Actors:** C2  
 **What must be true**
-- [ ] Stories A01–A03 pass
-- [ ] A full Ride cash trip passes (Groups B and C)
-- [ ] A full Food cash-on-delivery trip with verification code passes (Groups D and E)
-- [ ] Market post → review → browse → chat passes (Group F)
-- [ ] No critical open problems: two trips from one request, delivered without verification code, waiting listing shown to public, or signing in without a valid code
-- [ ] Outside-area / empty messages checked for Ride and Food
+- [ ] Approved upcoming events appear in Browse (filters work as designed)
+- [ ] Pending events are hidden from Browse
+- [ ] RSVP issues a ticket code on Tickets
+- [ ] Cancel RSVP (while reserved) frees capacity when designed
+
+#### Story G04 — Host check-in
+**As a** host, **I want to** check guests in, **so that** attendance is tracked at the door.
+
+**Actors:** C1  
+**What must be true**
+- [ ] Attendees list shows reserved tickets
+- [ ] Check-in by ticket code or one-tap marks checked-in
+- [ ] Door/check-in code is available to the host (not required on public browse)
 
 ---
 
-## 5. How serious is the problem?
+## 10. Group H — Cross-app & release gate
+
+#### Story H01 — One sign-in for all modules
+**As a** customer, **I want** one sign-in for Ride, Food, Market, and Events.
+
+**Actors:** C1  
+**What must be true**
+- [ ] After one OTP, switching modules never asks for a new code until sign-out
+
+#### Story H02 — Final ready checklist
+**As** the person signing off, **I want** one gate list aligned with the runbook §10.
+
+**What must be true**
+- [ ] A01–A04 pass (sign-in, Home, roles, Staff)
+- [ ] Full Ride cash trip passes (Groups B–C) — runbook §4
+- [ ] Full Food COD + OTP delivery passes (Groups D–E) — runbook §5
+- [ ] Market post → approve → browse → contact passes (Group F) — runbook §6
+- [ ] Events create → approve → RSVP → check-in passes (Group G) — runbook §7
+- [ ] Merchant isolation (E03) passes
+- [ ] No critical open defects below
+
+---
+
+## 11. How serious is the problem?
 
 | Level | Meaning | Examples |
 |-------|---------|----------|
-| Critical | Must fix before launch | Sign-in without a valid code; two trips from one request; order marked delivered without verification code; listing still waiting for review but already public |
-| Major | Should fix before first release if it is in this checklist | Wrong price at the end of a trip; chat not sending; cancel allowed after the shop started preparing |
-| Minor | Can fix soon after launch | Wording, layout, small empty-state polish |
-| Later | Not part of first release | Missing reward points, paid ad boost, pharmacy, etc. |
+| **Critical** | Must fix before launch | Sign-in without valid OTP; two trips from one Request; Food delivered without OTP (non-ops); pending Market/Event shown as public |
+| **Major** | Should fix before calling this bar done | Wrong fare at complete; chat not sending; cancel allowed after preparing; role works without re-OTP after grant |
+| **Minor** | Soon after | Copy, spacing, empty-state polish |
+| **Later** | Out of this bar | Push/FCM, mobile money, QR tickets, surge, scheduled rides |
 
 ---
 
-## 6. Document history
+## 12. Story ↔ runbook map
+
+| Stories | Runbook section |
+|---------|-----------------|
+| A01–A04 | §2–§3, §8 |
+| B01–B07, C01–C03 | §4 |
+| D01–D05, E01–E05 | §5 |
+| F01–F06 | §6 |
+| G01–G04 | §7 |
+| H01–H02 | §10 |
+
+---
+
+## 13. Document history
 
 | Version | Date | Notes |
 |---------|------|-------|
-| 0.1 | 2026-11-15 | First testing guide and pictures |
-| 0.2 | 2026-11-15 | Added user stories and checklists |
-| 0.3 | 2026-11-15 | Plain language; no short forms |
-| 0.4 | 2026-11-15 | Removed unnecessary audience callouts |
+| 0.1–0.4 | 2026-11-15 | Original first-release stories (Ride/Food/Market) |
+| **1.0** | **2026-11-23** | Rewritten to match step-by-step runbook; phones/roles; Events group; live app URL |

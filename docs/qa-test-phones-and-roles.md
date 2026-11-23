@@ -1,6 +1,7 @@
 # QA test phones & roles
 
-**Guided step-by-step runbook (start here):** [qa-step-by-step-guide.md](./qa-step-by-step-guide.md)
+**Guided step-by-step runbook (start here):** [qa-step-by-step-guide.md](./qa-step-by-step-guide.md)  
+**User stories checklist:** [mvp-qa-guide.md](./mvp-qa-guide.md) · [`mvp-qa-guide.pdf`](./mvp-qa-guide.pdf)
 
 Use these numbers on **https://maekel.pages.dev/** (backup: https://zewdnehnathan.github.io/maekel/) against **https://maekel-api.onrender.com**.
 

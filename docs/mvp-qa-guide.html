@@ -1,0 +1,512 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Maekel User Stories</title>
+<style>@page{size:A4;margin:16mm 14mm}body{font-family:Segoe UI,Calibri,Arial,sans-serif;font-size:10.5pt;line-height:1.4;color:#1a1a1a;max-width:920px;margin:0 auto;padding:20px}h1,h2,h3{color:#0a1018;page-break-after:avoid}h1{font-size:20pt;border-bottom:2px solid #2ef3c5;padding-bottom:8px}h2{font-size:14pt;margin-top:1.4em;border-bottom:1px solid #d0d7de;padding-bottom:4px}h3{font-size:12pt;margin-top:1.1em}table{border-collapse:collapse;width:100%;margin:10px 0 14px;font-size:9pt;page-break-inside:avoid}th,td{border:1px solid #c9d1d9;padding:5px 7px;text-align:left;vertical-align:top}th{background:#eef6f4}code{font-family:Consolas,monospace;font-size:.9em;background:#eef2f6;padding:1px 4px;border-radius:3px}ul,ol{margin:6px 0 10px 18px}hr{border:none;border-top:1px solid #d0d7de;margin:18px 0}a{color:#0b6e4f}</style></head><body><h1 id="maekel-user-stories-acceptance-checklist">Maekel User Stories &amp; Acceptance Checklist</h1>
+<p><strong>What Maekel is:</strong> One app for Addis Ababa with Ride, Food, Market, and Events — one phone number, many roles.<br />
+<strong>Version:</strong> 1.0<br />
+<strong>Aligned with:</strong> <a href="./qa-step-by-step-guide.md">qa-step-by-step-guide.md</a> (click-by-click runbook)<br />
+<strong>PDF copy:</strong> <a href="./mvp-qa-guide.pdf"><code>mvp-qa-guide.pdf</code></a><br />
+<strong>App:</strong> https://maekel.pages.dev/ · <strong>API:</strong> https://maekel-api.onrender.com/ · <strong>OTP:</strong> <code>123456</code></p>
+<p><strong>How to use</strong>
+1. Run steps in the <a href="./qa-step-by-step-guide.md">step-by-step runbook</a> using the phones below.<br />
+2. Tick every box under <strong>What must be true</strong> for each story.<br />
+3. A story passes only when every box is ticked.<br />
+4. Do not call the release ready if any <strong>Critical</strong> item in §10 is open.</p>
+<hr />
+<h2 id="1-what-ready-means">1. What “ready” means</h2>
+<p>With one Maekel login a tester can:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Module</th>
+<th>Done when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Sign-in / Home</td>
+<td>Phone + OTP → Home; open Ride, Food, Market, Events without signing in again</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ride</td>
+<td>Quote → request → matched driver → live map → cash complete → rate + history</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Food</td>
+<td>Ops creates shop → merchant menu → COD order → kitchen → rider OTP handover</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Market</td>
+<td>Post ad → moderator approve → browse → favorite → chat/call</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Events</td>
+<td>Host create → ops approve → guest RSVP → host check-in</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Not required to fail readiness:</strong> Games polish, push notifications, mobile money, QR tickets, road-network routing, surge, scheduled rides.</p>
+<hr />
+<h2 id="2-test-people-phones-roles">2. Test people (phones &amp; roles)</h2>
+<p>Same roster as the runbook §1. Create once (runbook §2), then reuse.</p>
+<table>
+<thead>
+<tr>
+<th>Label</th>
+<th>Local phone</th>
+<th>Roles</th>
+<th>Acts as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A</strong></td>
+<td><code>999999999</code></td>
+<td>Admin + all ops (auto)</td>
+<td>Staff, Ride/Food/Market/Events ops; can drive</td>
+</tr>
+<tr>
+<td><strong>C1</strong></td>
+<td><code>911111111</code></td>
+<td>Defaults only</td>
+<td>Passenger, food customer, Market seller/buyer, Events host</td>
+</tr>
+<tr>
+<td><strong>C2</strong></td>
+<td><code>977777777</code></td>
+<td>Defaults only</td>
+<td>Second customer, Market buyer, Events guest</td>
+</tr>
+<tr>
+<td><strong>D</strong></td>
+<td><code>911111112</code></td>
+<td>Defaults + Ride ops <strong>Approve</strong></td>
+<td>Ride driver <em>(or use A)</em></td>
+</tr>
+<tr>
+<td><strong>MM</strong></td>
+<td><code>922222222</code></td>
+<td><code>market_moderator</code></td>
+<td>Market reviewer</td>
+</tr>
+<tr>
+<td><strong>FO</strong></td>
+<td><code>944444444</code></td>
+<td><code>food_ops</code></td>
+<td>Food ops</td>
+</tr>
+<tr>
+<td><strong>FM</strong></td>
+<td><code>955555555</code></td>
+<td><code>food_merchant</code></td>
+<td>Restaurant kitchen</td>
+</tr>
+<tr>
+<td><strong>FR</strong></td>
+<td><code>966666666</code></td>
+<td><code>food_rider</code></td>
+<td>Food delivery</td>
+</tr>
+<tr>
+<td><strong>FM2</strong></td>
+<td><code>988888888</code></td>
+<td><code>food_merchant</code></td>
+<td>Second restaurant (isolation)</td>
+</tr>
+<tr>
+<td><strong>EO</strong></td>
+<td><code>900000010</code></td>
+<td><code>events_ops</code></td>
+<td>Events moderator</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Defaults on every new OTP:</strong> <code>ride_passenger</code>, <code>food_customer</code>, <code>market_buyer</code>, <code>market_seller</code>, <code>events_attendee</code>, <code>events_organizer</code>.</p>
+<p><strong>Rule:</strong> After every Staff grant → that user <strong>Sign out → OTP again</strong>.</p>
+<hr />
+<h2 id="3-group-a-sign-in-and-home">3. Group A — Sign-in and Home</h2>
+<p><em>Runbook §3 · Actor C1</em></p>
+<h4 id="story-a01-sign-in-with-phone-and-otp">Story A01 — Sign in with phone and OTP</h4>
+<p><strong>As a</strong> new customer, <strong>I want to</strong> sign in with my Ethiopian number and OTP, <strong>so that</strong> I use one Maekel account.</p>
+<p><strong>Actors:</strong> C1 <code>911111111</code><br />
+<strong>What must be true</strong>
+- [ ] I enter 9 local digits; country is +251
+- [ ] Wrong OTP shows a clear error and I stay signed out
+- [ ] Correct OTP <code>123456</code> opens Home
+- [ ] Sign out returns me to the phone screen and clears the session</p>
+<h4 id="story-a02-home-shortcuts">Story A02 — Home shortcuts</h4>
+<p><strong>As a</strong> signed-in customer, <strong>I want</strong> clear tiles for Ride, Market, Food, and Events, <strong>so that</strong> I open each module quickly.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Home shows Maekel branding and tiles for Ride, Market, Food, Events (Games may exist)
+- [ ] Each tile opens without crash
+- [ ] Moving between modules does not ask for OTP again</p>
+<h4 id="story-a03-one-phone-many-roles">Story A03 — One phone, many roles</h4>
+<p><strong>As a</strong> customer, <strong>I want</strong> one number for passenger/driver and buyer/seller (and food/events roles when granted), <strong>so that</strong> I do not need two accounts.</p>
+<p><strong>Actors:</strong> C1 + A (grants)<br />
+<strong>What must be true</strong>
+- [ ] Same account can use Ride as passenger and, after Ride ops approve, as driver
+- [ ] Same account can buy and sell on Market
+- [ ] Staff roles stay blocked until granted and re-OTP’d
+- [ ] After grant + re-OTP, the matching ops shortcut appears on Home when expected</p>
+<h4 id="story-a04-staff-grants-persist">Story A04 — Staff grants persist</h4>
+<p><strong>As an</strong> admin, <strong>I want</strong> role grants to stick, <strong>so that</strong> QA accounts keep working after API restarts.</p>
+<p><strong>Actors:</strong> A <code>999999999</code><br />
+<strong>What must be true</strong>
+- [ ] Staff can grant <code>market_moderator</code>, <code>food_ops</code>, <code>food_merchant</code>, <code>food_rider</code>, <code>events_ops</code>, <code>ride_ops</code>
+- [ ] Grants appear on the Staff list after refresh
+- [ ] Target must re-OTP before the role works in the app</p>
+<hr />
+<h2 id="4-group-b-ride-passenger">4. Group B — Ride (passenger)</h2>
+<p><em>Runbook §4 · Passenger C1 · Driver A or approved D</em></p>
+<h4 id="story-b01-choose-pickup-and-drop-off">Story B01 — Choose pickup and drop-off</h4>
+<p><strong>As a</strong> passenger, <strong>I want to</strong> set pickup and drop-off in Addis, <strong>so that</strong> I can request a trip.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Pickup via GPS, map pin, or place search
+- [ ] Drop-off via pin or search
+- [ ] Outside the service area, request is blocked with a clear message</p>
+<h4 id="story-b02-see-price-before-request">Story B02 — See price before request</h4>
+<p><strong>As a</strong> passenger, <strong>I want</strong> an ETB quote before Request, <strong>so that</strong> I am not surprised later.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Quote shows total ETB, distance, and ETA
+- [ ] One vehicle class (Economy) in this release
+- [ ] Request is not available until a quote is shown
+- [ ] On a normal completed trip, end fare matches the quote</p>
+<h4 id="story-b03-request-and-get-a-driver">Story B03 — Request and get a driver</h4>
+<p><strong>As a</strong> passenger, <strong>I want to</strong> request and be matched, <strong>so that</strong> a driver comes for me.</p>
+<p><strong>Actors:</strong> C1 + Online approved driver<br />
+<strong>What must be true</strong>
+- [ ] After Request I see searching / matching
+- [ ] When matched I see driver identity (name/car/plate or clear summary) and ETA
+- [ ] Double Request does not create two active trips
+- [ ] If no driver is found, I see a clear message and can try again</p>
+<h4 id="story-b04-follow-the-trip-on-the-map">Story B04 — Follow the trip on the map</h4>
+<p><strong>As a</strong> passenger, <strong>I want</strong> live trip status on the map, <strong>so that</strong> I know progress.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] After assign, map/status updates toward pickup
+- [ ] Status moves: assigned → arriving/arrived → in progress → completed/cancelled
+- [ ] Driver position refreshes while online (polling is OK)
+- [ ] I can reopen an active trip if I leave and come back</p>
+<h4 id="story-b05-contact-the-driver">Story B05 — Contact the driver</h4>
+<p><strong>As a</strong> passenger, <strong>I want to</strong> contact my driver, <strong>so that</strong> we can coordinate pickup.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] After match, Call (<code>tel:</code>) and/or in-app contact works (at least one)</p>
+<h4 id="story-b06-cancel-before-the-trip-starts">Story B06 — Cancel before the trip starts</h4>
+<p><strong>As a</strong> passenger, <strong>I want to</strong> cancel before the trip is in progress, <strong>so that</strong> I am not forced to ride.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Cancel is available before in-progress
+- [ ] After cancel, trip is cancelled and the driver is free for other offers</p>
+<h4 id="story-b07-cash-rate-and-history">Story B07 — Cash, rate, and history</h4>
+<p><strong>As a</strong> passenger, <strong>I want to</strong> pay cash, rate, and see past trips, <strong>so that</strong> the trip feels complete.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Cash amount is clear at complete
+- [ ] I can rate 1–5 after complete
+- [ ] History shows fare, time, and driver summary</p>
+<hr />
+<h2 id="5-group-c-ride-driver-ops">5. Group C — Ride (driver &amp; ops)</h2>
+<p><em>Runbook §4.1–4.2 · Driver A or D · Ops A</em></p>
+<h4 id="story-c01-go-online-and-receive-offers">Story C01 — Go online and receive offers</h4>
+<p><strong>As an</strong> approved driver, <strong>I want to</strong> go online and get offers, <strong>so that</strong> I can earn.</p>
+<p><strong>Actors:</strong> D (or A)<br />
+<strong>What must be true</strong>
+- [ ] Unapproved driver cannot go Online
+- [ ] After Ride ops Approve (+ re-OTP if needed), Online works
+- [ ] Offline means no new offers
+- [ ] Offer shows pickup area, fare estimate, and accept time limit (~45s)</p>
+<h4 id="story-c02-complete-driver-trip-steps">Story C02 — Complete driver trip steps</h4>
+<p><strong>As a</strong> driver, <strong>I want to</strong> Accept → Arrived → Start → Complete + cash confirm, <strong>so that</strong> the trip closes correctly.</p>
+<p><strong>Actors:</strong> Driver matched to C1<br />
+<strong>What must be true</strong>
+- [ ] Accept links me to the passenger trip
+- [ ] Arrived → Start → Complete work in order
+- [ ] Cash confirm works
+- [ ] Today’s earnings updates after complete
+- [ ] Report problem (e.g. no-show) does not crash the app</p>
+<h4 id="story-c03-ride-ops-thin-control">Story C03 — Ride ops thin control</h4>
+<p><strong>As</strong> Ride ops, <strong>I want to</strong> approve drivers and manage fare params, <strong>so that</strong> supply and pricing stay under control.</p>
+<p><strong>Actors:</strong> A<br />
+<strong>What must be true</strong>
+- [ ] Approve / suspend drivers from Ride ops
+- [ ] Force-cancel an active trip when needed
+- [ ] Fare config (base / per-km / min) is readable and savable</p>
+<hr />
+<h2 id="6-group-d-food-customer">6. Group D — Food (customer)</h2>
+<p><em>Runbook §5.3 · Actor C1 · Prerequisite: FO+FM setup (§5.1–5.2)</em></p>
+<h4 id="story-d01-see-shops-that-deliver-to-me">Story D01 — See shops that deliver to me</h4>
+<p><strong>As a</strong> customer, <strong>I want</strong> restaurants/groceries for my pin, <strong>so that</strong> I only browse what I can order.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] I set/confirm a delivery place before or while browsing
+- [ ] Shops for that area appear (after ops created a merchant)
+- [ ] Empty / out-of-area messaging is clear when nothing applies</p>
+<h4 id="story-d02-build-a-cart-from-one-shop">Story D02 — Build a cart from one shop</h4>
+<p><strong>As a</strong> customer, <strong>I want</strong> items with quantities and options from one shop, <strong>so that</strong> I can check out one order.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Item shows ETB price and availability
+- [ ] Unavailable items cannot be added (or are clearly blocked)
+- [ ] Modifiers/options adjust the line total
+- [ ] Cart shows items, subtotal, delivery fee, and total
+- [ ] One cart = one shop in this release</p>
+<h4 id="story-d03-place-cod-order">Story D03 — Place COD order</h4>
+<p><strong>As a</strong> customer, <strong>I want to</strong> place a cash-on-delivery order, <strong>so that</strong> the shop can prepare.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Delivery fee and total are clear before place
+- [ ] COD is available
+- [ ] After place I get order id/status and a <strong>delivery OTP</strong> on the order detail</p>
+<h4 id="story-d04-follow-order-and-otp-handover">Story D04 — Follow order and OTP handover</h4>
+<p><strong>As a</strong> customer, <strong>I want</strong> status updates and OTP handover, <strong>so that</strong> delivery is safer.</p>
+<p><strong>Actors:</strong> C1 (+ FR completes)<br />
+<strong>What must be true</strong>
+- [ ] Status moves through confirmed → preparing → ready/picked up → on the way → delivered (or clear equivalents)
+- [ ] Order cannot show delivered without correct OTP (unless ops force-deliver)
+- [ ] Order appears in history</p>
+<h4 id="story-d05-cancel-only-before-preparing">Story D05 — Cancel only before preparing</h4>
+<p><strong>As a</strong> customer, <strong>I want to</strong> cancel only before preparing, <strong>so that</strong> shops do not waste food.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Cancel works while still only confirmed
+- [ ] After preparing starts, cancel is blocked with a clear message</p>
+<hr />
+<h2 id="7-group-e-food-ops-kitchen-rider">7. Group E — Food (ops, kitchen, rider)</h2>
+<p><em>Runbook §5.1–5.5 · FO / FM / FR / FM2</em></p>
+<h4 id="story-e01-ops-onboard-merchant-and-owner">Story E01 — Ops onboard merchant and owner</h4>
+<p><strong>As</strong> Food ops, <strong>I want to</strong> create a merchant and assign an owner phone, <strong>so that</strong> kitchen staff can manage their menu.</p>
+<p><strong>Actors:</strong> FO <code>944444444</code> (or A), owner FM <code>955555555</code><br />
+<strong>What must be true</strong>
+- [ ] Create merchant from Food ops
+- [ ] Assign owner phone <code>955555555</code>
+- [ ] Owner only reaches their console after <code>food_merchant</code> grant + re-OTP
+- [ ] Ops uses Food ops board, not “claiming” another store’s console as primary flow</p>
+<h4 id="story-e02-merchant-menu-and-kitchen">Story E02 — Merchant menu and kitchen</h4>
+<p><strong>As</strong> restaurant staff, <strong>I want to</strong> manage menu (with options) and advance orders, <strong>so that</strong> riders can pick up.</p>
+<p><strong>Actors:</strong> FM <code>955555555</code><br />
+<strong>What must be true</strong>
+- [ ] Add/edit dishes with ETB prices and availability
+- [ ] Add modifiers/options (name + ETB)
+- [ ] New orders appear on the console without hard refresh (live poll OK)
+- [ ] Accept → Preparing → Ready works
+- [ ] Pause shop stops new orders when designed</p>
+<h4 id="story-e03-merchant-isolation">Story E03 — Merchant isolation</h4>
+<p><strong>As</strong> second restaurant staff, <strong>I must not</strong> edit another restaurant’s menu.</p>
+<p><strong>Actors:</strong> FM2 <code>988888888</code> vs FM<br />
+<strong>What must be true</strong>
+- [ ] FM2 only sees/edits their assigned merchant
+- [ ] FM2 cannot change FM’s dishes</p>
+<h4 id="story-e04-rider-otp-delivery">Story E04 — Rider OTP delivery</h4>
+<p><strong>As a</strong> food rider, <strong>I want to</strong> claim ready jobs and complete with customer OTP + COD, <strong>so that</strong> handover is checked.</p>
+<p><strong>Actors:</strong> FR <code>966666666</code><br />
+<strong>What must be true</strong>
+- [ ] Ready jobs appear on Rider board (live poll OK)
+- [ ] Pickup shows clear merchant name/address
+- [ ] Pickup → on the way → complete requires correct customer OTP
+- [ ] Wrong OTP is rejected; order not delivered
+- [ ] COD amount to collect is clear
+- [ ] Food riders are separate from Ride drivers (job lists do not mix)</p>
+<h4 id="story-e05-food-ops-support-actions">Story E05 — Food ops support actions</h4>
+<p><strong>As</strong> Food ops, <strong>I want</strong> thin support tools, <strong>so that</strong> stuck orders can be unblocked.</p>
+<p><strong>Actors:</strong> FO or A<br />
+<strong>What must be true</strong>
+- [ ] Ops board shows orders
+- [ ] Support cancel / reassign rider when available
+- [ ] Force-deliver without OTP works when designed</p>
+<hr />
+<h2 id="8-group-f-market">8. Group F — Market</h2>
+<p><em>Runbook §6 · C1 seller · MM moderator · C2 buyer</em></p>
+<h4 id="story-f01-browse-and-search">Story F01 — Browse and search</h4>
+<p><strong>As a</strong> buyer, <strong>I want to</strong> browse and search approved ads, <strong>so that</strong> I find items near me.</p>
+<p><strong>Actors:</strong> C2<br />
+<strong>What must be true</strong>
+- [ ] Seeded categories are available
+- [ ] Keyword / filters (subcity, price as designed) work
+- [ ] Cards show title, price ETB, place (photo when provided)
+- [ ] Only <strong>approved</strong> ads appear in public browse</p>
+<h4 id="story-f02-contact-seller">Story F02 — Contact seller</h4>
+<p><strong>As a</strong> buyer, <strong>I want to</strong> chat or call the seller, <strong>so that</strong> we can arrange meetup.</p>
+<p><strong>Actors:</strong> C2<br />
+<strong>What must be true</strong>
+- [ ] Detail shows description and seller context
+- [ ] In-app chat sends/receives (no fake auto-reply as the only path)
+- [ ] Call works per design (<code>tel:</code> / reveal)
+- [ ] Safety guidance is visible around contact</p>
+<h4 id="story-f03-favorites">Story F03 — Favorites</h4>
+<p><strong>As a</strong> buyer, <strong>I want</strong> favorites, <strong>so that</strong> I can return to ads later.</p>
+<p><strong>Actors:</strong> C2<br />
+<strong>What must be true</strong>
+- [ ] Add/remove favorite from detail
+- [ ] Favorites list shows saved approved ads</p>
+<h4 id="story-f04-post-for-sale">Story F04 — Post for sale</h4>
+<p><strong>As a</strong> seller, <strong>I want to</strong> post an ad, <strong>so that</strong> buyers can find it after approval.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Sell flow covers category, details, price, place, photos as designed
+- [ ] After submit, status is <strong>pending</strong> and ad is <strong>not</strong> public
+- [ ] My ads shows the pending listing</p>
+<h4 id="story-f05-moderate-listings">Story F05 — Moderate listings</h4>
+<p><strong>As a</strong> Market moderator, <strong>I want to</strong> approve or reject ads, <strong>so that</strong> only safe ads go live.</p>
+<p><strong>Actors:</strong> MM <code>922222222</code><br />
+<strong>What must be true</strong>
+- [ ] Ops queue shows pending ads
+- [ ] Approve makes the ad public
+- [ ] Reject keeps it off browse and can show a reason to the seller
+- [ ] Buyer reports appear for ops handling</p>
+<h4 id="story-f06-manage-my-ads">Story F06 — Manage my ads</h4>
+<p><strong>As a</strong> seller, <strong>I want to</strong> manage my ads, <strong>so that</strong> I can edit, close, or mark sold.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] My ads shows pending / approved / rejected / sold (or clear equivalents)
+- [ ] Edit works (material edits may re-pending)
+- [ ] Sold / unpublish removes the ad from active browse</p>
+<hr />
+<h2 id="9-group-g-events">9. Group G — Events</h2>
+<p><em>Runbook §7 · Host C1 · Ops EO · Guest C2</em></p>
+<h4 id="story-g01-host-creates-an-event">Story G01 — Host creates an event</h4>
+<p><strong>As an</strong> organizer, <strong>I want to</strong> create an event for review, <strong>so that</strong> guests can discover it after approval.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Create form covers title, category, subcity, venue, time, capacity, free or pay-at-door price
+- [ ] Submit creates <strong>pending</strong> event
+- [ ] Host tab lists my pending/live events</p>
+<h4 id="story-g02-ops-approve-or-reject">Story G02 — Ops approve or reject</h4>
+<p><strong>As</strong> Events ops, <strong>I want to</strong> approve or reject pending events, <strong>so that</strong> only valid events go live.</p>
+<p><strong>Actors:</strong> EO <code>900000010</code> (or A)<br />
+<strong>What must be true</strong>
+- [ ] Ops queue shows pending (live poll OK)
+- [ ] Approve makes the event visible in Browse
+- [ ] Reject with reason is visible to the host
+- [ ] Force cancel / suspend organizer stops live events when used</p>
+<h4 id="story-g03-guest-rsvp-and-tickets">Story G03 — Guest RSVP and tickets</h4>
+<p><strong>As a</strong> guest, <strong>I want to</strong> RSVP and keep a ticket code, <strong>so that</strong> I can attend.</p>
+<p><strong>Actors:</strong> C2<br />
+<strong>What must be true</strong>
+- [ ] Approved upcoming events appear in Browse (filters work as designed)
+- [ ] Pending events are hidden from Browse
+- [ ] RSVP issues a ticket code on Tickets
+- [ ] Cancel RSVP (while reserved) frees capacity when designed</p>
+<h4 id="story-g04-host-check-in">Story G04 — Host check-in</h4>
+<p><strong>As a</strong> host, <strong>I want to</strong> check guests in, <strong>so that</strong> attendance is tracked at the door.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] Attendees list shows reserved tickets
+- [ ] Check-in by ticket code or one-tap marks checked-in
+- [ ] Door/check-in code is available to the host (not required on public browse)</p>
+<hr />
+<h2 id="10-group-h-cross-app-release-gate">10. Group H — Cross-app &amp; release gate</h2>
+<h4 id="story-h01-one-sign-in-for-all-modules">Story H01 — One sign-in for all modules</h4>
+<p><strong>As a</strong> customer, <strong>I want</strong> one sign-in for Ride, Food, Market, and Events.</p>
+<p><strong>Actors:</strong> C1<br />
+<strong>What must be true</strong>
+- [ ] After one OTP, switching modules never asks for a new code until sign-out</p>
+<h4 id="story-h02-final-ready-checklist">Story H02 — Final ready checklist</h4>
+<p><strong>As</strong> the person signing off, <strong>I want</strong> one gate list aligned with the runbook §10.</p>
+<p><strong>What must be true</strong>
+- [ ] A01–A04 pass (sign-in, Home, roles, Staff)
+- [ ] Full Ride cash trip passes (Groups B–C) — runbook §4
+- [ ] Full Food COD + OTP delivery passes (Groups D–E) — runbook §5
+- [ ] Market post → approve → browse → contact passes (Group F) — runbook §6
+- [ ] Events create → approve → RSVP → check-in passes (Group G) — runbook §7
+- [ ] Merchant isolation (E03) passes
+- [ ] No critical open defects below</p>
+<hr />
+<h2 id="11-how-serious-is-the-problem">11. How serious is the problem?</h2>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Meaning</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Critical</strong></td>
+<td>Must fix before launch</td>
+<td>Sign-in without valid OTP; two trips from one Request; Food delivered without OTP (non-ops); pending Market/Event shown as public</td>
+</tr>
+<tr>
+<td><strong>Major</strong></td>
+<td>Should fix before calling this bar done</td>
+<td>Wrong fare at complete; chat not sending; cancel allowed after preparing; role works without re-OTP after grant</td>
+</tr>
+<tr>
+<td><strong>Minor</strong></td>
+<td>Soon after</td>
+<td>Copy, spacing, empty-state polish</td>
+</tr>
+<tr>
+<td><strong>Later</strong></td>
+<td>Out of this bar</td>
+<td>Push/FCM, mobile money, QR tickets, surge, scheduled rides</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12-story-runbook-map">12. Story ↔ runbook map</h2>
+<table>
+<thead>
+<tr>
+<th>Stories</th>
+<th>Runbook section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A01–A04</td>
+<td>§2–§3, §8</td>
+</tr>
+<tr>
+<td>B01–B07, C01–C03</td>
+<td>§4</td>
+</tr>
+<tr>
+<td>D01–D05, E01–E05</td>
+<td>§5</td>
+</tr>
+<tr>
+<td>F01–F06</td>
+<td>§6</td>
+</tr>
+<tr>
+<td>G01–G04</td>
+<td>§7</td>
+</tr>
+<tr>
+<td>H01–H02</td>
+<td>§10</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="13-document-history">13. Document history</h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1–0.4</td>
+<td>2026-11-15</td>
+<td>Original first-release stories (Ride/Food/Market)</td>
+</tr>
+<tr>
+<td><strong>1.0</strong></td>
+<td><strong>2026-11-23</strong></td>
+<td>Rewritten to match step-by-step runbook; phones/roles; Events group; live app URL</td>
+</tr>
+</tbody>
+</table></body></html>
