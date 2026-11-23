@@ -1,5 +1,7 @@
 # QA test phones & roles
 
+**Guided step-by-step runbook (start here):** [qa-step-by-step-guide.md](./qa-step-by-step-guide.md)
+
 Use these numbers on **https://maekel.pages.dev/** (backup: https://zewdnehnathan.github.io/maekel/) against **https://maekel-api.onrender.com**.
 
 | Always the same | Value |
