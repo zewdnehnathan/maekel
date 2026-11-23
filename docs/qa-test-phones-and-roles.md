@@ -1,6 +1,6 @@
 # QA test phones & roles
 
-Use these numbers on **https://zewdnehnathan.github.io/maekel/** (or local) against **https://maekel-api.onrender.com**.
+Use these numbers on **https://maekel.pages.dev/** (backup: https://zewdnehnathan.github.io/maekel/) against **https://maekel-api.onrender.com**.
 
 | Always the same | Value |
 |-----------------|--------|

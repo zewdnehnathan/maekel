@@ -2,39 +2,45 @@
 
 API stays on Render: `https://maekel-api.onrender.com`
 
-## Primary host: GitHub Pages
+## Live URLs
 
-| Item | Value |
-|------|--------|
-| URL | **https://zewdnehnathan.github.io/maekel/** |
-| Branch | `gh-pages` |
-| Cost | Free (public repo) |
+| Host | URL |
+|------|-----|
+| **Cloudflare Pages (preferred)** | **https://maekel.pages.dev/** |
+| **GitHub Pages (backup)** | **https://zewdnehnathan.github.io/maekel/** |
 
-Hash routes (`/#/home`) work without server rewrites.
+Both use hash routes (`/#/home`). Prefer Cloudflare — root path, faster CDN. GitHub is kept as a free backup.
 
-### Build + deploy (Windows)
+If the first paint looks blank, wait ~2–5s for Flutter/CanvasKit or hard-refresh. Open with `/#/auth` if needed.
+
+## One-shot deploy (both hosts)
 
 ```powershell
 cd C:\Users\hp\Documents\maekel
+powershell -ExecutionPolicy Bypass -File .\scripts\deploy-web.ps1
+```
+
+Requires: Flutter SDK, `npx wrangler` logged in (`npx wrangler login`), `gh` push access.
+
+## Cloudflare only
+
+```powershell
+flutter build web --release --web-resources-cdn --base-href "/" --dart-define=API_BASE_URL=https://maekel-api.onrender.com
+npx wrangler pages deploy build/web --project-name maekel --branch main --commit-dirty=true
+```
+
+## GitHub Pages only
+
+```powershell
 flutter build web --release --web-resources-cdn --base-href "/maekel/" --dart-define=API_BASE_URL=https://maekel-api.onrender.com
 powershell -ExecutionPolicy Bypass -File .\scripts\deploy-gh-pages.ps1
 ```
 
-Then ensure Pages is on: repo **Settings → Pages → Deploy from branch `gh-pages` / (root)**.
-
-## Other free options
-
-| Host | Notes |
-|------|--------|
-| **Cloudflare Pages** | Fast CDN; use `--base-href "/"`; connect GitHub or `wrangler pages deploy build/web` |
-| **Firebase Hosting** | Google account; `--base-href "/"` |
-| **Render Static** | Same account as API; can sleep on free |
-| Netlify | Blocked here when team credits are exceeded |
+Pages source: branch `gh-pages` / (root).
 
 ## Send to QA
 
-Share **https://zewdnehnathan.github.io/maekel/**
+Share **https://maekel.pages.dev/** (or the GitHub URL as backup).
 
 - First API call may be slow if Render is asleep (~30–60s)
 - OTP code: `123456`
-- Open as `…/maekel/#/home` (hash routing)
