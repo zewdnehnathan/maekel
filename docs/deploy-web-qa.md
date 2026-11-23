@@ -1,39 +1,40 @@
 # Deploy Maekel Web for QA (free)
 
-## Free host options
-
-| Host | Cost | Notes |
-|------|------|--------|
-| **Netlify Drop** | Free | Fastest: drag `build/web` in browser, get a URL |
-| **Cloudflare Pages** | Free | Fast CDN; connect GitHub or CLI |
-| **Firebase Hosting** | Free Spark | Google account |
-| **GitHub Pages** | Free on **public** repos | Private repos need a paid plan |
-| **Render Static** | Free | Can sleep like the API |
-
-**Recommended for QA today:** Netlify Drop.
-
 API stays on Render: `https://maekel-api.onrender.com`
 
-## Build (local)
+## Primary host: GitHub Pages
+
+| Item | Value |
+|------|--------|
+| URL | **https://zewdnehnathan.github.io/maekel/** |
+| Branch | `gh-pages` |
+| Cost | Free (public repo) |
+
+Hash routes (`/#/home`) work without server rewrites.
+
+### Build + deploy (Windows)
 
 ```powershell
 cd C:\Users\hp\Documents\maekel
-flutter build web --release --web-resources-cdn --base-href "/" --dart-define=API_BASE_URL=https://maekel-api.onrender.com
+flutter build web --release --web-resources-cdn --base-href "/maekel/" --dart-define=API_BASE_URL=https://maekel-api.onrender.com
+powershell -ExecutionPolicy Bypass -File .\scripts\deploy-gh-pages.ps1
 ```
 
-Output: `build/web`
+Then ensure Pages is on: repo **Settings → Pages → Deploy from branch `gh-pages` / (root)**.
 
-## Deploy (Netlify Drop — no CLI)
+## Other free options
 
-1. Open https://app.netlify.com/drop  
-2. Drag the folder `C:\Users\hp\Documents\maekel\build\web` onto the page  
-3. Copy the `*.netlify.app` URL and send it to QA
+| Host | Notes |
+|------|--------|
+| **Cloudflare Pages** | Fast CDN; use `--base-href "/"`; connect GitHub or `wrangler pages deploy build/web` |
+| **Firebase Hosting** | Google account; `--base-href "/"` |
+| **Render Static** | Same account as API; can sleep on free |
+| Netlify | Blocked here when team credits are exceeded |
 
 ## Send to QA
 
-Share the HTTPS URL. Note:
+Share **https://zewdnehnathan.github.io/maekel/**
 
 - First API call may be slow if Render is asleep (~30–60s)
 - OTP code: `123456`
-- iPhone: open in Safari; “Add to Home Screen” optional
-- Location/GPS prompts differ from native Android
+- Open as `…/maekel/#/home` (hash routing)

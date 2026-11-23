@@ -1,6 +1,6 @@
 # QA test phones & roles
 
-Use these numbers on **https://luxury-phoenix-403a4a.netlify.app** (or local) against **https://maekel-api.onrender.com**.
+Use these numbers on **https://zewdnehnathan.github.io/maekel/** (or local) against **https://maekel-api.onrender.com**.
 
 | Always the same | Value |
 |-----------------|--------|
