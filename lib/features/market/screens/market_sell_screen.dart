@@ -12,6 +12,8 @@ import '../components/market_safety_banner.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketSellScreen extends ConsumerStatefulWidget {
   const MarketSellScreen({super.key, this.editAdId});
@@ -91,6 +93,36 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
     }
   }
 
+  String _specFieldLabel(AppLocalizations l10n, String? categoryId) {
+    switch (categoryId) {
+      case 'phones':
+        return l10n.marketSpecStorage;
+      case 'vehicles':
+        return l10n.marketSpecYear;
+      case 'property':
+        return l10n.marketSpecType;
+      case 'electronics':
+        return l10n.marketSpecSize;
+      default:
+        return l10n.marketSpecGeneric;
+    }
+  }
+
+  String _specHint(AppLocalizations l10n, String? categoryId) {
+    switch (categoryId) {
+      case 'phones':
+        return l10n.marketSpecHintPhones;
+      case 'vehicles':
+        return l10n.marketSpecHintVehicles;
+      case 'property':
+        return l10n.marketSpecHintProperty;
+      case 'electronics':
+        return l10n.marketSpecHintElectronics;
+      default:
+        return l10n.marketSpecHintGeneric;
+    }
+  }
+
   Map<String, String> _buildAttributes() {
     final attrs = <String, String>{};
     final brand = _brand.text.trim();
@@ -120,7 +152,7 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
   Future<void> _pick(ImageSource source) async {
     if (_photos.length >= 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Max 8 photos.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.marketMaxPhotos)),
       );
       return;
     }
@@ -172,13 +204,13 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_categoryId == null || _subcity == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick a category and area.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.marketPickCategoryArea)),
       );
       return;
     }
     if (_photos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one photo.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.marketAddPhoto)),
       );
       return;
     }
@@ -220,12 +252,11 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
         );
       }
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isEdit
-                ? 'Updated — pending review again.'
-                : 'Submitted for moderation. You’ll be notified when reviewed.',
+            _isEdit ? l10n.marketUpdatedPending : l10n.marketSubmittedModeration,
           ),
         ),
       );
@@ -254,18 +285,22 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
   Widget build(BuildContext context) {
     final categories = ref.watch(marketCategoriesProvider);
     final subcities = ref.watch(marketSubcitiesProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return MarketShell(
-      title: _isEdit ? 'Edit ad' : 'Sell',
+      title: _isEdit ? l10n.marketEditAd : l10n.marketSellAction,
       showBottomNav: false,
       child: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            const MarketSafetyBanner(message: MarketSafetyCopy.shortTip),
+            MarketSafetyBanner(compact: true),
             const SizedBox(height: 16),
-            Text('PHOTOS', style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              AppLocalizations.of(context)!.photos,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 8),
             SizedBox(
               height: 104,
@@ -311,9 +346,9 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
                                   color: MaekelColors.signal,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text(
-                                  'COVER',
-                                  style: TextStyle(
+                                child: Text(
+                                  l10n.marketCover.toUpperCase(),
+                                  style: const TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w700,
                                     color: MaekelColors.voidBlack,
@@ -351,7 +386,7 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
                                 children: [
                                   ListTile(
                                     leading: const Icon(Icons.photo_library_outlined),
-                                    title: const Text('Gallery'),
+                                    title: Text(AppLocalizations.of(context)!.gallery),
                                     onTap: () {
                                       Navigator.pop(context);
                                       _pick(ImageSource.gallery);
@@ -359,7 +394,7 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
                                   ),
                                   ListTile(
                                     leading: const Icon(Icons.photo_camera_outlined),
-                                    title: const Text('Camera'),
+                                    title: Text(AppLocalizations.of(context)!.camera),
                                     onTap: () {
                                       Navigator.pop(context);
                                       _pick(ImageSource.camera);
@@ -377,12 +412,15 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Column(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_a_photo_outlined),
-                          SizedBox(height: 6),
-                          Text('Add', style: TextStyle(fontSize: 12)),
+                          const Icon(Icons.add_a_photo_outlined),
+                          const SizedBox(height: 6),
+                          Text(
+                            AppLocalizations.of(context)!.marketAdd,
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ],
                       ),
                     ),
@@ -394,33 +432,41 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
               // ignore: deprecated_member_use
               value: _categoryId,
               dropdownColor: MaekelColors.panel,
-              decoration: const InputDecoration(labelText: 'Category'),
+              decoration: InputDecoration(
+                labelText: l10n.marketCategoryTitle,
+              ),
               items: [
                 for (final c in categories)
-                  DropdownMenuItem(value: c.id, child: Text(c.name)),
+                  DropdownMenuItem(
+                    value: c.id,
+                    child: Text(c.localized(l10n)),
+                  ),
               ],
               onChanged: (v) => setState(() {
                 _categoryId = v;
                 // Keep typed spec; label updates with category.
               }),
-              validator: (v) => v == null ? 'Required' : null,
+              validator: (v) => v == null ? l10n.marketRequired : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _title,
               style: const TextStyle(color: MaekelColors.ink),
-              decoration: const InputDecoration(labelText: 'Title'),
-              validator: (v) =>
-                  (v == null || v.trim().length < 6) ? 'Min 6 characters' : null,
+              decoration: InputDecoration(labelText: l10n.marketFieldTitle),
+              validator: (v) => (v == null || v.trim().length < 6)
+                  ? l10n.marketMinChars(6)
+                  : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _description,
               style: const TextStyle(color: MaekelColors.ink),
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: InputDecoration(
+                labelText: l10n.marketFieldDescription,
+              ),
               validator: (v) => (v == null || v.trim().length < 20)
-                  ? 'Min 20 characters'
+                  ? l10n.marketMinChars(20)
                   : null,
             ),
             const SizedBox(height: 12),
@@ -428,13 +474,13 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
               controller: _price,
               style: const TextStyle(color: MaekelColors.ink),
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Price (ETB)',
-                prefixText: 'ETB ',
+              decoration: InputDecoration(
+                labelText: l10n.marketFieldPrice,
+                prefixText: '${l10n.currencyEtb} ',
               ),
               validator: (v) {
                 final n = int.tryParse((v ?? '').replaceAll(',', ''));
-                if (n == null || n <= 0) return 'Enter a valid price';
+                if (n == null || n <= 0) return l10n.marketValidPrice;
                 return null;
               },
             ),
@@ -443,10 +489,12 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
               // ignore: deprecated_member_use
               value: _condition,
               dropdownColor: MaekelColors.panel,
-              decoration: const InputDecoration(labelText: 'Condition'),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.marketCondition,
+              ),
               items: [
                 for (final c in AdCondition.values)
-                  DropdownMenuItem(value: c, child: Text(c.label)),
+                  DropdownMenuItem(value: c, child: Text(c.localized(AppLocalizations.of(context)!))),
               ],
               onChanged: (v) {
                 if (v != null) setState(() => _condition = v);
@@ -454,16 +502,16 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'KEY DETAILS',
+              l10n.marketKeyDetails.toUpperCase(),
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _brand,
               style: const TextStyle(color: MaekelColors.ink),
-              decoration: const InputDecoration(
-                labelText: 'Brand',
-                hintText: 'e.g. Apple, Toyota',
+              decoration: InputDecoration(
+                labelText: l10n.marketFieldBrand,
+                hintText: l10n.marketBrandHint,
               ),
             ),
             const SizedBox(height: 12),
@@ -471,14 +519,8 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
               controller: _spec,
               style: const TextStyle(color: MaekelColors.ink),
               decoration: InputDecoration(
-                labelText: _specLabelFor(_categoryId),
-                hintText: switch (_categoryId) {
-                  'phones' => 'e.g. 128GB',
-                  'vehicles' => 'e.g. 2019',
-                  'property' => 'e.g. Rent / Sale',
-                  'electronics' => 'e.g. 55 inch',
-                  _ => 'Main spec',
-                },
+                labelText: _specFieldLabel(l10n, _categoryId),
+                hintText: _specHint(l10n, _categoryId),
               ),
             ),
             const SizedBox(height: 12),
@@ -488,9 +530,9 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
                   child: TextFormField(
                     controller: _extraKey,
                     style: const TextStyle(color: MaekelColors.ink),
-                    decoration: const InputDecoration(
-                      labelText: 'Extra detail name',
-                      hintText: 'e.g. Color',
+                    decoration: InputDecoration(
+                      labelText: l10n.marketExtraDetailName,
+                      hintText: l10n.marketExtraDetailHint,
                     ),
                   ),
                 ),
@@ -499,9 +541,9 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
                   child: TextFormField(
                     controller: _extraValue,
                     style: const TextStyle(color: MaekelColors.ink),
-                    decoration: const InputDecoration(
-                      labelText: 'Value',
-                      hintText: 'e.g. Black',
+                    decoration: InputDecoration(
+                      labelText: l10n.marketExtraValue,
+                      hintText: l10n.marketExtraValueHint,
                     ),
                   ),
                 ),
@@ -512,13 +554,16 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
               // ignore: deprecated_member_use
               value: _subcity,
               dropdownColor: MaekelColors.panel,
-              decoration: const InputDecoration(labelText: 'Subcity'),
+              decoration: InputDecoration(labelText: l10n.marketFieldSubcity),
               items: [
                 for (final s in subcities)
-                  DropdownMenuItem(value: s, child: Text(s)),
+                  DropdownMenuItem(
+                    value: s,
+                    child: Text(localizedPlace(l10n, s)),
+                  ),
               ],
               onChanged: (v) => setState(() => _subcity = v),
-              validator: (v) => v == null ? 'Required' : null,
+              validator: (v) => v == null ? l10n.marketRequired : null,
             ),
             const SizedBox(height: 24),
             FilledButton(
@@ -533,10 +578,18 @@ class _MarketSellScreenState extends ConsumerState<MarketSellScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2.4),
                         ),
                         const SizedBox(width: 12),
-                        Text(_uploading ? 'Uploading photos…' : 'Submitting…'),
+                        Text(
+                          _uploading
+                              ? l10n.marketUploadingPhotos
+                              : l10n.marketSubmitting,
+                        ),
                       ],
                     )
-                  : Text(_isEdit ? 'SAVE & RE-SUBMIT' : 'SUBMIT FOR REVIEW'),
+                  : Text(
+                      _isEdit
+                          ? l10n.marketSaveResubmit.toUpperCase()
+                          : l10n.marketSubmitReview.toUpperCase(),
+                    ),
             ),
           ],
         ),

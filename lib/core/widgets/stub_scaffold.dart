@@ -4,6 +4,7 @@ import '../../app/theme.dart';
 import 'futuristic_backdrop.dart';
 import 'glass_panel.dart';
 import 'maekel_app_bar.dart';
+import '../../l10n/app_localizations.dart';
 
 class StubScaffold extends StatelessWidget {
   const StubScaffold({
@@ -51,7 +52,7 @@ class StubScaffold extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          'MODULE · ONLINE SOON',
+                          AppLocalizations.of(context)!.moduleOnlineSoon.toUpperCase(),
                           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                 color: MaekelColors.amber,
                                 fontSize: 11,

@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../models/market_models.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class AdCard extends StatelessWidget {
   const AdCard({
@@ -102,7 +104,7 @@ class AdCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${ad.subcity} · ${ad.condition.label}',
+                      '${localizedPlace(AppLocalizations.of(context)!, ad.subcity)} · ${ad.condition.localized(AppLocalizations.of(context)!)}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 12,
                           ),

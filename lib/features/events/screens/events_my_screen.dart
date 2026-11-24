@@ -11,6 +11,8 @@ import '../../../core/widgets/glass_panel.dart';
 import '../components/events_shell.dart';
 import '../models/events_models.dart';
 import '../providers/events_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class EventsMyScreen extends ConsumerStatefulWidget {
   const EventsMyScreen({super.key});
@@ -109,7 +111,7 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
       if (!mounted) return;
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Checked in')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.eventsCheckedIn)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -139,7 +141,7 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
     final mine = ref.watch(myEventsProvider);
 
     return EventsShell(
-      title: 'Host',
+      title: AppLocalizations.of(context)!.eventsNavHost,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.eventsCreate),
@@ -159,11 +161,11 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (mine.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 40),
+              Padding(
+                padding: const EdgeInsets.only(top: 40),
                 child: Text(
-                  'You have not hosted an event yet.',
-                  style: TextStyle(color: MaekelColors.muted),
+                  AppLocalizations.of(context)!.eventsNotHosted,
+                  style: const TextStyle(color: MaekelColors.muted),
                 ),
               )
             else
@@ -177,13 +179,33 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (e.displayImageUrls.isNotEmpty) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: Image.network(
+                                  e.displayImageUrls.first,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) =>
+                                      const ColoredBox(
+                                    color: MaekelColors.panelLift,
+                                    child: Center(
+                                      child: Icon(Icons.broken_image_outlined),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
                           Text(
                             e.title,
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${e.status.name} · ${e.ticketsSold}/${e.capacity} · ${e.subcity}',
+                            '${e.status.localized(AppLocalizations.of(context)!)} · ${e.ticketsSold}/${e.capacity} · ${localizedPlace(AppLocalizations.of(context)!, e.subcity)}',
                             style: const TextStyle(color: MaekelColors.muted),
                           ),
                           if (e.rejectionReason != null) ...[
@@ -201,17 +223,17 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                                 onPressed: () => context.push(
                                   '${AppRoutes.eventsCreate}?edit=${e.id}',
                                 ),
-                                child: const Text('Edit'),
+                                child: Text(AppLocalizations.of(context)!.edit),
                               ),
                               TextButton(
                                 onPressed: () => _openAttendees(e),
-                                child: const Text('Attendees'),
+                                child: Text(AppLocalizations.of(context)!.eventsAttendees),
                               ),
                               if (e.status == EventStatus.approved ||
                                   e.status == EventStatus.pending)
                                 TextButton(
                                   onPressed: () => _cancelEvent(e),
-                                  child: const Text('Cancel'),
+                                  child: Text(AppLocalizations.of(context)!.cancel),
                                 ),
                             ],
                           ),
@@ -219,7 +241,8 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                             const SizedBox(height: 8),
                             if (e.checkInCode != null)
                               Text(
-                                'Door code: ${e.checkInCode}',
+                                AppLocalizations.of(context)!
+                                    .eventsDoorCode(e.checkInCode ?? ''),
                                 style: TextStyle(
                                   color: MaekelColors.events,
                                   fontWeight: FontWeight.w600,
@@ -228,15 +251,16 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                             const SizedBox(height: 8),
                             TextField(
                               controller: _checkIn,
-                              decoration: const InputDecoration(
-                                labelText: 'Ticket code',
-                                hintText: 'MK-…',
+                              decoration: InputDecoration(
+                                labelText: AppLocalizations.of(context)!.eventsTicketCode,
+                                hintText: AppLocalizations.of(context)!
+                                    .eventsTicketHint,
                               ),
                             ),
                             const SizedBox(height: 8),
                             FilledButton(
                               onPressed: () => _doCheckIn(e.id),
-                              child: const Text('Check in'),
+                              child: Text(AppLocalizations.of(context)!.eventsCheckIn),
                             ),
                             const SizedBox(height: 12),
                             ..._attendees.map(
@@ -245,7 +269,12 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(a.ticketCode),
                                 subtitle: Text(
-                                  'qty ${a.qty} · ${a.status.name}',
+                                  AppLocalizations.of(context)!.eventsTicketQtyStatus(
+                                    a.qty,
+                                    a.status.localized(
+                                      AppLocalizations.of(context)!,
+                                    ),
+                                  ),
                                 ),
                                 trailing: a.status == TicketStatus.reserved
                                     ? IconButton(

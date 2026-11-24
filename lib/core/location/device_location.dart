@@ -3,18 +3,26 @@ import 'package:latlong2/latlong.dart';
 
 import '../../features/ride/models/ride_models.dart';
 
+enum DeviceLocationCode {
+  turnOn,
+  denied,
+  blocked,
+  noPickupPlaces,
+}
+
 class DeviceLocationException implements Exception {
-  DeviceLocationException(this.message);
-  final String message;
+  DeviceLocationException(this.code);
+
+  final DeviceLocationCode code;
 
   @override
-  String toString() => message;
+  String toString() => code.name;
 }
 
 Future<LatLng> getDeviceLatLng() async {
   final serviceOn = await Geolocator.isLocationServiceEnabled();
   if (!serviceOn) {
-    throw DeviceLocationException('Turn on location services to use pickup.');
+    throw DeviceLocationException(DeviceLocationCode.turnOn);
   }
 
   var permission = await Geolocator.checkPermission();
@@ -22,12 +30,10 @@ Future<LatLng> getDeviceLatLng() async {
     permission = await Geolocator.requestPermission();
   }
   if (permission == LocationPermission.denied) {
-    throw DeviceLocationException('Location permission denied.');
+    throw DeviceLocationException(DeviceLocationCode.denied);
   }
   if (permission == LocationPermission.deniedForever) {
-    throw DeviceLocationException(
-      'Location permission is blocked. Enable it in system settings.',
-    );
+    throw DeviceLocationException(DeviceLocationCode.blocked);
   }
 
   final pos = await Geolocator.getCurrentPosition(
@@ -41,7 +47,7 @@ Future<LatLng> getDeviceLatLng() async {
 
 RidePlace nearestPlace(LatLng point, List<RidePlace> places) {
   if (places.isEmpty) {
-    throw DeviceLocationException('No pickup places available.');
+    throw DeviceLocationException(DeviceLocationCode.noPickupPlaces);
   }
   const distance = Distance();
   RidePlace best = places.first;

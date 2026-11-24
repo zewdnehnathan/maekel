@@ -9,6 +9,8 @@ import '../../../core/widgets/glass_panel.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FoodRiderScreen extends ConsumerStatefulWidget {
   const FoodRiderScreen({super.key});
@@ -99,19 +101,19 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: MaekelColors.panel,
-        title: const Text('Delivery OTP'),
+        title: Text(AppLocalizations.of(context)!.foodDeliveryOtp),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
           style: const TextStyle(color: MaekelColors.ink),
-          decoration: const InputDecoration(
-            labelText: 'Ask customer for OTP',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.foodAskOtp,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -119,7 +121,7 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
               foregroundColor: MaekelColors.ink,
             ),
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Confirm COD'),
+            child: Text(AppLocalizations.of(context)!.foodConfirmCod),
           ),
         ],
       ),
@@ -135,9 +137,11 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
   }
 
   Widget _jobCard(FoodOrder order, {required bool mine}) {
+    final l10n = AppLocalizations.of(context)!;
     final merchant = ref.watch(foodMerchantProvider(order.merchantId));
-    final pickupName = merchant?.name ?? 'Restaurant';
-    final pickupArea = merchant?.subcity ?? order.address.subcity;
+    final pickupName = merchant?.name ?? l10n.foodRestaurant;
+    final pickupAreaRaw = merchant?.subcity ?? order.address.subcity;
+    final pickupArea = localizedPlace(l10n, pickupAreaRaw);
     final pickupHours = merchant?.hoursLabel;
 
     return GlassPanel(
@@ -147,12 +151,12 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '#${order.id.substring(0, 8)} · ${order.status.label}',
+            '#${order.id.substring(0, 8)} · ${order.status.localized(l10n)}',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 6),
           Text(
-            'PICKUP',
+            l10n.foodPickup.toUpperCase(),
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: MaekelColors.food,
                 ),
@@ -169,13 +173,13 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'DROPOFF',
+            l10n.foodDropoff.toUpperCase(),
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: MaekelColors.amber,
                 ),
           ),
           Text(
-            '${order.address.label} · ${order.address.subcity}',
+            '${order.address.label} · ${localizedPlace(l10n, order.address.subcity)}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           Text(
@@ -184,7 +188,7 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Collect ${order.grandTotalEtb} ETB COD',
+            l10n.foodCollectCod(order.grandTotalEtb),
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: MaekelColors.food,
                 ),
@@ -209,7 +213,7 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
                                   .riderClaim(order.id);
                             },
                           ),
-                  child: const Text('Claim job'),
+                  child: Text(AppLocalizations.of(context)!.foodClaimJob),
                 ),
               if (mine && order.status == OrderStatus.ready)
                 FilledButton(
@@ -226,7 +230,7 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
                                   .riderPickup(order.id);
                             },
                           ),
-                  child: const Text('Picked up'),
+                  child: Text(AppLocalizations.of(context)!.foodPickedUp),
                 ),
               if (mine && order.status == OrderStatus.pickedUp)
                 FilledButton(
@@ -243,7 +247,7 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
                                   .riderOnTheWay(order.id);
                             },
                           ),
-                  child: const Text('On the way'),
+                  child: Text(AppLocalizations.of(context)!.foodOnTheWay),
                 ),
               if (mine &&
                   (order.status == OrderStatus.onTheWay ||
@@ -254,7 +258,7 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
                     foregroundColor: MaekelColors.ink,
                   ),
                   onPressed: _busy ? null : () => _complete(order),
-                  child: const Text('Complete + COD'),
+                  child: Text(AppLocalizations.of(context)!.foodCompleteCod),
                 ),
             ],
           ),
@@ -265,8 +269,10 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return FoodShell(
-      title: 'Food rider',
+      title: l10n.foodRider,
       showBottomNav: false,
       actions: [
         IconButton(
@@ -292,25 +298,25 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                   children: [
                     Text(
-                      'MY JOBS (${_active.length})',
+                      l10n.foodMyJobs(_active.length).toUpperCase(),
                       style: Theme.of(context).textTheme.labelLarge,
                     ),
                     const SizedBox(height: 8),
                     if (_active.isEmpty)
-                      const GlassPanel(child: Text('No active delivery.')),
+                      GlassPanel(child: Text(l10n.foodNoActiveDelivery)),
                     for (final o in _active) ...[
                       const SizedBox(height: 10),
                       _jobCard(o, mine: true),
                     ],
                     const SizedBox(height: 20),
                     Text(
-                      'AVAILABLE (${_available.length})',
+                      l10n.foodAvailable(_available.length).toUpperCase(),
                       style: Theme.of(context).textTheme.labelLarge,
                     ),
                     const SizedBox(height: 8),
                     if (_available.isEmpty)
-                      const GlassPanel(
-                        child: Text('No ready orders waiting for a rider.'),
+                      GlassPanel(
+                        child: Text(l10n.foodNoReadyOrders),
                       ),
                     for (final o in _available) ...[
                       const SizedBox(height: 10),

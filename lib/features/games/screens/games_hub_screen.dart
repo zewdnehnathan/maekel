@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
+import '../../../core/locale/language_picker.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/glass_panel.dart';
 import '../../../core/widgets/maekel_app_bar.dart';
@@ -17,71 +18,77 @@ class GamesHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     final boards = ref.watch(addisLeaderboardProvider);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: MaekelAppBar(
-        title: l10n.gamesTitle,
+        title: AppLocalizations.of(context)!.gamesTitle,
         actions: [
           IconButton(
-            tooltip: 'Refresh leaderboard',
+            tooltip: AppLocalizations.of(context)!.languageTitle,
+            onPressed: () => showLanguagePicker(context, ref),
+            icon: const Icon(Icons.translate_rounded),
+            color: MaekelColors.signal,
+          ),
+          IconButton(
+            tooltip: AppLocalizations.of(context)!.gamesRefreshBoard,
             onPressed: () => ref.invalidate(addisLeaderboardProvider),
             icon: const Icon(Icons.refresh_rounded),
+            color: MaekelColors.signal,
           ),
         ],
       ),
       body: FuturisticBackdrop(
         child: SafeArea(
+          top: false,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             children: [
               const SizedBox(height: 8),
               Text(
-                'QUICK PLAY',
+                AppLocalizations.of(context)!.gamesQuickPlay,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: MaekelColors.games,
                     ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Play offline, sync your best scores to the Addis board.',
+                AppLocalizations.of(context)!.gamesHubBody,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: MaekelColors.muted,
                     ),
               ),
               const SizedBox(height: 18),
               _GameEntry(
-                title: l10n.tetris,
-                subtitle: 'Stack · clear lines · level up',
+                title: AppLocalizations.of(context)!.tetris,
+                subtitle: AppLocalizations.of(context)!.gamesTetrisSubtitle,
                 icon: Icons.grid_view_rounded,
                 onTap: () => context.push(AppRoutes.tetris),
               ),
               const SizedBox(height: 12),
               _GameEntry(
-                title: l10n.brickBreaker,
-                subtitle: 'Bounce · smash bricks · survive',
+                title: AppLocalizations.of(context)!.brickBreaker,
+                subtitle: AppLocalizations.of(context)!.gamesBrickSubtitle,
                 icon: Icons.sports_esports_rounded,
                 onTap: () => context.push(AppRoutes.brickBreaker),
               ),
               const SizedBox(height: 12),
               _GameEntry(
-                title: l10n.candyCrush,
-                subtitle: 'Swap · match 3 · cascade score',
+                title: AppLocalizations.of(context)!.candyCrush,
+                subtitle: AppLocalizations.of(context)!.gamesCandySubtitle,
                 icon: Icons.bubble_chart_rounded,
                 onTap: () => context.push(AppRoutes.candyCrush),
               ),
               const SizedBox(height: 12),
               _GameEntry(
-                title: l10n.roadFighter,
-                subtitle: 'Dodge · fuel up · drive farther',
+                title: AppLocalizations.of(context)!.roadFighter,
+                subtitle: AppLocalizations.of(context)!.gamesRoadSubtitle,
                 icon: Icons.directions_car_rounded,
                 onTap: () => context.push(AppRoutes.roadFighter),
               ),
               const SizedBox(height: 28),
               Text(
-                'ADDIS TOP 3',
+                AppLocalizations.of(context)!.gamesAddisTop3,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: MaekelColors.games,
                     ),
@@ -95,7 +102,7 @@ class GamesHubScreen extends ConsumerWidget {
                 error: (_, _) => GlassPanel(
                   accent: MaekelColors.danger,
                   child: Text(
-                    'Leaderboard offline — start backend games-service to see Addis top 3.',
+                    AppLocalizations.of(context)!.gamesLeaderboardOffline,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: MaekelColors.muted,
                         ),
@@ -177,7 +184,7 @@ class _GameEntry extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title.toUpperCase(),
+                      MaekelAppBar.displayTitle(title),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             letterSpacing: 1.1,
                           ),

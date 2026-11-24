@@ -4,9 +4,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
-import '../../../core/constants/app_constants.dart';
 import '../components/food_shell.dart';
 import '../providers/food_providers.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FoodCartScreen extends ConsumerWidget {
   const FoodCartScreen({super.key});
@@ -20,10 +20,12 @@ class FoodCartScreen extends ConsumerWidget {
     final fee = merchant?.deliveryFeeEtb ?? 0;
     final total = cart.subtotalEtb + fee;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return FoodShell(
-      title: 'Cart',
+      title: l10n.foodCartTitle,
       child: cart.isEmpty
-          ? const Center(child: Text('Your cart is empty.'))
+          ? Center(child: Text(AppLocalizations.of(context)!.foodCartEmpty))
           : Column(
               children: [
                 Expanded(
@@ -40,7 +42,7 @@ class FoodCartScreen extends ConsumerWidget {
                         ),
                         title: Text(line.item.name),
                         subtitle: Text(
-                          '${line.unitPrice} ${AppConstants.currencyCode} each',
+                          l10n.foodUnitPriceEach(line.unitPrice),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -82,20 +84,28 @@ class FoodCartScreen extends ConsumerWidget {
                     top: false,
                     child: Column(
                       children: [
-                        _row(context, 'Subtotal', '${cart.subtotalEtb} ETB'),
-                        _row(context, 'Delivery fee', '$fee ETB'),
+                        _row(
+                          context,
+                          l10n.foodSubtotal,
+                          '${cart.subtotalEtb} ${l10n.currencyEtb}',
+                        ),
+                        _row(
+                          context,
+                          l10n.foodDeliveryFee,
+                          '$fee ${l10n.currencyEtb}',
+                        ),
                         const SizedBox(height: 6),
                         _row(
                           context,
-                          'Total',
-                          '$total ETB',
+                          l10n.foodTotal,
+                          '$total ${l10n.currencyEtb}',
                           bold: true,
                         ),
                         if (merchant != null &&
                             cart.subtotalEtb < merchant.minOrderEtb) ...[
                           const SizedBox(height: 8),
                           Text(
-                            'Min order ${merchant.minOrderEtb} ETB',
+                            l10n.foodMinOrder(merchant.minOrderEtb),
                             style: const TextStyle(color: MaekelColors.amber),
                           ),
                         ],
@@ -109,7 +119,7 @@ class FoodCartScreen extends ConsumerWidget {
                                   cart.subtotalEtb >= merchant.minOrderEtb
                               ? () => context.push(AppRoutes.foodCheckout)
                               : null,
-                          child: const Text('CHECKOUT · COD'),
+                          child: Text(l10n.foodCheckoutCod),
                         ),
                       ],
                     ),

@@ -10,6 +10,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketMyAdsScreen extends ConsumerStatefulWidget {
   const MarketMyAdsScreen({super.key});
@@ -47,12 +49,11 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
         );
     if (!mounted) return;
     setState(() => _seller = seller);
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          value
-              ? 'Phone visible on your ads (rate-limited).'
-              : 'Phone hidden — buyers use chat only.',
+          value ? l10n.marketPhoneVisible : l10n.marketPhoneHidden,
         ),
       ),
     );
@@ -65,15 +66,17 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
     final isModerator =
         ref.watch(authProvider).session?.isMarketModerator ?? false;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return MarketShell(
-      title: 'My ads',
+      title: l10n.marketNavMyAds,
       actions: [
         if (isModerator)
           IconButton(
             onPressed: () => context.push(AppRoutes.marketOps),
             icon: const Icon(Icons.admin_panel_settings_outlined),
             color: MaekelColors.amber,
-            tooltip: 'Ops queue',
+            tooltip: AppLocalizations.of(context)!.marketOpsQueueTooltip,
           ),
         IconButton(
           onPressed: () => context.push(AppRoutes.marketSell),
@@ -89,11 +92,11 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Show phone on ads'),
+              title: Text(AppLocalizations.of(context)!.marketShowPhone),
               subtitle: Text(
                 _seller == null
-                    ? 'Call CTA for buyers (daily limit applies)'
-                    : 'Number: ${_seller!.phoneE164}',
+                    ? l10n.marketCallCtaBuyers
+                    : l10n.marketYourNumber(_seller!.phoneE164),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               value: _seller?.showPhone ?? true,
@@ -104,7 +107,9 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
           if (_notes.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              unread > 0 ? 'UPDATES ($unread new)' : 'UPDATES',
+              unread > 0
+                  ? l10n.marketUpdatesUnread(unread).toUpperCase()
+                  : l10n.marketUpdates.toUpperCase(),
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: 8),
@@ -141,18 +146,18 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
               child: Column(
                 children: [
                   Text(
-                    'No ads yet',
+                    l10n.marketNoAdsYet,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Post something to sell in Addis.',
+                    l10n.marketPostSomething,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => context.push(AppRoutes.marketSell),
-                    child: const Text('SELL NOW'),
+                    child: Text(AppLocalizations.of(context)!.marketSellNow),
                   ),
                 ],
               ),
@@ -180,7 +185,7 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
                           ),
                         ),
                         Text(
-                          ad.status.label.toUpperCase(),
+                          ad.status.localized(AppLocalizations.of(context)!).toUpperCase(),
                           style:
                               Theme.of(context).textTheme.labelLarge?.copyWith(
                                     fontSize: 10,
@@ -196,13 +201,13 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${ad.priceEtb} ${AppConstants.currencyCode} · ${ad.subcity}',
+                      '${ad.priceEtb} ${AppConstants.currencyCode} · ${localizedPlace(AppLocalizations.of(context)!, ad.subcity)}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     if (ad.rejectReason != null) ...[
                       const SizedBox(height: 6),
                       Text(
-                        'Reason: ${ad.rejectReason}',
+                        l10n.marketRejectReason(ad.rejectReason!),
                         style: const TextStyle(color: MaekelColors.danger),
                       ),
                     ],
@@ -213,14 +218,14 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
                         TextButton(
                           onPressed: () => context
                               .push('${AppRoutes.market}/ads/${ad.id}'),
-                          child: const Text('Open'),
+                          child: Text(AppLocalizations.of(context)!.open),
                         ),
                         if (ad.status != AdStatus.sold)
                           TextButton(
                             onPressed: () => context.push(
                               '${AppRoutes.marketSell}?edit=${ad.id}',
                             ),
-                            child: const Text('Edit'),
+                            child: Text(AppLocalizations.of(context)!.edit),
                           ),
                         if (ad.status == AdStatus.approved)
                           TextButton(
@@ -232,15 +237,15 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
                                     status: AdStatus.sold,
                                   );
                             },
-                            child: const Text('Mark sold'),
+                            child: Text(AppLocalizations.of(context)!.marketMarkSold),
                           ),
                         TextButton(
                           onPressed: () {
                             ref.read(marketRepositoryProvider).deleteAd(ad.id);
                           },
-                          child: const Text(
-                            'Delete',
-                            style: TextStyle(color: MaekelColors.danger),
+                          child: Text(
+                            l10n.delete,
+                            style: const TextStyle(color: MaekelColors.danger),
                           ),
                         ),
                       ],

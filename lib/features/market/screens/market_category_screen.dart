@@ -7,6 +7,7 @@ import '../components/ad_card.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketCategoryScreen extends ConsumerStatefulWidget {
   const MarketCategoryScreen({super.key, required this.categoryId});
@@ -42,13 +43,14 @@ class _MarketCategoryScreenState extends ConsumerState<MarketCategoryScreen> {
         .where((a) => a.categoryId == widget.categoryId)
         .toList();
     final favorites = ref.watch(favoriteIdsProvider);
-    final title = category?.name ?? 'Category';
+    final l10n = AppLocalizations.of(context)!;
+    final title = category?.localized(l10n) ?? l10n.marketCategoryTitle;
 
     return MarketShell(
       title: title,
       showBottomNav: false,
       child: ads.isEmpty
-          ? const Center(child: Text('No ads in this category yet.'))
+          ? Center(child: Text(AppLocalizations.of(context)!.marketNoAdsInCategory))
           : GridView.builder(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               itemCount: ads.length,

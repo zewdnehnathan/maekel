@@ -7,6 +7,7 @@ import '../../../app/theme.dart';
 import '../../../core/widgets/glass_panel.dart';
 import '../components/market_shell.dart';
 import '../providers/market_providers.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketMessagesScreen extends ConsumerWidget {
   const MarketMessagesScreen({super.key});
@@ -15,12 +16,13 @@ class MarketMessagesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final threads = ref.watch(marketThreadsProvider);
     final repo = ref.watch(marketRepositoryProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return MarketShell(
-      title: 'Messages',
+      title: l10n.marketMessages,
       child: threads.isEmpty
-          ? const Center(
-              child: Text('No chats yet. Open an ad and tap Chat.'),
+          ? Center(
+              child: Text(AppLocalizations.of(context)!.marketNoChats),
             )
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -65,14 +67,14 @@ class MarketMessagesScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                ad?.title ?? 'Listing',
+                                ad?.title ?? l10n.marketListing,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                last?.body ?? 'Start chatting',
+                                last?.body ?? l10n.marketStartChatting,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.bodyMedium,

@@ -16,6 +16,15 @@
 	<string>Maekel may save listing photos to your library when you choose.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>am</string>
+		<string>ti</string>
+		<string>om</string>
+		<string>aa</string>
+		<string>so</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Maekel</string>
 	<key>CFBundleExecutable</key>

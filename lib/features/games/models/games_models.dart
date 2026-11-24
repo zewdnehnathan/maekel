@@ -1,3 +1,5 @@
+import '../../../l10n/app_localizations.dart';
+
 enum ArcadeGame { tetris, brickBreaker, candyCrush, roadFighter }
 
 extension ArcadeGameApi on ArcadeGame {
@@ -13,6 +15,13 @@ extension ArcadeGameApi on ArcadeGame {
         ArcadeGame.brickBreaker => 'Brick Breaker',
         ArcadeGame.candyCrush => 'Candy Crush',
         ArcadeGame.roadFighter => 'Road Fighter',
+      };
+
+  String localized(AppLocalizations l10n) => switch (this) {
+        ArcadeGame.tetris => l10n.tetris,
+        ArcadeGame.brickBreaker => l10n.brickBreaker,
+        ArcadeGame.candyCrush => l10n.candyCrush,
+        ArcadeGame.roadFighter => l10n.roadFighter,
       };
 }
 

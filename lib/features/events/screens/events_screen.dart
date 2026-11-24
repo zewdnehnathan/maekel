@@ -12,6 +12,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../components/events_shell.dart';
 import '../models/events_models.dart';
 import '../providers/events_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
   const EventsScreen({super.key});
@@ -80,16 +82,16 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
     final catalog = ref.watch(eventsCatalogProvider);
 
     return EventsShell(
-      title: 'Events',
+      title: AppLocalizations.of(context)!.eventsTitle,
       actions: [
         if (session?.isEventsOps == true)
           IconButton(
-            tooltip: 'Events ops',
+            tooltip: AppLocalizations.of(context)!.eventsOps,
             onPressed: () => context.push(AppRoutes.eventsOps),
             icon: const Icon(Icons.admin_panel_settings_outlined),
           ),
         IconButton(
-          tooltip: 'Create event',
+          tooltip: AppLocalizations.of(context)!.eventsCreate,
           onPressed: () => context.push(AppRoutes.eventsCreate),
           icon: const Icon(Icons.add_circle_outline),
         ),
@@ -102,8 +104,8 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             TextField(
               controller: _search,
               onChanged: _onSearch,
-              decoration: const InputDecoration(
-                hintText: 'Search events, venues…',
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.eventsSearchHint,
                 prefixIcon: Icon(Icons.search),
               ),
             ),
@@ -116,7 +118,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      label: const Text('All'),
+                      label: Text(AppLocalizations.of(context)!.all),
                       selected: filters.categoryId == null,
                       onSelected: (_) {
                         ref
@@ -153,7 +155,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      label: const Text('Any area'),
+                      label: Text(AppLocalizations.of(context)!.eventsAnyArea),
                       selected: filters.subcity == null,
                       onSelected: (_) {
                         ref
@@ -167,7 +169,9 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                     (s) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
-                        label: Text(s),
+                        label: Text(
+                          localizedPlace(AppLocalizations.of(context)!, s),
+                        ),
                         selected: filters.subcity == s,
                         onSelected: (_) {
                           ref
@@ -190,11 +194,11 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             else if (_error != null)
               Text(_error!, style: const TextStyle(color: MaekelColors.danger))
             else if (catalog.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 40),
+              Padding(
+                padding: const EdgeInsets.only(top: 40),
                 child: Text(
-                  'No upcoming events yet. Host one from the + button.',
-                  style: TextStyle(color: MaekelColors.muted),
+                  AppLocalizations.of(context)!.eventsEmpty,
+                  style: const TextStyle(color: MaekelColors.muted),
                 ),
               )
             else
@@ -222,7 +226,8 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final when = _formatWhen(event.startsAt);
+    final l10n = AppLocalizations.of(context)!;
+    final when = _formatWhen(event.startsAt, l10n);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -232,6 +237,25 @@ class _EventCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (event.displayImageUrls.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.network(
+                      event.displayImageUrls.first,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const ColoredBox(
+                        color: MaekelColors.panelLift,
+                        child: Center(
+                          child: Icon(Icons.broken_image_outlined),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               Row(
                 children: [
                   Expanded(
@@ -241,7 +265,7 @@ class _EventCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    event.priceLabel,
+                    event.priceLabelLocalized(l10n),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: MaekelColors.events,
                         ),
@@ -250,7 +274,7 @@ class _EventCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '$when · ${event.subcity}',
+                '$when · ${localizedPlace(l10n, event.subcity)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: MaekelColors.muted,
                     ),
@@ -263,8 +287,8 @@ class _EventCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 event.isSoldOut
-                    ? 'Sold out'
-                    : '${event.seatsLeft} seats left',
+                    ? l10n.eventsSoldOut
+                    : l10n.eventsSeatsLeft(event.seatsLeft),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: event.isSoldOut
                           ? MaekelColors.danger
@@ -279,21 +303,21 @@ class _EventCard extends StatelessWidget {
   }
 }
 
-String _formatWhen(DateTime dt) {
+String _formatWhen(DateTime dt, AppLocalizations l10n) {
   final local = dt.toLocal();
   final months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
+    l10n.eventsMonthJan,
+    l10n.eventsMonthFeb,
+    l10n.eventsMonthMar,
+    l10n.eventsMonthApr,
+    l10n.eventsMonthMay,
+    l10n.eventsMonthJun,
+    l10n.eventsMonthJul,
+    l10n.eventsMonthAug,
+    l10n.eventsMonthSep,
+    l10n.eventsMonthOct,
+    l10n.eventsMonthNov,
+    l10n.eventsMonthDec,
   ];
   final hh = local.hour.toString().padLeft(2, '0');
   final mm = local.minute.toString().padLeft(2, '0');

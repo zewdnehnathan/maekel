@@ -1,9 +1,12 @@
+import multipart from '@fastify/multipart';
+import crypto from 'node:crypto';
 import {
   AppError,
   createPool,
   createService,
   databaseUrl,
   ensureDatabase,
+  env,
   envInt,
   listen,
   migrate,
@@ -13,6 +16,10 @@ import {
 import { z } from 'zod';
 
 const port = envInt('EVENTS_PORT', 3007);
+const publicApiBase = env(
+  'PUBLIC_API_BASE',
+  `http://127.0.0.1:${envInt('GATEWAY_PORT', 8080)}`,
+);
 let pool: ReturnType<typeof createPool>;
 
 const opsStaff = ['events_ops', 'platform_admin'] as const;
@@ -92,10 +99,76 @@ async function boot() {
     )`,
     `CREATE INDEX IF NOT EXISTS tickets_user_idx ON tickets (user_id)`,
     `CREATE INDEX IF NOT EXISTS tickets_event_idx ON tickets (event_id)`,
+    `ALTER TABLE events ADD COLUMN IF NOT EXISTS image_urls TEXT[] NOT NULL DEFAULT '{}'`,
+    // Survive Render ephemeral disk: store event photos in Postgres BYTEA.
+    `CREATE TABLE IF NOT EXISTS media_objects (
+      id TEXT PRIMARY KEY,
+      content_type TEXT NOT NULL,
+      bytes BYTEA NOT NULL,
+      byte_len INT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
   ]);
   await seed();
 
-  const app = await createService({ name: 'events-service', port });
+  const app = await createService({
+    name: 'events-service',
+    port,
+    bodyLimit: 12 * 1024 * 1024,
+  });
+
+  await app.register(multipart, {
+    limits: {
+      fileSize: 8 * 1024 * 1024,
+      files: 1,
+    },
+  });
+
+  app.post('/v1/events/media', async (req) => {
+    requireAuth(req);
+    const file = await req.file();
+    if (!file) {
+      throw new AppError('No file uploaded', 400, 'validation_error');
+    }
+    const mime = file.mimetype || '';
+    if (!mime.startsWith('image/')) {
+      throw new AppError('Only image uploads are allowed', 400, 'invalid_media');
+    }
+    const bytes = await file.toBuffer();
+    if (file.file.truncated) {
+      throw new AppError('File too large (max 8MB)', 413, 'file_too_large');
+    }
+    const ext = extensionForMime(mime);
+    const id = crypto.randomUUID();
+    const filename = `${id}${ext}`;
+    await pool.query(
+      `INSERT INTO media_objects (id, content_type, bytes, byte_len)
+       VALUES ($1,$2,$3,$4)`,
+      [filename, mime, bytes, bytes.length],
+    );
+    return {
+      id: filename,
+      url: `${publicApiBase}/v1/events/media/files/${filename}`,
+      contentType: mime,
+    };
+  });
+
+  app.get('/v1/events/media/files/:filename', async (req, reply) => {
+    const { filename } = req.params as { filename: string };
+    if (!/^[a-f0-9-]+\.(jpe?g|png|webp|gif)$/i.test(filename)) {
+      throw new AppError('Invalid media path', 400, 'validation_error');
+    }
+    const res = await pool.query(
+      `SELECT content_type, bytes FROM media_objects WHERE id = $1`,
+      [filename],
+    );
+    if (!res.rowCount) {
+      throw new AppError('Media not found', 404, 'not_found');
+    }
+    const row = res.rows[0] as { content_type: string; bytes: Buffer };
+    reply.header('Cache-Control', 'public, max-age=86400');
+    return reply.type(row.content_type).send(row.bytes);
+  });
 
   app.get('/v1/events/categories', async () => {
     const res = await pool.query(
@@ -166,7 +239,7 @@ async function boot() {
        LIMIT 200`,
       params,
     );
-    return { items: res.rows.map(mapEvent) };
+    return { items: res.rows.map((r) => mapEvent(r)) };
   });
 
   app.get('/v1/events/events/:id', async (req) => {
@@ -209,6 +282,7 @@ async function boot() {
         priceEtb: z.number().int().min(0).max(1_000_000).default(0),
         paymentMode: z.enum(['free', 'pay_at_door']).default('free'),
         coverUrl: z.string().url().optional().nullable(),
+        imageUrls: z.array(z.string().url()).max(8).optional(),
       })
       .parse(req.body ?? {});
 
@@ -225,16 +299,17 @@ async function boot() {
       );
     }
 
+    const imageUrls = normalizeImageUrls(body.imageUrls, body.coverUrl);
     const id = crypto.randomUUID();
     const checkInCode = randomCode(6);
     const res = await pool.query(
       `INSERT INTO events (
          id, organizer_id, category_id, title, description,
          venue_name, venue_address, subcity, starts_at, ends_at,
-         capacity, price_etb, payment_mode, status, cover_url, check_in_code
+         capacity, price_etb, payment_mode, status, cover_url, image_urls, check_in_code
        ) VALUES (
          $1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10::timestamptz,
-         $11,$12,$13,'pending',$14,$15
+         $11,$12,$13,'pending',$14,$15,$16
        )
        RETURNING *`,
       [
@@ -251,7 +326,8 @@ async function boot() {
         body.capacity,
         body.priceEtb,
         body.paymentMode,
-        body.coverUrl ?? null,
+        imageUrls[0] ?? null,
+        imageUrls,
         checkInCode,
       ],
     );
@@ -277,6 +353,7 @@ async function boot() {
         priceEtb: z.number().int().min(0).max(1_000_000).optional(),
         paymentMode: z.enum(['free', 'pay_at_door']).optional(),
         coverUrl: z.string().url().optional().nullable(),
+        imageUrls: z.array(z.string().url()).max(8).optional(),
       })
       .parse(req.body ?? {});
 
@@ -286,16 +363,17 @@ async function boot() {
     if (existing.organizer_id !== user.sub && !isOps) {
       throw new AppError('Forbidden', 403, 'forbidden');
     }
+    const existingStatus = String(existing.status);
     if (
-      ['cancelled', 'ended'].includes(existing.status) ||
-      (existing.status === 'approved' && !isOps && body.capacity == null)
+      ['cancelled', 'ended'].includes(existingStatus) ||
+      (existingStatus === 'approved' && !isOps && body.capacity == null)
     ) {
       // Organizer may bump capacity on live events; other edits re-pending.
     }
     if (body.categoryId) await assertCategory(body.categoryId);
 
-    const nextPrice = body.priceEtb ?? existing.price_etb;
-    const nextPay = body.paymentMode ?? existing.payment_mode;
+    const nextPrice = Number(body.priceEtb ?? existing.price_etb);
+    const nextPay = String(body.paymentMode ?? existing.payment_mode);
     if (nextPrice > 0 && nextPay === 'free') {
       throw new AppError(
         'Paid events must use pay_at_door',
@@ -305,7 +383,7 @@ async function boot() {
     }
 
     const sold = await ticketsSold(id);
-    const nextCapacity = body.capacity ?? existing.capacity;
+    const nextCapacity = Number(body.capacity ?? existing.capacity);
     if (nextCapacity < sold) {
       throw new AppError(
         `Capacity cannot be below tickets sold (${sold})`,
@@ -313,6 +391,16 @@ async function boot() {
         'capacity',
       );
     }
+
+    const imagesProvided =
+      body.imageUrls !== undefined || body.coverUrl !== undefined;
+    const nextImages = imagesProvided
+      ? normalizeImageUrls(
+          body.imageUrls ??
+            ((existing.image_urls as string[] | null) ?? undefined),
+          body.coverUrl,
+        )
+      : null;
 
     let nextStatus = existing.status as string;
     const materialEdit =
@@ -325,7 +413,8 @@ async function boot() {
       body.endsAt !== undefined ||
       body.categoryId != null ||
       body.priceEtb != null ||
-      body.paymentMode != null;
+      body.paymentMode != null ||
+      imagesProvided;
     if (materialEdit && existing.organizer_id === user.sub && !isOps) {
       if (existing.status === 'approved' || existing.status === 'rejected') {
         nextStatus = 'pending';
@@ -346,7 +435,8 @@ async function boot() {
          price_etb = COALESCE($12, price_etb),
          payment_mode = COALESCE($13, payment_mode),
          cover_url = CASE WHEN $14::boolean THEN $15 ELSE cover_url END,
-         status = $16,
+         image_urls = CASE WHEN $14::boolean THEN $16 ELSE image_urls END,
+         status = $17,
          updated_at = NOW()
        WHERE id = $1
        RETURNING *`,
@@ -364,8 +454,9 @@ async function boot() {
         body.capacity ?? null,
         body.priceEtb ?? null,
         body.paymentMode ?? null,
-        body.coverUrl !== undefined,
-        body.coverUrl ?? null,
+        imagesProvided,
+        nextImages?.[0] ?? null,
+        nextImages ?? [],
         nextStatus,
       ],
     );
@@ -495,7 +586,7 @@ async function boot() {
     }
 
     const sold = await ticketsSold(id);
-    if (sold + body.qty > event.capacity) {
+    if (sold + body.qty > Number(event.capacity)) {
       throw new AppError('Sold out', 409, 'sold_out');
     }
 
@@ -592,7 +683,7 @@ async function boot() {
     if (event.organizer_id !== user.sub && !isOps) {
       throw new AppError('Forbidden', 403, 'forbidden');
     }
-    if (!['approved', 'ended'].includes(event.status)) {
+    if (!['approved', 'ended'].includes(String(event.status))) {
       throw new AppError('Event not check-in ready', 400, 'not_ready');
     }
 
@@ -665,8 +756,8 @@ async function boot() {
        LIMIT 100`,
     );
     return {
-      pending: pending.rows.map(mapEvent),
-      live: live.rows.map(mapEvent),
+      pending: pending.rows.map((r) => mapEvent(r)),
+      live: live.rows.map((r) => mapEvent(r)),
     };
   });
 
@@ -730,10 +821,37 @@ async function boot() {
   await listen(app, port);
 }
 
+function normalizeImageUrls(
+  imageUrls: string[] | undefined,
+  coverUrl: string | null | undefined,
+): string[] {
+  const fromList = (imageUrls ?? []).map((u) => u.trim()).filter(Boolean);
+  if (fromList.length > 0) return [...new Set(fromList)].slice(0, 8);
+  if (coverUrl?.trim()) return [coverUrl.trim()];
+  return [];
+}
+
+function extensionForMime(mime: string): string {
+  switch (mime) {
+    case 'image/png':
+      return '.png';
+    case 'image/webp':
+      return '.webp';
+    case 'image/gif':
+      return '.gif';
+    default:
+      return '.jpg';
+  }
+}
+
 function mapEvent(
   r: Record<string, unknown>,
   opts: { includeCheckInCode?: boolean } = {},
 ) {
+  const imageUrls = normalizeImageUrls(
+    (r.image_urls as string[] | null | undefined) ?? undefined,
+    (r.cover_url as string | null | undefined) ?? null,
+  );
   return {
     id: r.id,
     organizerId: r.organizer_id,
@@ -753,7 +871,8 @@ function mapEvent(
     priceEtb: r.price_etb,
     paymentMode: r.payment_mode,
     status: r.status,
-    coverUrl: r.cover_url,
+    coverUrl: imageUrls[0] ?? r.cover_url ?? null,
+    imageUrls,
     checkInCode: opts.includeCheckInCode ? r.check_in_code : undefined,
     rejectionReason: r.rejection_reason,
     createdAt: r.created_at,

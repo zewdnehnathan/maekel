@@ -6,6 +6,7 @@ import '../../../app/router.dart';
 import '../components/ad_card.dart';
 import '../components/market_shell.dart';
 import '../providers/market_providers.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketFavoritesScreen extends ConsumerWidget {
   const MarketFavoritesScreen({super.key});
@@ -17,9 +18,9 @@ class MarketFavoritesScreen extends ConsumerWidget {
     final userId = ref.watch(marketUserIdProvider);
 
     return MarketShell(
-      title: 'Favorites',
+      title: AppLocalizations.of(context)!.marketFavoritesTitle,
       child: ads.isEmpty
-          ? const Center(child: Text('No saved ads yet.'))
+          ? Center(child: Text(AppLocalizations.of(context)!.marketNoFavorites))
           : GridView.builder(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               itemCount: ads.length,

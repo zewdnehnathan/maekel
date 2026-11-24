@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:material_ui/material_ui.dart';
 
 import '../../app/theme.dart';
@@ -74,77 +72,74 @@ class _ModuleCardState extends State<ModuleCard>
               borderRadius: BorderRadius.circular(22),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(22),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          widget.accent.withValues(alpha: 0.18),
-                          MaekelColors.panel.withValues(alpha: 0.75),
-                          MaekelColors.deep.withValues(alpha: 0.9),
-                        ],
-                      ),
-                      border: Border.all(
-                        color: widget.accent.withValues(alpha: 0.45),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: widget.accent.withValues(alpha: 0.18),
-                          blurRadius: 22,
-                          offset: const Offset(0, 10),
-                        ),
+                // No BackdropFilter on purpose — on Flutter web it often paints
+                // an opaque grey slab after locale changes.
+                child: Ink(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        widget.accent.withValues(alpha: 0.18),
+                        MaekelColors.panel.withValues(alpha: 0.75),
+                        MaekelColors.deep.withValues(alpha: 0.9),
                       ],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              color: widget.accent.withValues(alpha: 0.16),
-                              border: Border.all(
-                                color: widget.accent.withValues(alpha: 0.35),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: widget.accent.withValues(alpha: 0.35),
-                                  blurRadius: 16,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              widget.icon,
-                              color: widget.accent,
-                              size: 24,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            widget.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: MaekelColors.ink,
-                                  letterSpacing: 0.2,
-                                ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            widget.subtitle,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
+                    border: Border.all(
+                      color: widget.accent.withValues(alpha: 0.45),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.accent.withValues(alpha: 0.18),
+                        blurRadius: 22,
+                        offset: const Offset(0, 10),
                       ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            color: widget.accent.withValues(alpha: 0.16),
+                            border: Border.all(
+                              color: widget.accent.withValues(alpha: 0.35),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: widget.accent.withValues(alpha: 0.35),
+                                blurRadius: 16,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            widget.icon,
+                            color: widget.accent,
+                            size: 24,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          widget.title,
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: MaekelColors.ink,
+                                    letterSpacing: 0.2,
+                                  ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.subtitle,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
                     ),
                   ),
                 ),

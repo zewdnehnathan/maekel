@@ -27,6 +27,7 @@ abstract class EventsRepository {
     required int capacity,
     required int priceEtb,
     required EventPaymentMode paymentMode,
+    List<String> imageUrls = const [],
   });
 
   Future<MaekelEvent> updateEvent(
@@ -42,6 +43,13 @@ abstract class EventsRepository {
     int? capacity,
     int? priceEtb,
     EventPaymentMode? paymentMode,
+    List<String>? imageUrls,
+  });
+
+  Future<String> uploadPhoto({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
   });
 
   Future<MaekelEvent> updateEventStatus(

@@ -9,6 +9,8 @@ import '../../../core/widgets/glass_panel.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FoodOpsScreen extends ConsumerStatefulWidget {
   const FoodOpsScreen({super.key});
@@ -132,21 +134,23 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: MaekelColors.panel,
-        title: Text('Assign owner · ${merchant.name}'),
+        title: Text(
+          AppLocalizations.of(context)!.foodAssignOwner(merchant.name),
+        ),
         content: TextField(
           controller: phone,
           keyboardType: TextInputType.phone,
           style: const TextStyle(color: MaekelColors.ink),
-          decoration: const InputDecoration(
-            labelText: 'Restaurant staff phone (9 digits)',
-            prefixText: '+251 ',
-            helperText: 'Only this user can edit the menu.',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.adminLocalPhone,
+            prefixText: '${AppLocalizations.of(context)!.phonePrefix} ',
+            helperText: AppLocalizations.of(context)!.foodStaffPhoneHelper,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -154,7 +158,7 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
               foregroundColor: MaekelColors.ink,
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Assign'),
+            child: Text(AppLocalizations.of(context)!.foodAssign),
           ),
         ],
       ),
@@ -172,8 +176,10 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return FoodShell(
-      title: 'Food ops',
+      title: l10n.foodOps,
       showBottomNav: false,
       actions: [
         IconButton(
@@ -199,12 +205,12 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                   children: [
                     Text(
-                      'ORDER BOARD (${_orders.length})',
+                      l10n.foodOrderBoard(_orders.length).toUpperCase(),
                       style: Theme.of(context).textTheme.labelLarge,
                     ),
                     const SizedBox(height: 8),
                     if (_orders.isEmpty)
-                      const GlassPanel(child: Text('No recent orders.')),
+                      GlassPanel(child: Text(l10n.foodNoRecentOrders)),
                     for (final order in _orders) ...[
                       const SizedBox(height: 10),
                       GlassPanel(
@@ -214,16 +220,16 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '#${order.id.substring(0, 8)} · ${order.status.label}',
+                              '#${order.id.substring(0, 8)} · ${order.status.localized(l10n)}',
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Text(
-                              '${order.merchantId} → ${order.address.subcity} · ${order.grandTotalEtb} ETB',
+                              '${order.merchantId} → ${localizedPlace(l10n, order.address.subcity)} · ${order.grandTotalEtb} ETB',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             if (order.riderId != null)
                               Text(
-                                'Rider: ${order.riderId}',
+                                l10n.foodRiderLabel(order.riderId!),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             const SizedBox(height: 8),
@@ -244,7 +250,7 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                                                     .opsCancel(order.id);
                                               },
                                             ),
-                                    child: const Text('Support cancel'),
+                                    child: Text(AppLocalizations.of(context)!.foodSupportCancel),
                                   ),
                                 if (order.riderId != null &&
                                     (order.status == OrderStatus.ready ||
@@ -265,7 +271,7 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                                                     );
                                               },
                                             ),
-                                    child: const Text('Clear rider'),
+                                    child: Text(AppLocalizations.of(context)!.foodClearRider),
                                   ),
                               ],
                             ),
@@ -275,7 +281,7 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                     ],
                     const SizedBox(height: 24),
                     Text(
-                      'ONBOARD MERCHANT',
+                      l10n.foodOnboardMerchant.toUpperCase(),
                       style: Theme.of(context).textTheme.labelLarge,
                     ),
                     const SizedBox(height: 8),
@@ -287,24 +293,24 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                           TextField(
                             controller: _name,
                             style: const TextStyle(color: MaekelColors.ink),
-                            decoration:
-                                const InputDecoration(labelText: 'Name'),
+                            decoration: InputDecoration(
+                              labelText: l10n.eventsFieldTitle,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           DropdownButtonFormField<MerchantKind>(
                             // ignore: deprecated_member_use
                             value: _kind,
                             dropdownColor: MaekelColors.panel,
-                            decoration:
-                                const InputDecoration(labelText: 'Kind'),
-                            items: const [
+                            decoration: InputDecoration(labelText: l10n.foodKind),
+                            items: [
                               DropdownMenuItem(
                                 value: MerchantKind.restaurant,
-                                child: Text('Restaurant'),
+                                child: Text(l10n.foodRestaurant),
                               ),
                               DropdownMenuItem(
                                 value: MerchantKind.grocery,
-                                child: Text('Grocery'),
+                                child: Text(l10n.foodGrocery),
                               ),
                             ],
                             onChanged: (v) {
@@ -315,15 +321,16 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                           TextField(
                             controller: _subcity,
                             style: const TextStyle(color: MaekelColors.ink),
-                            decoration:
-                                const InputDecoration(labelText: 'Subcity'),
+                            decoration: InputDecoration(
+                              labelText: l10n.foodSubcity,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           TextField(
                             controller: _coverage,
                             style: const TextStyle(color: MaekelColors.ink),
-                            decoration: const InputDecoration(
-                              labelText: 'Coverage (comma-separated)',
+                            decoration: InputDecoration(
+                              labelText: l10n.foodCoverageLabel,
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -331,11 +338,10 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                             controller: _ownerPhone,
                             keyboardType: TextInputType.phone,
                             style: const TextStyle(color: MaekelColors.ink),
-                            decoration: const InputDecoration(
-                              labelText: 'Owner phone (restaurant staff)',
-                              prefixText: '+251 ',
-                              helperText:
-                                  'Required for menu access — only this user edits dishes.',
+                            decoration: InputDecoration(
+                              labelText: l10n.foodStaffPhone,
+                              prefixText: '${l10n.phonePrefix} ',
+                              helperText: l10n.foodStaffPhoneHelper,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -345,14 +351,14 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                               foregroundColor: MaekelColors.ink,
                             ),
                             onPressed: _busy ? null : _onboard,
-                            child: const Text('Create merchant'),
+                            child: Text(l10n.foodCreateMerchant),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'MERCHANTS (${_merchants.length})',
+                      l10n.foodMerchants(_merchants.length).toUpperCase(),
                       style: Theme.of(context).textTheme.labelLarge,
                     ),
                     const SizedBox(height: 8),
@@ -365,18 +371,22 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              '${m.name} · ${m.subcity} · '
-                              '${m.isOpen ? 'open' : 'paused'}',
+                              '${m.name} · ${localizedPlace(l10n, m.subcity)} · ${m.isOpen ? l10n.foodStoreOpen : l10n.foodStorePaused}',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             Text(
-                              m.ownerUserId == null
-                                  ? 'Owner: unassigned'
-                                  : 'Owner: ${m.ownerUserId}',
+                              l10n.foodOwner(
+                                m.ownerUserId ?? l10n.foodUnassigned,
+                              ),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             Text(
-                              'Covers ${m.coverageSubcities.join(', ')}',
+                              l10n.foodCovers(
+                                localizedPlaceList(
+                                  l10n,
+                                  m.coverageSubcities.join(', '),
+                                ),
+                              ),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             Align(
@@ -386,8 +396,8 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                                     _busy ? null : () => _assignOwner(m),
                                 child: Text(
                                   m.ownerUserId == null
-                                      ? 'Assign owner phone'
-                                      : 'Reassign owner',
+                                      ? l10n.foodAssignOwner(m.name)
+                                      : l10n.foodReassign,
                                 ),
                               ),
                             ),

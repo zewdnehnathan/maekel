@@ -9,6 +9,8 @@ import '../../../core/widgets/glass_panel.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FoodCheckoutScreen extends ConsumerStatefulWidget {
   const FoodCheckoutScreen({super.key});
@@ -18,9 +20,18 @@ class FoodCheckoutScreen extends ConsumerStatefulWidget {
 }
 
 class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
+  static const _subcityOptions = [
+    'Bole',
+    'Kirkos',
+    'Yeka',
+    'CMC',
+    'Kazanchis',
+    'Arada',
+  ];
+
   final _notes = TextEditingController();
-  final _label = TextEditingController(text: 'Home');
-  final _details = TextEditingController(text: 'Near Edna Mall, gate 2');
+  late final TextEditingController _label;
+  late final TextEditingController _details;
   String _subcity = 'Bole';
   String? _selectedPlaceId;
   List<SavedPlace> _places = const [];
@@ -30,6 +41,9 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
   @override
   void initState() {
     super.initState();
+    final l10n = AppLocalizations.of(context)!;
+    _label = TextEditingController(text: l10n.foodHomeLabel);
+    _details = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPlaces());
     final pin = ref.read(foodCoverageSubcityProvider);
     if (pin != null) _subcity = pin;
@@ -64,8 +78,11 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
   Future<void> _saveCurrentPlace() async {
     setState(() => _savingPlace = true);
     try {
+      final saveL10n = AppLocalizations.of(context)!;
       final place = await ref.read(foodRepositoryProvider).savePlace(
-            label: _label.text.trim().isEmpty ? 'Saved' : _label.text.trim(),
+            label: _label.text.trim().isEmpty
+                ? saveL10n.foodSavedLabel
+                : _label.text.trim(),
             subcity: _subcity,
             details: _details.text.trim(),
           );
@@ -75,7 +92,7 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
         _selectedPlaceId = place.id;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Address saved')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.foodAddressSaved)),
       );
     } on ApiException catch (e) {
       if (mounted) {
@@ -97,10 +114,11 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
     if (userId == null || merchant == null) return;
 
     if (!merchant.covers(_subcity)) {
+      final snackL10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${merchant.name} does not deliver to $_subcity. Change pin or merchant.',
+            snackL10n.foodNoDeliverPin(localizedPlace(snackL10n, _subcity)),
           ),
         ),
       );
@@ -112,7 +130,9 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
       final order = await ref.read(foodRepositoryProvider).placeOrder(
             customerId: userId,
             address: DeliveryAddress(
-              label: _label.text.trim().isEmpty ? 'Home' : _label.text.trim(),
+              label: _label.text.trim().isEmpty
+                  ? AppLocalizations.of(context)!.foodHomeLabel
+                  : _label.text.trim(),
               subcity: _subcity,
               details: _details.text.trim(),
             ),
@@ -139,8 +159,10 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
         : ref.watch(foodMerchantProvider(cart.merchantId!));
     final fee = merchant?.deliveryFeeEtb ?? 0;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return FoodShell(
-      title: 'Checkout',
+      title: l10n.foodCheckout,
       showBottomNav: false,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -148,19 +170,19 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
           GlassPanel(
             accent: MaekelColors.food,
             child: Text(
-              'Pay cash on delivery. Delivery fee shown before you confirm — no surprises.',
+              l10n.foodCodBlurb,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            'SAVED PLACES',
+            l10n.foodSavedPlaces.toUpperCase(),
             style: Theme.of(context).textTheme.labelLarge,
           ),
           const SizedBox(height: 8),
           if (_places.isEmpty)
             Text(
-              'No saved places yet — fill address below and tap Save.',
+              l10n.foodNoSavedPlaces,
               style: Theme.of(context).textTheme.bodySmall,
             )
           else
@@ -170,7 +192,9 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
               children: [
                 for (final p in _places)
                   ChoiceChip(
-                    label: Text('${p.label} · ${p.subcity}'),
+                    label: Text(
+                      '${p.label} · ${localizedPlace(l10n, p.subcity)}',
+                    ),
                     selected: _selectedPlaceId == p.id,
                     onSelected: (_) => _applyPlace(p),
                     selectedColor: MaekelColors.food.withValues(alpha: 0.25),
@@ -186,21 +210,20 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
           TextField(
             controller: _label,
             style: const TextStyle(color: MaekelColors.ink),
-            decoration: const InputDecoration(labelText: 'Label'),
+            decoration: InputDecoration(labelText: l10n.foodLabel),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             // ignore: deprecated_member_use
             value: _subcity,
             dropdownColor: MaekelColors.panel,
-            decoration: const InputDecoration(labelText: 'Subcity'),
-            items: const [
-              DropdownMenuItem(value: 'Bole', child: Text('Bole')),
-              DropdownMenuItem(value: 'Kirkos', child: Text('Kirkos')),
-              DropdownMenuItem(value: 'Yeka', child: Text('Yeka')),
-              DropdownMenuItem(value: 'CMC', child: Text('CMC')),
-              DropdownMenuItem(value: 'Kazanchis', child: Text('Kazanchis')),
-              DropdownMenuItem(value: 'Arada', child: Text('Arada')),
+            decoration: InputDecoration(labelText: l10n.foodSubcity),
+            items: [
+              for (final s in _subcityOptions)
+                DropdownMenuItem(
+                  value: s,
+                  child: Text(localizedPlace(l10n, s)),
+                ),
             ],
             onChanged: (v) {
               if (v != null) {
@@ -215,7 +238,7 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
           TextField(
             controller: _details,
             style: const TextStyle(color: MaekelColors.ink),
-            decoration: const InputDecoration(labelText: 'Address details'),
+            decoration: InputDecoration(labelText: l10n.foodAddressDetails),
           ),
           const SizedBox(height: 8),
           Align(
@@ -223,25 +246,31 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
             child: TextButton.icon(
               onPressed: _savingPlace ? null : _saveCurrentPlace,
               icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-              label: Text(_savingPlace ? 'Saving…' : 'Save this address'),
+              label: Text(
+                _savingPlace ? l10n.foodSaving : l10n.foodSaveAddress,
+              ),
             ),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _notes,
             style: const TextStyle(color: MaekelColors.ink),
-            decoration: const InputDecoration(
-              labelText: 'Notes for rider / kitchen',
+            decoration: InputDecoration(
+              labelText: l10n.foodNotesRider,
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            'Payment: Cash on delivery (COD)',
+            l10n.foodPaymentCod,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           Text(
-            'Subtotal ${cart.subtotalEtb} ETB + delivery $fee ETB = ${cart.subtotalEtb + fee} ETB',
+            l10n.foodCheckoutSummary(
+              cart.subtotalEtb,
+              fee,
+              cart.subtotalEtb + fee,
+            ),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: MaekelColors.food,
                 ),
@@ -259,7 +288,7 @@ class _FoodCheckoutScreenState extends ConsumerState<FoodCheckoutScreen> {
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2.4),
                   )
-                : Text('PLACE ORDER · ${cart.subtotalEtb + fee} ETB'),
+                : Text(l10n.foodPlaceOrderEtb(cart.subtotalEtb + fee)),
           ),
         ],
       ),

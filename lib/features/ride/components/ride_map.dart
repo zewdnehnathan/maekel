@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme.dart';
+import '../../../l10n/app_localizations.dart';
 import '../models/ride_models.dart';
 
 class RideMap extends StatefulWidget {
@@ -204,11 +205,11 @@ class _RideMapState extends State<RideMap> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: MaekelColors.glassBorder),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     child: Text(
-                      '+/− zoom · click to pin · drag to pan',
-                      style: TextStyle(
+                      AppLocalizations.of(context)!.rideMapHint,
+                      style: const TextStyle(
                         color: MaekelColors.muted,
                         fontSize: 11,
                       ),

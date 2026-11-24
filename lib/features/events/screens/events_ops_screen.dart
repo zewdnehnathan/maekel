@@ -9,6 +9,8 @@ import '../../../core/widgets/glass_panel.dart';
 import '../components/events_shell.dart';
 import '../models/events_models.dart';
 import '../providers/events_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class EventsOpsScreen extends ConsumerStatefulWidget {
   const EventsOpsScreen({super.key});
@@ -96,19 +98,21 @@ class _EventsOpsScreenState extends ConsumerState<EventsOpsScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: MaekelColors.panel,
-          title: const Text('Reject event'),
+          title: Text(AppLocalizations.of(context)!.eventsReject),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(labelText: 'Reason'),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.eventsReason,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Reject'),
+              child: Text(AppLocalizations.of(context)!.reject),
             ),
           ],
         );
@@ -119,7 +123,7 @@ class _EventsOpsScreenState extends ConsumerState<EventsOpsScreen> {
       event,
       EventStatus.rejected,
       reason: controller.text.trim().isEmpty
-          ? 'Does not meet guidelines'
+          ? AppLocalizations.of(context)!.eventsRejectDefault
           : controller.text.trim(),
     );
   }
@@ -129,7 +133,7 @@ class _EventsOpsScreenState extends ConsumerState<EventsOpsScreen> {
     final queue = _queue;
 
     return EventsShell(
-      title: 'Events ops',
+      title: AppLocalizations.of(context)!.eventsOps,
       showBottomNav: false,
       child: RefreshIndicator(
         onRefresh: () => _load(silent: false),
@@ -145,14 +149,14 @@ class _EventsOpsScreenState extends ConsumerState<EventsOpsScreen> {
               )
             else if (queue != null) ...[
               Text(
-                'Pending (${queue.pending.length})',
+                AppLocalizations.of(context)!.eventsPending(queue.pending.length),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               if (queue.pending.isEmpty)
-                const Text(
-                  'Queue clear.',
-                  style: TextStyle(color: MaekelColors.muted),
+                Text(
+                  AppLocalizations.of(context)!.eventsQueueClear,
+                  style: const TextStyle(color: MaekelColors.muted),
                 )
               else
                 ...queue.pending.map(
@@ -171,7 +175,7 @@ class _EventsOpsScreenState extends ConsumerState<EventsOpsScreen> {
                 ),
               const SizedBox(height: 24),
               Text(
-                'Live (${queue.live.length})',
+                AppLocalizations.of(context)!.eventsLive(queue.live.length),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -225,7 +229,7 @@ class _OpsCard extends StatelessWidget {
               Text(event.title, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
               Text(
-                '${event.subcity} · ${event.venueName} · ${event.organizerPhone}',
+                '${localizedPlace(AppLocalizations.of(context)!, event.subcity)} · ${event.venueName} · ${event.organizerPhone}',
                 style: const TextStyle(color: MaekelColors.muted),
               ),
               const SizedBox(height: 4),
@@ -239,17 +243,17 @@ class _OpsCard extends StatelessWidget {
                   if (onApprove != null)
                     FilledButton(
                       onPressed: onApprove,
-                      child: const Text('Approve'),
+                      child: Text(AppLocalizations.of(context)!.approve),
                     ),
                   if (onReject != null)
                     OutlinedButton(
                       onPressed: onReject,
-                      child: const Text('Reject'),
+                      child: Text(AppLocalizations.of(context)!.reject),
                     ),
-                  TextButton(onPressed: onCancel, child: const Text('Force cancel')),
+                  TextButton(onPressed: onCancel, child: Text(AppLocalizations.of(context)!.rideForceCancel)),
                   TextButton(
                     onPressed: onSuspend,
-                    child: const Text('Suspend organizer'),
+                    child: Text(AppLocalizations.of(context)!.eventsSuspendOrganizer),
                   ),
                 ],
               ),

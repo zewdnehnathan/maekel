@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/locale/auth_l10n.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_providers.dart';
@@ -90,8 +91,7 @@ class AuthNotifier extends Notifier<AuthState> {
     final cleaned = localDigits.replaceAll(RegExp(r'\D'), '');
     if (cleaned.length != AppConstants.localPhoneLength) {
       state = state.copyWith(
-        errorMessage:
-            'Enter a ${AppConstants.localPhoneLength}-digit local number.',
+        errorMessage: authErrorPhoneDigits,
         clearError: false,
       );
       return false;
@@ -113,8 +113,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } catch (_) {
       state = state.copyWith(
         isSubmitting: false,
-        errorMessage:
-            'Could not reach Maekel API at ${AppConstants.apiBaseUrl}',
+        errorMessage: authErrorApiUnreachable,
       );
       return false;
     }
@@ -123,7 +122,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> verifyOtp(String code) async {
     final pending = state.pendingPhoneE164;
     if (pending == null) {
-      state = state.copyWith(errorMessage: 'Start again with your phone number.');
+      state = state.copyWith(errorMessage: authErrorStartAgain);
       return false;
     }
 
@@ -161,7 +160,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } catch (_) {
       state = state.copyWith(
         isSubmitting: false,
-        errorMessage: 'Could not verify OTP. Is the gateway running?',
+        errorMessage: authErrorOtpGateway,
       );
       return false;
     }

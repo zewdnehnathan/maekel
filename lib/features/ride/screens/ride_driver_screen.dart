@@ -10,6 +10,8 @@ import '../components/ride_shell.dart';
 import '../models/ride_models.dart';
 import '../providers/ride_providers.dart';
 import '../services/api_ride_repository.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RideDriverScreen extends ConsumerStatefulWidget {
   const RideDriverScreen({super.key});
@@ -88,7 +90,12 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Reported: ${reason.replaceAll('_', ' ')}')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!
+                .rideReported(reason.replaceAll('_', ' ')),
+          ),
+        ),
       );
       await _loadEarnings();
     } catch (e) {
@@ -100,11 +107,12 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
   }
 
   String _offerCountdown(RideTrip trip) {
+    final l10n = AppLocalizations.of(context)!;
     final expires = trip.offerExpiresAt;
-    if (expires == null) return 'Accept soon';
+    if (expires == null) return l10n.rideAcceptSoon;
     final secs = expires.difference(DateTime.now()).inSeconds;
-    if (secs <= 0) return 'Expired';
-    return '${secs}s left';
+    if (secs <= 0) return l10n.rideExpired;
+    return l10n.rideSecsLeft(secs);
   }
 
   @override
@@ -115,16 +123,18 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
     final repo = ref.watch(rideRepositoryProvider);
 
     if (userId == null || session == null) {
-      return const RideShell(
-        title: 'Drive',
-        child: Center(child: Text('Sign in required')),
+      return RideShell(
+        title: AppLocalizations.of(context)!.rideDriveTitle,
+        child: Center(child: Text(AppLocalizations.of(context)!.signInRequired)),
       );
     }
 
     final offers = repo.getOpenOffersForDriver(session.driverId);
 
+    final l10n = AppLocalizations.of(context)!;
+
     return RideShell(
-      title: 'Drive',
+      title: l10n.rideDriveTitle,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
@@ -134,20 +144,20 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Driver mode',
+                  l10n.rideDriverMode,
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 6),
                 Text(
                   session.isApproved
-                      ? 'Go online to receive trip offers.'
-                      : 'Awaiting ops approval — cannot go online yet.',
+                      ? l10n.rideGoOnlineHint
+                      : l10n.ridePendingApproval,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(session.isOnline ? 'Online' : 'Offline'),
+                  title: Text(session.isOnline ? l10n.online : l10n.offline),
                   value: session.isOnline,
                   activeThumbColor: MaekelColors.ride,
                   onChanged: session.isApproved
@@ -169,7 +179,7 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
                 ),
                 if (!session.isApproved)
                   Text(
-                    'Pending Ride ops approval before you can go online.',
+                    l10n.ridePendingApproval,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: MaekelColors.amber,
                         ),
@@ -178,22 +188,27 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text("TODAY'S EARNINGS", style: Theme.of(context).textTheme.labelLarge),
+          Text(
+            l10n.rideTodaysEarnings.toUpperCase(),
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
           const SizedBox(height: 8),
           GlassPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_earnings?.totalEtb ?? 0} ETB',
+                  l10n.rideFareEtb(_earnings?.totalEtb ?? 0),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: MaekelColors.signal,
                       ),
                 ),
                 Text(
                   _loadingEarnings
-                      ? 'Refreshing…'
-                      : '${_earnings?.trips.length ?? 0} completed trip(s) today',
+                      ? l10n.rideRefreshing
+                      : l10n.rideCompletedTripsToday(
+                          _earnings?.trips.length ?? 0,
+                        ),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 if (_earnings != null && _earnings!.trips.isNotEmpty) ...[
@@ -202,8 +217,8 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        '${repo.getPlace(trip.pickupId)?.name ?? trip.pickupId}'
-                        ' → ${repo.getPlace(trip.dropoffId)?.name ?? trip.dropoffId}'
+                        '${localizedPlace(l10n, repo.getPlace(trip.pickupId)?.name ?? trip.pickupId)}'
+                        ' → ${localizedPlace(l10n, repo.getPlace(trip.dropoffId)?.name ?? trip.dropoffId)}'
                         ' · ${trip.fareEtb} ETB',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
@@ -214,18 +229,33 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
           ),
           const SizedBox(height: 16),
           if (active != null) ...[
-            Text('ACTIVE JOB', style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              l10n.rideActiveJob,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 8),
             GlassPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(active.status.label),
+                  Text(active.status.localized(AppLocalizations.of(context)!)),
                   Text(
-                    '${repo.getPlace(active.pickupId)?.name ?? active.pickupId}'
-                    ' → ${repo.getPlace(active.dropoffId)?.name ?? active.dropoffId}',
+                    l10n.rideRouteArrow(
+                      localizedPlace(
+                        l10n,
+                        repo.getPlace(active.pickupId)?.name ?? active.pickupId,
+                      ),
+                      localizedPlace(
+                        l10n,
+                        repo.getPlace(active.dropoffId)?.name ??
+                            active.dropoffId,
+                      ),
+                    ),
                   ),
-                  Text('Fare due: ${active.fareEtb} ETB cash'),
+                  Text(
+                    AppLocalizations.of(context)!
+                        .rideFareDueCash(active.fareEtb),
+                  ),
                   const SizedBox(height: 12),
                   if (active.status == TripStatus.inProgress)
                     FilledButton(
@@ -235,7 +265,7 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
                             .confirmCash(active.id);
                         await _loadEarnings();
                       },
-                      child: const Text('COMPLETE + CONFIRM CASH'),
+                      child: Text(AppLocalizations.of(context)!.rideCompleteCash),
                     )
                   else if (active.status != TripStatus.completed)
                     FilledButton(
@@ -246,16 +276,19 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
                       },
                       child: Text(
                         switch (active.status) {
-                          TripStatus.assigned => 'START ARRIVING',
-                          TripStatus.arriving => 'MARK ARRIVED',
-                          TripStatus.arrived => 'START TRIP',
-                          _ => 'ADVANCE',
+                          TripStatus.assigned =>
+                            AppLocalizations.of(context)!.rideStartArriving,
+                          TripStatus.arriving =>
+                            AppLocalizations.of(context)!.rideMarkArrived,
+                          TripStatus.arrived =>
+                            AppLocalizations.of(context)!.rideStartTrip,
+                          _ => AppLocalizations.of(context)!.rideAdvance,
                         },
                       ),
                     ),
                   const SizedBox(height: 10),
                   Text(
-                    'REPORT A PROBLEM',
+                    l10n.rideReportProblem.toUpperCase(),
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                   const SizedBox(height: 6),
@@ -265,11 +298,11 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
                     children: [
                       OutlinedButton(
                         onPressed: () => _report(active, 'no_show'),
-                        child: const Text('Passenger no-show'),
+                        child: Text(AppLocalizations.of(context)!.ridePassengerNoShow),
                       ),
                       OutlinedButton(
                         onPressed: () => _report(active, 'wrong_pin'),
-                        child: const Text('Wrong pin'),
+                        child: Text(AppLocalizations.of(context)!.rideWrongPin),
                       ),
                     ],
                   ),
@@ -277,20 +310,21 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
               ),
             ),
           ] else ...[
-            Text('OFFERS', style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              AppLocalizations.of(context)!.rideOffers,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 8),
             if (!session.isOnline)
-              const Text('Go online to see matching requests.')
+              Text(AppLocalizations.of(context)!.rideGoOnlineHint)
             else if (offers.isEmpty)
-              const Text(
-                'No open offers right now. When a passenger requests nearby, the offer appears here with a time limit.',
-              )
+              Text(l10n.rideNoOffers)
             else
               ...offers.map((trip) {
                 final pickup = repo.getPlace(trip.pickupId);
                 final dropoff = repo.getPlace(trip.dropoffId);
                 final countdown = _offerCountdown(trip);
-                final expired = countdown == 'Expired';
+                final expired = countdown == l10n.rideExpired;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: GlassPanel(
@@ -298,11 +332,11 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${pickup?.name} → ${dropoff?.name}',
+                          '${localizedPlace(l10n, pickup?.name ?? trip.pickupId)} → ${localizedPlace(l10n, dropoff?.name ?? trip.dropoffId)}',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         Text(
-                          '${trip.fareEtb} ETB · ${trip.status.label} · $countdown',
+                          '${trip.fareEtb} ETB · ${trip.status.localized(AppLocalizations.of(context)!)} · $countdown',
                         ),
                         const SizedBox(height: 8),
                         FilledButton(
@@ -323,7 +357,7 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
                                     );
                                   }
                                 },
-                          child: const Text('ACCEPT'),
+                          child: Text(AppLocalizations.of(context)!.accept),
                         ),
                       ],
                     ),

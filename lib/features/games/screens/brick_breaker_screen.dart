@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/maekel_app_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../brick_breaker/brick_breaker_engine.dart';
 import '../components/score_submit_helper.dart';
 import '../models/games_models.dart';
@@ -69,10 +70,10 @@ class _BrickBreakerScreenState extends ConsumerState<BrickBreakerScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: MaekelAppBar(
-        title: 'Brick Breaker',
+        title: AppLocalizations.of(context)!.brickBreaker,
         actions: [
           IconButton(
-            tooltip: 'Restart',
+            tooltip: AppLocalizations.of(context)!.gamesRestart,
             onPressed: () => setState(() {
               _scoreSubmitted = false;
               _engine.reset();
@@ -90,13 +91,22 @@ class _BrickBreakerScreenState extends ConsumerState<BrickBreakerScreen>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _Stat(label: 'SCORE', value: '${_engine.score}'),
-                    _Stat(label: 'LIVES', value: '${_engine.lives}'),
-                    _Stat(label: 'LVL', value: '${_engine.level}'),
+                    _Stat(
+                      label: AppLocalizations.of(context)!.gamesScore,
+                      value: '${_engine.score}',
+                    ),
+                    _Stat(
+                      label: AppLocalizations.of(context)!.gamesLives,
+                      value: '${_engine.lives}',
+                    ),
+                    _Stat(
+                      label: AppLocalizations.of(context)!.gamesLevel,
+                      value: '${_engine.level}',
+                    ),
                     const Spacer(),
                     if (!_engine.ballLaunched && !_engine.isGameOver)
                       Text(
-                        'TAP TO LAUNCH',
+                        AppLocalizations.of(context)!.gamesTapToLaunch,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                               color: MaekelColors.games,
                             ),
@@ -141,9 +151,11 @@ class _BrickBreakerScreenState extends ConsumerState<BrickBreakerScreen>
                               child: Stack(
                                 children: [
                                   if (_engine.isGameOver)
-                                    const _Banner(
-                                      label: 'GAME OVER',
-                                      detail: 'Tap refresh to try again',
+                                    _Banner(
+                                      label: AppLocalizations.of(context)!
+                                          .gamesGameOver,
+                                      detail: AppLocalizations.of(context)!
+                                          .gamesTapRefreshTry,
                                     ),
                                 ],
                               ),
@@ -156,7 +168,7 @@ class _BrickBreakerScreenState extends ConsumerState<BrickBreakerScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Drag to move paddle · tap to launch',
+                  AppLocalizations.of(context)!.gamesBrickHint,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: MaekelColors.muted,
                       ),

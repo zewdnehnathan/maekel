@@ -10,6 +10,7 @@ import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
 import '../services/api_market_repository.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketChatScreen extends ConsumerStatefulWidget {
   const MarketChatScreen({super.key, required this.threadId});
@@ -109,8 +110,10 @@ class _MarketChatScreenState extends ConsumerState<MarketChatScreen> {
         : (t.buyerId == userId ? t.sellerId : t.buyerId);
     final other = otherId == null ? null : repo.getSeller(otherId);
 
+    final l10n = AppLocalizations.of(context)!;
+
     return MarketShell(
-      title: ad?.title ?? 'Chat',
+      title: ad?.title ?? l10n.marketChatTitle,
       showBottomNav: false,
       actions: [
         if (other?.showPhone == true)
@@ -125,10 +128,7 @@ class _MarketChatScreenState extends ConsumerState<MarketChatScreen> {
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: MarketSafetyBanner(
-              compact: true,
-              message: MarketSafetyCopy.chatBanner,
-            ),
+            child: MarketSafetyBanner(compact: true),
           ),
           Expanded(
             child: ListView.builder(
@@ -187,8 +187,8 @@ class _MarketChatScreenState extends ConsumerState<MarketChatScreen> {
                     child: TextField(
                       controller: _controller,
                       style: const TextStyle(color: MaekelColors.ink),
-                      decoration: const InputDecoration(
-                        hintText: 'Message…',
+                      decoration: InputDecoration(
+                        hintText: l10n.marketMessageHint,
                       ),
                       onSubmitted: (_) => _send(),
                     ),

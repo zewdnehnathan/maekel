@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketShell extends StatelessWidget {
   const MarketShell({
@@ -93,22 +94,22 @@ class MarketShell extends StatelessWidget {
                     context.go(AppRoutes.marketMessages);
                 }
               },
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.grid_view_rounded),
-                  label: 'Browse',
+                  icon: const Icon(Icons.grid_view_rounded),
+                  label: AppLocalizations.of(context)!.marketNavBrowse,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.storefront_outlined),
-                  label: 'My ads',
+                  icon: const Icon(Icons.storefront_outlined),
+                  label: AppLocalizations.of(context)!.marketNavMyAds,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.favorite_border_rounded),
-                  label: 'Saved',
+                  icon: const Icon(Icons.favorite_border_rounded),
+                  label: AppLocalizations.of(context)!.marketNavSaved,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.chat_bubble_outline_rounded),
-                  label: 'Chats',
+                  icon: const Icon(Icons.chat_bubble_outline_rounded),
+                  label: AppLocalizations.of(context)!.marketNavChats,
                 ),
               ],
             )

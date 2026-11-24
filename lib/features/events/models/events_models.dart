@@ -1,3 +1,5 @@
+import '../../../l10n/app_localizations.dart';
+
 enum EventStatus {
   draft,
   pending,
@@ -44,6 +46,7 @@ class MaekelEvent {
     required this.paymentMode,
     required this.status,
     this.coverUrl,
+    this.imageUrls = const [],
     this.checkInCode,
     this.rejectionReason,
     this.createdAt,
@@ -69,6 +72,7 @@ class MaekelEvent {
   final EventPaymentMode paymentMode;
   final EventStatus status;
   final String? coverUrl;
+  final List<String> imageUrls;
   final String? checkInCode;
   final String? rejectionReason;
   final DateTime? createdAt;
@@ -78,9 +82,19 @@ class MaekelEvent {
   bool get isSoldOut => seatsLeft <= 0;
   bool get isFree => priceEtb <= 0 || paymentMode == EventPaymentMode.free;
 
-  String get priceLabel {
-    if (isFree && priceEtb <= 0) return 'Free';
-    return 'ETB $priceEtb${paymentMode == EventPaymentMode.payAtDoor ? ' · pay at door' : ''}';
+  List<String> get displayImageUrls {
+    if (imageUrls.isNotEmpty) return imageUrls;
+    final cover = coverUrl;
+    if (cover != null && cover.isNotEmpty) return [cover];
+    return const [];
+  }
+
+  String priceLabelLocalized(AppLocalizations l10n) {
+    if (isFree && priceEtb <= 0) return l10n.eventsFree;
+    if (paymentMode == EventPaymentMode.payAtDoor) {
+      return l10n.eventsPricePayDoor(priceEtb);
+    }
+    return '${l10n.currencyEtb} $priceEtb';
   }
 }
 
@@ -234,4 +248,36 @@ TicketStatus parseTicketStatus(String raw) {
 DateTime? parseDt(Object? raw) {
   if (raw == null) return null;
   return DateTime.tryParse('$raw')?.toLocal();
+}
+
+extension EventStatusL10n on EventStatus {
+  String localized(AppLocalizations l10n) {
+    switch (this) {
+      case EventStatus.draft:
+        return l10n.eventStatusDraft;
+      case EventStatus.pending:
+        return l10n.pending;
+      case EventStatus.approved:
+        return l10n.approved;
+      case EventStatus.rejected:
+        return l10n.eventStatusRejected;
+      case EventStatus.cancelled:
+        return l10n.rideStatusCancelled;
+      case EventStatus.ended:
+        return l10n.eventStatusEnded;
+    }
+  }
+}
+
+extension TicketStatusL10n on TicketStatus {
+  String localized(AppLocalizations l10n) {
+    switch (this) {
+      case TicketStatus.reserved:
+        return l10n.ticketStatusReserved;
+      case TicketStatus.checkedIn:
+        return l10n.ticketStatusCheckedIn;
+      case TicketStatus.cancelled:
+        return l10n.rideStatusCancelled;
+    }
+  }
 }

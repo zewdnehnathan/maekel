@@ -7,6 +7,7 @@ import '../components/ride_shell.dart';
 import '../models/ride_models.dart';
 import '../services/api_ride_repository.dart';
 import '../providers/ride_providers.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RideOpsScreen extends ConsumerStatefulWidget {
   const RideOpsScreen({super.key});
@@ -33,7 +34,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
     if (repo is! ApiRideRepository) {
       setState(() {
         _loading = false;
-        _error = 'Ride ops requires API mode.';
+        _error = AppLocalizations.of(context)!.rideOpsApiOnly;
       });
       return;
     }
@@ -70,7 +71,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
       if (!mounted) return;
       setState(() => _config = saved);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fare config saved')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.rideFareConfigSaved)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -83,9 +84,10 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
   @override
   Widget build(BuildContext context) {
     final config = _config;
+    final l10n = AppLocalizations.of(context)!;
 
     return RideShell(
-      title: 'Ride ops',
+      title: l10n.rideOpsTitle,
       showBottomNav: false,
       child: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -97,7 +99,10 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                     accent: MaekelColors.danger,
                     child: Text(_error!),
                   ),
-                Text('FARE CONFIG', style: Theme.of(context).textTheme.labelLarge),
+                Text(
+                  AppLocalizations.of(context)!.rideFareConfig.toUpperCase(),
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
                 const SizedBox(height: 8),
                 if (config != null)
                   GlassPanel(
@@ -105,7 +110,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                     child: Column(
                       children: [
                         _numField(
-                          'Base ETB',
+                          l10n.rideBaseEtb,
                           config.baseEtb.toDouble(),
                           (v) => setState(
                             () => _config = RideFareConfig(
@@ -119,7 +124,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                           ),
                         ),
                         _numField(
-                          'Per km ETB',
+                          l10n.ridePerKmEtb,
                           config.perKmEtb,
                           (v) => setState(
                             () => _config = RideFareConfig(
@@ -133,7 +138,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                           ),
                         ),
                         _numField(
-                          'Min fare ETB',
+                          l10n.rideMinFareEtb,
                           config.minFareEtb.toDouble(),
                           (v) => setState(
                             () => _config = RideFareConfig(
@@ -147,7 +152,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                           ),
                         ),
                         _numField(
-                          'Offer radius km',
+                          l10n.rideOfferRadiusKm,
                           config.offerRadiusKm,
                           (v) => setState(
                             () => _config = RideFareConfig(
@@ -163,14 +168,16 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                         const SizedBox(height: 8),
                         FilledButton(
                           onPressed: _saveConfig,
-                          child: const Text('SAVE FARE PARAMS'),
+                          child: Text(AppLocalizations.of(context)!.rideSaveFareParams),
                         ),
                       ],
                     ),
                   ),
                 const SizedBox(height: 18),
                 Text(
-                  'DRIVERS (${_drivers.length})',
+                  AppLocalizations.of(context)!
+                      .rideDrivers(_drivers.length)
+                      .toUpperCase(),
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 8),
@@ -187,8 +194,8 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               Text(
-                                '${d.plate} · ${d.isOnline ? 'Online' : 'Offline'} · '
-                                '${d.isApproved ? 'Approved' : 'Pending'}',
+                                '${d.plate} · ${d.isOnline ? l10n.online : l10n.offline} · '
+                                '${d.isApproved ? l10n.approved : l10n.pending}',
                               ),
                             ],
                           ),
@@ -203,7 +210,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                             );
                             await _load();
                           },
-                          child: Text(d.isApproved ? 'Suspend' : 'Approve'),
+                          child: Text(d.isApproved ? l10n.rideSuspend : l10n.rideApprove),
                         ),
                       ],
                     ),
@@ -212,12 +219,14 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                 ],
                 const SizedBox(height: 10),
                 Text(
-                  'ACTIVE TRIPS (${_active.length})',
+                  AppLocalizations.of(context)!
+                      .rideActiveTrips(_active.length)
+                      .toUpperCase(),
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 8),
                 if (_active.isEmpty)
-                  const Text('No active trips.')
+                  Text(AppLocalizations.of(context)!.rideNoActiveTrips)
                 else
                   for (final trip in _active) ...[
                     GlassPanel(
@@ -225,7 +234,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${trip.status.label} · ${trip.fareEtb} ETB',
+                            '${trip.status.localized(AppLocalizations.of(context)!)} · ${trip.fareEtb} ETB',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           Text(
@@ -237,11 +246,11 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                               if (repo is! ApiRideRepository) return;
                               await repo.opsCancelTrip(
                                 trip.id,
-                                note: 'Cancelled by Ride ops',
+                                note: l10n.rideCancelledByOps,
                               );
                               await _load();
                             },
-                            child: const Text('Force cancel'),
+                            child: Text(AppLocalizations.of(context)!.rideForceCancel),
                           ),
                         ],
                       ),

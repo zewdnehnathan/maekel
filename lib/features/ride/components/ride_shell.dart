@@ -6,6 +6,7 @@ import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RideShell extends ConsumerWidget {
   const RideShell({
@@ -67,7 +68,7 @@ class RideShell extends ConsumerWidget {
                         onPressed: () => context.push(AppRoutes.rideOps),
                         icon: const Icon(Icons.admin_panel_settings_rounded),
                         color: MaekelColors.ride,
-                        tooltip: 'Ride ops',
+                        tooltip: AppLocalizations.of(context)!.adminRideOps,
                       ),
                     ...?actions,
                   ],
@@ -93,18 +94,18 @@ class RideShell extends ConsumerWidget {
                     context.go(AppRoutes.rideDriver);
                 }
               },
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.hail_rounded),
-                  label: 'Ride',
+                  icon: const Icon(Icons.hail_rounded),
+                  label: AppLocalizations.of(context)!.rideNavRide,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.history_rounded),
-                  label: 'Trips',
+                  icon: const Icon(Icons.history_rounded),
+                  label: AppLocalizations.of(context)!.rideNavTrips,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.local_taxi_rounded),
-                  label: 'Drive',
+                  icon: const Icon(Icons.local_taxi_rounded),
+                  label: AppLocalizations.of(context)!.rideNavDrive,
                 ),
               ],
             )

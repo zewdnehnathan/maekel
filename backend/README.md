@@ -2,6 +2,8 @@
 
 TypeScript Fastify microservices with **Postgres DB-per-service**, behind a local gateway.
 
+**New developer full setup (backend + Flutter):** [docs/local-dev-setup.md](../docs/local-dev-setup.md)
+
 ## Services
 
 | Service | Port | Database |
@@ -12,6 +14,8 @@ TypeScript Fastify microservices with **Postgres DB-per-service**, behind a loca
 | food-service | 3003 | `maekel_food` |
 | ride-service | 3004 | `maekel_ride` |
 | chat-service | 3005 | `maekel_chat` |
+| games-service | 3006 | `maekel_games` |
+| events-service | 3007 | `maekel_events` |
 
 Public entry: `http://127.0.0.1:8080`
 

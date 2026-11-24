@@ -4,11 +4,12 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FoodScreen extends ConsumerWidget {
   const FoodScreen({super.key});
@@ -30,26 +31,28 @@ class FoodScreen extends ConsumerWidget {
     final pin = ref.watch(foodCoverageSubcityProvider);
     final session = ref.watch(authProvider).session;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return FoodShell(
-      title: 'Food',
+      title: l10n.foodTitle,
       actions: [
         if (session?.isFoodMerchant == true)
           IconButton(
-            tooltip: 'Merchant console',
+            tooltip: AppLocalizations.of(context)!.foodMerchantConsole,
             onPressed: () => context.push(AppRoutes.foodMerchantConsole),
             icon: const Icon(Icons.storefront_outlined),
             color: MaekelColors.food,
           ),
         if (session?.isFoodRider == true)
           IconButton(
-            tooltip: 'Rider',
+            tooltip: AppLocalizations.of(context)!.foodRider,
             onPressed: () => context.push(AppRoutes.foodRider),
             icon: const Icon(Icons.delivery_dining_outlined),
             color: MaekelColors.food,
           ),
         if (session?.isFoodOps == true)
           IconButton(
-            tooltip: 'Food ops',
+            tooltip: AppLocalizations.of(context)!.foodOps,
             onPressed: () => context.push(AppRoutes.foodOps),
             icon: const Icon(Icons.admin_panel_settings_outlined),
             color: MaekelColors.food,
@@ -68,17 +71,17 @@ class FoodScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Text(
-            'Deliver in Addis',
+            l10n.foodSubtitle,
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 6),
           Text(
-            'Restaurants & groceries · COD · OTP handover',
+            l10n.foodBlurb,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 14),
           Text(
-            'DELIVERY PIN',
+            l10n.foodDeliveryPin.toUpperCase(),
             style: Theme.of(context).textTheme.labelLarge,
           ),
           const SizedBox(height: 8),
@@ -88,7 +91,7 @@ class FoodScreen extends ConsumerWidget {
             children: [
               for (final p in _pins)
                 _KindChip(
-                  label: p,
+                  label: localizedPlace(l10n, p),
                   selected: pin == p,
                   onTap: () =>
                       ref.read(foodCoverageSubcityProvider.notifier).state = p,
@@ -100,8 +103,8 @@ class FoodScreen extends ConsumerWidget {
             onChanged: (v) =>
                 ref.read(foodQueryProvider.notifier).state = v,
             style: const TextStyle(color: MaekelColors.ink),
-            decoration: const InputDecoration(
-              hintText: 'Search merchants or dishes…',
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.foodSearchHint,
               prefixIcon: Icon(Icons.search_rounded, color: MaekelColors.food),
             ),
           ),
@@ -110,19 +113,19 @@ class FoodScreen extends ConsumerWidget {
             spacing: 8,
             children: [
               _KindChip(
-                label: 'All',
+                label: AppLocalizations.of(context)!.all,
                 selected: kind == null,
                 onTap: () =>
                     ref.read(foodKindFilterProvider.notifier).state = null,
               ),
               _KindChip(
-                label: 'Restaurants',
+                label: AppLocalizations.of(context)!.foodRestaurants,
                 selected: kind == MerchantKind.restaurant,
                 onTap: () => ref.read(foodKindFilterProvider.notifier).state =
                     MerchantKind.restaurant,
               ),
               _KindChip(
-                label: 'Groceries',
+                label: AppLocalizations.of(context)!.foodGroceries,
                 selected: kind == MerchantKind.grocery,
                 onTap: () => ref.read(foodKindFilterProvider.notifier).state =
                     MerchantKind.grocery,
@@ -142,13 +145,15 @@ class FoodScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'No merchants deliver to $pin',
+                    l10n.foodNoMerchants(
+                      localizedPlace(l10n, pin ?? ''),
+                    ),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Try another delivery pin nearby.',
+                    l10n.foodTryOtherPin,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
@@ -207,15 +212,18 @@ class FoodScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${m.kind.label} · ${m.subcity} · ★ ${m.rating}',
+                                  '${m.kind.localized(AppLocalizations.of(context)!)} · ${localizedPlace(l10n, m.subcity)} · ★ ${m.rating}',
                                   style:
                                       Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   m.isOpen
-                                      ? '${m.etaMinutes} min · ${m.deliveryFeeEtb} ${AppConstants.currencyCode} fee'
-                                      : 'Closed · ${m.hoursLabel}',
+                                      ? l10n.foodEtaFee(
+                                          m.etaMinutes,
+                                          m.deliveryFeeEtb,
+                                        )
+                                      : l10n.foodClosedHours(m.hoursLabel),
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium

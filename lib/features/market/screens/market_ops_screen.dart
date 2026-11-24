@@ -11,6 +11,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketOpsScreen extends ConsumerStatefulWidget {
   const MarketOpsScreen({super.key});
@@ -96,23 +98,23 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: MaekelColors.panel,
-          title: const Text('Reject ad'),
+          title: Text(AppLocalizations.of(context)!.marketOpsRejectAd),
           content: TextField(
             controller: controller,
             maxLines: 3,
             style: const TextStyle(color: MaekelColors.ink),
-            decoration: const InputDecoration(
-              hintText: 'Reason shown to seller…',
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.marketRejectReasonHint,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Reject'),
+              child: Text(AppLocalizations.of(context)!.reject),
             ),
           ],
         );
@@ -143,7 +145,9 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
       await ref.read(marketRepositoryProvider).resolveReport(
             reportId: report.id,
             action: action,
-            note: action == 'dismiss' ? 'Dismissed' : null,
+            note: action == 'dismiss'
+                ? AppLocalizations.of(context)!.marketDismissed
+                : null,
           );
       await _load();
     } on ApiException catch (e) {
@@ -168,7 +172,7 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: MaekelColors.panel,
-              title: const Text('Add category'),
+              title: Text(AppLocalizations.of(context)!.marketOpsAddCategory),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -176,18 +180,19 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                     TextField(
                       controller: nameController,
                       style: const TextStyle(color: MaekelColors.ink),
-                      decoration: const InputDecoration(
-                        labelText: 'Display name',
-                        hintText: 'e.g. Babies & Kids',
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.marketDisplayName,
+                        hintText:
+                            AppLocalizations.of(context)!.marketDisplayNameHint,
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: idController,
                       style: const TextStyle(color: MaekelColors.ink),
-                      decoration: const InputDecoration(
-                        labelText: 'Id (optional)',
-                        hintText: 'auto from name if empty',
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.marketIdOptional,
+                        hintText: AppLocalizations.of(context)!.marketIdAutoHint,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -195,7 +200,9 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                       // ignore: deprecated_member_use
                       value: iconName,
                       dropdownColor: MaekelColors.panel,
-                      decoration: const InputDecoration(labelText: 'Icon key'),
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.marketIconKey,
+                      ),
                       items: [
                         for (final icon in _iconChoices)
                           DropdownMenuItem(value: icon, child: Text(icon)),
@@ -210,11 +217,11 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
+                  child: Text(AppLocalizations.of(context)!.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Add'),
+                  child: Text(AppLocalizations.of(context)!.add),
                 ),
               ],
             );
@@ -228,7 +235,9 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
     if (name.length < 2) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name must be at least 2 characters.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.marketNameMinChars),
+        ),
       );
       return;
     }
@@ -243,7 +252,11 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Added “${created.name}”.')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.marketAddedName(created.name),
+          ),
+        ),
       );
       await _load();
     } on ApiException catch (e) {
@@ -273,21 +286,27 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: MaekelColors.panel,
-              title: Text('Edit ${category.id}'),
+              title: Text(
+                AppLocalizations.of(context)!.marketEditCategory(category.id),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: nameController,
                     style: const TextStyle(color: MaekelColors.ink),
-                    decoration: const InputDecoration(labelText: 'Display name'),
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.marketDisplayName,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     // ignore: deprecated_member_use
                     value: iconName,
                     dropdownColor: MaekelColors.panel,
-                    decoration: const InputDecoration(labelText: 'Icon key'),
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.marketIconKey,
+                    ),
                     items: [
                       for (final icon in _iconChoices)
                         DropdownMenuItem(value: icon, child: Text(icon)),
@@ -301,11 +320,11 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
+                  child: Text(AppLocalizations.of(context)!.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Save'),
+                  child: Text(AppLocalizations.of(context)!.save),
                 ),
               ],
             );
@@ -319,7 +338,9 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
     if (name.length < 2) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name must be at least 2 characters.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.marketNameMinChars),
+        ),
       );
       return;
     }
@@ -332,7 +353,9 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Updated “$name”.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.marketUpdatedName(name)),
+        ),
       );
       setState(() {});
     } on ApiException catch (e) {
@@ -351,24 +374,24 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: MaekelColors.panel,
-          title: const Text('Max active free ads'),
+          title: Text(AppLocalizations.of(context)!.marketOpsMaxFreeAds),
           content: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
             style: const TextStyle(color: MaekelColors.ink),
-            decoration: const InputDecoration(
-              labelText: 'Limit (1–50)',
-              helperText: 'Per seller: approved + pending count',
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.marketLimitLabel,
+              helperText: AppLocalizations.of(context)!.marketLimitHelper,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Save'),
+              child: Text(AppLocalizations.of(context)!.save),
             ),
           ],
         );
@@ -379,7 +402,9 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
     if (value == null || value < 1 || value > 50) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a number between 1 and 50.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.marketEnterMaxAds),
+        ),
       );
       return;
     }
@@ -390,7 +415,11 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
       if (!mounted) return;
       setState(() => _config = updated);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Max active ads set to $value.')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.marketMaxActiveSet(value),
+          ),
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -407,8 +436,10 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
     final isPlatformAdmin =
         ref.watch(authProvider).session?.isPlatformAdmin ?? false;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return MarketShell(
-      title: 'Ops',
+      title: l10n.marketOpsTitle,
       showBottomNav: false,
       actions: [
         if (isPlatformAdmin)
@@ -416,7 +447,7 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
             onPressed: () => context.push(AppRoutes.adminStaff),
             icon: const Icon(Icons.group_outlined),
             color: MaekelColors.amber,
-            tooltip: 'Staff & admins',
+            tooltip: AppLocalizations.of(context)!.adminTitle,
           ),
         IconButton(
           onPressed: _loading ? null : _load,
@@ -443,13 +474,15 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                     children: [
                       Text(
-                        'PENDING ADS (${queue?.pendingAds.length ?? 0})',
+                        AppLocalizations.of(context)!
+                            .marketOpsPending(queue?.pendingAds.length ?? 0)
+                            .toUpperCase(),
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
                       if (queue == null || queue.pendingAds.isEmpty)
-                        const GlassPanel(
-                          child: Text('Queue empty — nothing to moderate.'),
+                        GlassPanel(
+                          child: Text(AppLocalizations.of(context)!.marketOpsQueueEmpty),
                         )
                       else
                         for (final ad in queue.pendingAds) ...[
@@ -467,7 +500,7 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${ad.priceEtb} ${AppConstants.currencyCode} · ${ad.subcity}',
+                                  '${ad.priceEtb} ${AppConstants.currencyCode} · ${localizedPlace(AppLocalizations.of(context)!, ad.subcity)}',
                                   style:
                                       Theme.of(context).textTheme.bodyMedium,
                                 ),
@@ -487,17 +520,17 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                       onPressed: () => context.push(
                                         '${AppRoutes.market}/ads/${ad.id}',
                                       ),
-                                      child: const Text('Open'),
+                                      child: Text(AppLocalizations.of(context)!.open),
                                     ),
                                     FilledButton(
                                       onPressed: () => _approve(ad),
-                                      child: const Text('Approve'),
+                                      child: Text(AppLocalizations.of(context)!.approve),
                                     ),
                                     TextButton(
                                       onPressed: () => _reject(ad),
-                                      child: const Text(
-                                        'Reject',
-                                        style: TextStyle(
+                                      child: Text(
+                                        l10n.reject,
+                                        style: const TextStyle(
                                           color: MaekelColors.danger,
                                         ),
                                       ),
@@ -509,12 +542,11 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                             .suspendSeller(
                                               sellerId: ad.sellerId,
                                               suspended: true,
-                                              note:
-                                                  'Suspended from ops queue',
+                                              note: l10n.marketSuspendedFromOps,
                                             );
                                         await _load();
                                       },
-                                      child: const Text('Suspend seller'),
+                                      child: Text(AppLocalizations.of(context)!.marketOpsSuspendSeller),
                                     ),
                                   ],
                                 ),
@@ -525,13 +557,15 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                         ],
                       const SizedBox(height: 18),
                       Text(
-                        'OPEN REPORTS (${queue?.reports.length ?? 0})',
+                        AppLocalizations.of(context)!
+                            .marketOpsReports(queue?.reports.length ?? 0)
+                            .toUpperCase(),
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
                       if (queue == null || queue.reports.isEmpty)
-                        const GlassPanel(
-                          child: Text('No open reports.'),
+                        GlassPanel(
+                          child: Text(AppLocalizations.of(context)!.marketOpsNoReports),
                         )
                       else
                         for (final report in queue.reports) ...[
@@ -561,30 +595,30 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                       onPressed: () => context.push(
                                         '${AppRoutes.market}/ads/${report.adId}',
                                       ),
-                                      child: const Text('Open ad'),
+                                      child: Text(AppLocalizations.of(context)!.marketOpsOpenAd),
                                     ),
                                     TextButton(
                                       onPressed: () => _resolveReport(
                                         report,
                                         action: 'dismiss',
                                       ),
-                                      child: const Text('Dismiss'),
+                                      child: Text(AppLocalizations.of(context)!.dismiss),
                                     ),
                                     TextButton(
                                       onPressed: () => _resolveReport(
                                         report,
                                         action: 'unpublish',
                                       ),
-                                      child: const Text('Unpublish'),
+                                      child: Text(AppLocalizations.of(context)!.marketOpsUnpublish),
                                     ),
                                     TextButton(
                                       onPressed: () => _resolveReport(
                                         report,
                                         action: 'suspend',
                                       ),
-                                      child: const Text(
-                                        'Suspend',
-                                        style: TextStyle(
+                                      child: Text(
+                                        l10n.suspend,
+                                        style: const TextStyle(
                                           color: MaekelColors.danger,
                                         ),
                                       ),
@@ -601,22 +635,22 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              'CATEGORY CONFIG (${categories.length})',
+                              AppLocalizations.of(context)!
+                                  .marketOpsCategories(categories.length)
+                                  .toUpperCase(),
                               style: Theme.of(context).textTheme.labelLarge,
                             ),
                           ),
                           FilledButton.tonal(
                             onPressed: _addCategory,
-                            child: const Text('Add category'),
+                            child: Text(AppLocalizations.of(context)!.marketOpsAddCategory),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       if (categories.isEmpty)
-                        const GlassPanel(
-                          child: Text(
-                            'No categories yet. Add the first one to unlock Sell.',
-                          ),
+                        GlassPanel(
+                          child: Text(l10n.marketOpsNoCategories),
                         )
                       else
                         for (final category in categories) ...[
@@ -647,7 +681,10 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                             .titleMedium,
                                       ),
                                       Text(
-                                        'id: ${category.id} · icon: ${category.iconName}',
+                                        l10n.marketCategoryMeta(
+                                          category.id,
+                                          category.iconName,
+                                        ),
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium,
@@ -657,7 +694,7 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                 ),
                                 TextButton(
                                   onPressed: () => _editCategory(category),
-                                  child: const Text('Edit'),
+                                  child: Text(AppLocalizations.of(context)!.edit),
                                 ),
                               ],
                             ),
@@ -666,7 +703,7 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                         ],
                       const SizedBox(height: 8),
                       Text(
-                        'LIMITS',
+                        l10n.marketOpsLimits.toUpperCase(),
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
@@ -680,13 +717,15 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Max active free ads',
+                                    l10n.marketOpsMaxFreeAds,
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium,
                                   ),
                                   Text(
-                                    'Current: ${_config?.maxActiveFreeAds ?? '—'} per seller',
+                                    l10n.marketCurrentPerSeller(
+                                      _config?.maxActiveFreeAds ?? '—',
+                                    ),
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium,
@@ -696,7 +735,7 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                             ),
                             TextButton(
                               onPressed: _editMaxActiveAds,
-                              child: const Text('Edit'),
+                              child: Text(AppLocalizations.of(context)!.edit),
                             ),
                           ],
                         ),

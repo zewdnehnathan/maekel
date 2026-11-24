@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
+import '../../../l10n/app_localizations.dart';
 
 class EventsShell extends StatelessWidget {
   const EventsShell({
@@ -34,6 +35,7 @@ class EventsShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final loc = GoRouterState.of(context).uri.toString();
     final index = _indexForLocation(loc);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       extendBody: true,
@@ -88,21 +90,21 @@ class EventsShell extends StatelessWidget {
                     context.go(AppRoutes.eventsTickets);
                 }
               },
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.event_outlined),
-                  selectedIcon: Icon(Icons.event),
-                  label: 'Browse',
+                  icon: const Icon(Icons.event_outlined),
+                  selectedIcon: const Icon(Icons.event),
+                  label: l10n.eventsNavBrowse,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.campaign_outlined),
-                  selectedIcon: Icon(Icons.campaign),
-                  label: 'Host',
+                  icon: const Icon(Icons.campaign_outlined),
+                  selectedIcon: const Icon(Icons.campaign),
+                  label: l10n.eventsNavHost,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.confirmation_number_outlined),
-                  selectedIcon: Icon(Icons.confirmation_number),
-                  label: 'Tickets',
+                  icon: const Icon(Icons.confirmation_number_outlined),
+                  selectedIcon: const Icon(Icons.confirmation_number),
+                  label: l10n.eventsTickets,
                 ),
               ],
             )

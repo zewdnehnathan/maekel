@@ -1,3 +1,5 @@
+import '../../../l10n/app_localizations.dart';
+
 enum AdCondition { brandNew, used, refurbished }
 
 enum AdStatus { pending, approved, rejected, sold }
@@ -14,6 +16,18 @@ class MarketCategory {
   final String id;
   final String name;
   final String iconName;
+
+  String localized(AppLocalizations l10n) {
+    return switch (id) {
+      'phones' => l10n.marketCatPhones,
+      'electronics' => l10n.marketCatElectronics,
+      'vehicles' => l10n.marketCatVehicles,
+      'property' => l10n.marketCatProperty,
+      'furniture' => l10n.marketCatFurniture,
+      'fashion' => l10n.marketCatFashion,
+      _ => name,
+    };
+  }
 }
 
 class MarketSeller {
@@ -296,6 +310,17 @@ extension AdConditionLabel on AdCondition {
         return 'Refurbished';
     }
   }
+
+  String localized(AppLocalizations l10n) {
+    switch (this) {
+      case AdCondition.brandNew:
+        return l10n.marketConditionNew;
+      case AdCondition.used:
+        return l10n.marketConditionUsed;
+      case AdCondition.refurbished:
+        return l10n.marketConditionRefurbished;
+    }
+  }
 }
 
 extension AdStatusLabel on AdStatus {
@@ -309,6 +334,19 @@ extension AdStatusLabel on AdStatus {
         return 'Declined';
       case AdStatus.sold:
         return 'Sold';
+    }
+  }
+
+  String localized(AppLocalizations l10n) {
+    switch (this) {
+      case AdStatus.pending:
+        return l10n.marketStatusPending;
+      case AdStatus.approved:
+        return l10n.marketStatusActive;
+      case AdStatus.rejected:
+        return l10n.marketStatusDeclined;
+      case AdStatus.sold:
+        return l10n.marketStatusSold;
     }
   }
 }

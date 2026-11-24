@@ -8,6 +8,7 @@ import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/glass_panel.dart';
+import '../../../core/locale/auth_l10n.dart';
 import '../../../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 
@@ -39,7 +40,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final auth = ref.watch(authProvider);
     final phone = auth.pendingPhoneE164 ?? '';
 
@@ -69,16 +69,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'VERIFY CHANNEL',
+                    AppLocalizations.of(context)!.authVerifyChannel.toUpperCase(),
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    l10n.otpTitle,
+                    AppLocalizations.of(context)!.otpTitle,
                     style: Theme.of(context).textTheme.displayMedium,
                   ),
                   const SizedBox(height: 8),
-                  Text(l10n.otpSubtitle),
+                  Text(AppLocalizations.of(context)!.otpSubtitle),
                   if (phone.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -97,11 +97,17 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                           controller: _controller,
                           keyboardType: TextInputType.number,
                           textInputAction: TextInputAction.done,
-                          style: const TextStyle(
+                          style: MaekelFonts.latinUi(
                             color: MaekelColors.ink,
                             letterSpacing: 8,
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
+                            height: 1.2,
+                          ),
+                          strutStyle: const StrutStyle(
+                            fontSize: 22,
+                            height: 1.2,
+                            forceStrutHeight: true,
                           ),
                           textAlign: TextAlign.center,
                           inputFormatters: [
@@ -111,14 +117,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                             ),
                           ],
                           decoration: InputDecoration(
-                            labelText: l10n.otpHint,
+                            labelText: AppLocalizations.of(context)!.otpHint,
                             alignLabelWithHint: true,
+                            labelStyle: MaekelFonts.latinUi(
+                              fontSize: 14,
+                              color: MaekelColors.muted,
+                            ),
                           ),
                           validator: (value) {
                             final digits =
                                 (value ?? '').replaceAll(RegExp(r'\D'), '');
                             if (digits.length != AppConstants.otpLength) {
-                              return 'Enter the ${AppConstants.otpLength}-digit code';
+                              return AppLocalizations.of(context)!.authOtpInvalid;
                             }
                             return null;
                           },
@@ -127,7 +137,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         if (auth.errorMessage != null) ...[
                           const SizedBox(height: 12),
                           Text(
-                            auth.errorMessage!,
+                            resolveAuthErrorMessage(
+                              AppLocalizations.of(context)!,
+                              auth.errorMessage,
+                            ),
                             style:
                                 const TextStyle(color: MaekelColors.danger),
                           ),
@@ -145,17 +158,30 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                               ),
                             ],
                           ),
-                          child: FilledButton(
-                            onPressed: auth.isSubmitting ? null : _verify,
-                            child: auth.isSubmitting
-                                ? const SizedBox(
-                                    height: 22,
-                                    width: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.4,
+                          child: SizedBox(
+                            height: 54,
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: auth.isSubmitting ? null : _verify,
+                              child: auth.isSubmitting
+                                  ? const SizedBox(
+                                      height: 22,
+                                      width: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.4,
+                                      ),
+                                    )
+                                  : Text(
+                                      AppLocalizations.of(context)!.verifyLabel,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      strutStyle: const StrutStyle(
+                                        fontSize: 16,
+                                        height: 1.2,
+                                        forceStrutHeight: true,
+                                      ),
                                     ),
-                                  )
-                                : Text(l10n.verifyLabel.toUpperCase()),
+                            ),
                           ),
                         ),
                       ],

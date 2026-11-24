@@ -1,5 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 enum TripStatus {
   quoting,
   requested,
@@ -245,6 +247,7 @@ class DriverSession {
 }
 
 extension TripStatusLabel on TripStatus {
+  /// English fallback (logs / non-UI). Prefer [localized] in widgets.
   String get label {
     switch (this) {
       case TripStatus.quoting:
@@ -265,6 +268,29 @@ extension TripStatusLabel on TripStatus {
         return 'Completed';
       case TripStatus.cancelled:
         return 'Cancelled';
+    }
+  }
+
+  String localized(AppLocalizations l10n) {
+    switch (this) {
+      case TripStatus.quoting:
+        return l10n.rideStatusQuote;
+      case TripStatus.requested:
+        return l10n.rideStatusRequested;
+      case TripStatus.matching:
+        return l10n.rideStatusMatching;
+      case TripStatus.assigned:
+        return l10n.rideStatusAssigned;
+      case TripStatus.arriving:
+        return l10n.rideStatusArriving;
+      case TripStatus.arrived:
+        return l10n.rideStatusArrived;
+      case TripStatus.inProgress:
+        return l10n.rideStatusInProgress;
+      case TripStatus.completed:
+        return l10n.rideStatusCompleted;
+      case TripStatus.cancelled:
+        return l10n.rideStatusCancelled;
     }
   }
 }

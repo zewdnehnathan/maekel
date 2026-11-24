@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/widgets/glass_panel.dart';
+import '../../../l10n/app_localizations.dart';
 import '../models/games_models.dart';
 
 class AddisLeaderboardCard extends StatelessWidget {
@@ -35,7 +36,7 @@ class AddisLeaderboardCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'TOP 3 · ADDIS · ${game.label.toUpperCase()}',
+                  AppLocalizations.of(context)!.gamesTop3Title(game.localized(AppLocalizations.of(context)!)),
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: MaekelColors.games,
                         fontSize: 11,
@@ -47,7 +48,7 @@ class AddisLeaderboardCard extends StatelessWidget {
           const SizedBox(height: 12),
           if (entries.isEmpty)
             Text(
-              'No scores yet — be the first in Addis.',
+              AppLocalizations.of(context)!.gamesNoScores,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: MaekelColors.muted,
                   ),

@@ -8,6 +8,8 @@ import '../components/ad_card.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketScreen extends ConsumerWidget {
   const MarketScreen({super.key});
@@ -40,24 +42,24 @@ class MarketScreen extends ConsumerWidget {
     final subcities = ref.watch(marketSubcitiesProvider);
 
     return MarketShell(
-      title: 'Market',
+      title: AppLocalizations.of(context)!.marketTitle,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.marketSell),
         backgroundColor: MaekelColors.signal,
         foregroundColor: MaekelColors.voidBlack,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('SELL'),
+        label: Text(AppLocalizations.of(context)!.marketSellAction),
       ),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
           Text(
-            'Buy & sell in Addis',
+            AppLocalizations.of(context)!.marketSubtitle,
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 6),
           Text(
-            'Classifieds with chat. Inspect before you pay.',
+            AppLocalizations.of(context)!.marketBlurb,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
@@ -65,8 +67,8 @@ class MarketScreen extends ConsumerWidget {
             onChanged: (v) =>
                 ref.read(marketFiltersProvider.notifier).setQuery(v),
             style: const TextStyle(color: MaekelColors.ink),
-            decoration: const InputDecoration(
-              hintText: 'Search phones, cars, furniture…',
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.marketSearchHint,
               prefixIcon: Icon(Icons.search_rounded, color: MaekelColors.signal),
             ),
           ),
@@ -76,28 +78,39 @@ class MarketScreen extends ConsumerWidget {
             child: Row(
               children: [
                 _FilterChip(
-                  label: filters.subcity ?? 'All areas',
+                  label: filters.subcity != null
+                      ? localizedPlace(
+                          AppLocalizations.of(context)!,
+                          filters.subcity!,
+                        )
+                      : AppLocalizations.of(context)!.marketAllAreas,
                   selected: filters.subcity != null,
                   onTap: () => _pickSubcity(context, ref, subcities),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: filters.condition?.label ?? 'Condition',
+                  label: filters.condition?.localized(
+                        AppLocalizations.of(context)!,
+                      ) ??
+                      AppLocalizations.of(context)!.marketCondition,
                   selected: filters.condition != null,
                   onTap: () => _pickCondition(context, ref),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: _priceLabel(filters),
+                  label: _priceLabel(context, filters),
                   selected: filters.minPrice != null || filters.maxPrice != null,
                   onTap: () => _pickPrice(context, ref),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
                   label: switch (filters.sort) {
-                    AdSort.newest => 'Newest',
-                    AdSort.priceLow => 'Price ↑',
-                    AdSort.priceHigh => 'Price ↓',
+                    AdSort.newest =>
+                      AppLocalizations.of(context)!.marketSortNewest,
+                    AdSort.priceLow =>
+                      AppLocalizations.of(context)!.marketSortPriceUpChip,
+                    AdSort.priceHigh =>
+                      AppLocalizations.of(context)!.marketSortPriceDownChip,
                   },
                   selected: true,
                   onTap: () => _pickSort(context, ref),
@@ -110,7 +123,7 @@ class MarketScreen extends ConsumerWidget {
                     filters.query.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   _FilterChip(
-                    label: 'Clear',
+                    label: AppLocalizations.of(context)!.clear,
                     selected: false,
                     onTap: () =>
                         ref.read(marketFiltersProvider.notifier).reset(),
@@ -121,7 +134,7 @@ class MarketScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'CATEGORIES',
+            AppLocalizations.of(context)!.marketCategories.toUpperCase(),
             style: Theme.of(context).textTheme.labelLarge,
           ),
           const SizedBox(height: 10),
@@ -162,7 +175,7 @@ class MarketScreen extends ConsumerWidget {
                         Icon(_iconFor(c.iconName), color: MaekelColors.amber),
                         const Spacer(),
                         Text(
-                          c.name,
+                          c.localized(AppLocalizations.of(context)!),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -182,12 +195,12 @@ class MarketScreen extends ConsumerWidget {
           Row(
             children: [
               Text(
-                'NEAR YOU',
+                AppLocalizations.of(context)!.marketNearYou.toUpperCase(),
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const Spacer(),
               Text(
-                '${ads.length} ads',
+                AppLocalizations.of(context)!.marketAdsCount(ads.length),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -197,7 +210,7 @@ class MarketScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),
               child: Text(
-                'No listings match. Try another area or clear filters.',
+                AppLocalizations.of(context)!.marketNoMatch,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -250,7 +263,7 @@ class MarketScreen extends ConsumerWidget {
           child: ListView(
             children: [
               ListTile(
-                title: const Text('All areas'),
+                title: Text(AppLocalizations.of(context)!.marketAllAreas),
                 trailing: current == null
                     ? const Icon(Icons.check, color: MaekelColors.signal)
                     : null,
@@ -258,7 +271,9 @@ class MarketScreen extends ConsumerWidget {
               ),
               ...subcities.map(
                 (s) => ListTile(
-                  title: Text(s),
+                  title: Text(
+                    localizedPlace(AppLocalizations.of(context)!, s),
+                  ),
                   trailing: current == s
                       ? const Icon(Icons.check, color: MaekelColors.signal)
                       : null,
@@ -276,13 +291,16 @@ class MarketScreen extends ConsumerWidget {
         );
   }
 
-  String _priceLabel(MarketFilters filters) {
+  String _priceLabel(BuildContext context, MarketFilters filters) {
+    final l10n = AppLocalizations.of(context)!;
     final min = filters.minPrice;
     final max = filters.maxPrice;
-    if (min != null && max != null) return 'ETB $min–$max';
-    if (min != null) return 'ETB $min+';
-    if (max != null) return 'Up to ETB $max';
-    return 'Price range';
+    if (min != null && max != null) {
+      return l10n.marketPriceRangeMinMax(min, max);
+    }
+    if (min != null) return l10n.marketPriceRangeMinPlus(min);
+    if (max != null) return l10n.marketPriceRangeUpTo(max);
+    return l10n.marketPriceRange;
   }
 
   Future<void> _pickPrice(BuildContext context, WidgetRef ref) async {
@@ -311,7 +329,7 @@ class MarketScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Price range (ETB)',
+                  AppLocalizations.of(context)!.marketPriceRangeEtb,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
@@ -319,9 +337,9 @@ class MarketScreen extends ConsumerWidget {
                   controller: minController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(color: MaekelColors.ink),
-                  decoration: const InputDecoration(
-                    labelText: 'Minimum',
-                    hintText: 'Any',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.marketMinimum,
+                    hintText: AppLocalizations.of(context)!.marketAny,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -329,9 +347,9 @@ class MarketScreen extends ConsumerWidget {
                   controller: maxController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(color: MaekelColors.ink),
-                  decoration: const InputDecoration(
-                    labelText: 'Maximum',
-                    hintText: 'Any',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.marketMaximum,
+                    hintText: AppLocalizations.of(context)!.marketAny,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -345,7 +363,7 @@ class MarketScreen extends ConsumerWidget {
                               .setPriceRange();
                           Navigator.pop(context, true);
                         },
-                        child: const Text('Clear'),
+                        child: Text(AppLocalizations.of(context)!.clear),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -356,9 +374,10 @@ class MarketScreen extends ConsumerWidget {
                           final max = int.tryParse(maxController.text.trim());
                           if (min != null && max != null && min > max) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text(
-                                  'Minimum cannot be higher than maximum.',
+                                  AppLocalizations.of(context)!
+                                      .marketMinMaxError,
                                 ),
                               ),
                             );
@@ -370,7 +389,7 @@ class MarketScreen extends ConsumerWidget {
                               );
                           Navigator.pop(context, true);
                         },
-                        child: const Text('Apply'),
+                        child: Text(AppLocalizations.of(context)!.apply),
                       ),
                     ),
                   ],
@@ -397,12 +416,12 @@ class MarketScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: const Text('Any condition'),
+                title: Text(AppLocalizations.of(context)!.marketAnyCondition),
                 onTap: () => Navigator.pop(context, null),
               ),
               ...AdCondition.values.map(
                 (c) => ListTile(
-                  title: Text(c.label),
+                  title: Text(c.localized(AppLocalizations.of(context)!)),
                   trailing: current == c
                       ? const Icon(Icons.check, color: MaekelColors.signal)
                       : null,
@@ -430,9 +449,12 @@ class MarketScreen extends ConsumerWidget {
               for (final s in AdSort.values)
                 ListTile(
                   title: Text(switch (s) {
-                    AdSort.newest => 'Newest',
-                    AdSort.priceLow => 'Price: low to high',
-                    AdSort.priceHigh => 'Price: high to low',
+                    AdSort.newest =>
+                      AppLocalizations.of(context)!.marketSortNewest,
+                    AdSort.priceLow =>
+                      AppLocalizations.of(context)!.marketSortPriceLow,
+                    AdSort.priceHigh =>
+                      AppLocalizations.of(context)!.marketSortPriceHigh,
                   }),
                   trailing: current == s
                       ? const Icon(Icons.check, color: MaekelColors.signal)

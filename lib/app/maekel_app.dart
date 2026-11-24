@@ -1,10 +1,11 @@
-import 'package:cupertino_ui/cupertino_ui.dart' show GlobalCupertinoLocalizations;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
     show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/locale/fallback_material_localizations.dart';
+import '../core/locale/locale_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -18,20 +19,24 @@ class MaekelApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final materialLocale = ref.watch(materialLocaleProvider);
 
     return MaterialApp.router(
       title: 'Maekel',
       debugShowCheckedModeBanner: false,
       theme: buildMaekelTheme(),
       themeMode: ThemeMode.dark,
+      themeAnimationDuration: Duration.zero,
       routerConfig: router,
-      locale: const Locale('en'),
+      locale: materialLocale,
       supportedLocales: AppLocalizations.supportedLocales,
+      // Claim Material/Cupertino support for om/aa/so/ti via English fallback.
+      // Without this, auth fields and bottom sheets go blank after language switch.
       localizationsDelegates: const [
         AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
+        FallbackMaterialLocalizationsDelegate(),
         GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
+        FallbackCupertinoLocalizationsDelegate(),
       ],
       builder: (context, child) {
         final content = child ?? const SizedBox.shrink();

@@ -8,6 +8,8 @@ import '../components/ride_map.dart';
 import '../components/ride_shell.dart';
 import '../models/ride_models.dart';
 import '../providers/ride_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RideTripScreen extends ConsumerStatefulWidget {
   const RideTripScreen({super.key, required this.tripId});
@@ -27,10 +29,10 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
     final repo = ref.watch(rideRepositoryProvider);
 
     if (trip == null) {
-      return const RideShell(
-        title: 'Trip',
+      return RideShell(
+        title: AppLocalizations.of(context)!.rideTripTitle,
         showBottomNav: false,
-        child: Center(child: Text('Trip not found')),
+        child: Center(child: Text(AppLocalizations.of(context)!.rideTripNotFound)),
       );
     }
 
@@ -48,9 +50,11 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
         );
     final mapPickup = trip.pickupPoint ?? pickup?.point;
     final mapDropoff = trip.dropoffPoint ?? dropoff?.point;
+    final l10n = AppLocalizations.of(context)!;
+    final vehicleLabel = localizedVehicleClass(l10n, trip.vehicleClass);
 
     return RideShell(
-      title: 'Trip',
+      title: AppLocalizations.of(context)!.rideTripTitle,
       showBottomNav: false,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -68,20 +72,37 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  trip.status.label.toUpperCase(),
+                  trip.status.localized(AppLocalizations.of(context)!).toUpperCase(),
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${trip.fareEtb} ETB · ${trip.vehicleClass}',
+                  l10n.rideVehicleFare(
+                    trip.fareEtb,
+                    vehicleLabel,
+                  ),
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
                         fontSize: 32,
                         color: MaekelColors.signal,
                       ),
                 ),
                 const SizedBox(height: 8),
-                Text('From: ${pickup?.name ?? trip.pickupId}'),
-                Text('To: ${dropoff?.name ?? trip.dropoffId}'),
+                Text(
+                  l10n.rideFrom(
+                    localizedPlace(
+                      l10n,
+                      pickup?.name ?? trip.pickupId,
+                    ),
+                  ),
+                ),
+                Text(
+                  l10n.rideTo(
+                    localizedPlace(
+                      l10n,
+                      dropoff?.name ?? trip.dropoffId,
+                    ),
+                  ),
+                ),
                 if (trip.etaMinutes != null &&
                     (trip.status == TripStatus.matching ||
                         trip.status == TripStatus.assigned ||
@@ -89,7 +110,8 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
                         trip.status == TripStatus.requested)) ...[
                   const SizedBox(height: 6),
                   Text(
-                    'Driver ETA about ${trip.etaMinutes} min',
+                    AppLocalizations.of(context)!
+                        .rideDriverEta(trip.etaMinutes!),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: MaekelColors.signal,
                         ),
@@ -98,8 +120,8 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
                 const SizedBox(height: 8),
                 Text(
                   trip.wasNoDriver
-                      ? 'No driver was available. Go back and try again.'
-                      : 'Pay cash at complete — fare locked at request.',
+                      ? AppLocalizations.of(context)!.rideNoDriverAvailable
+                      : AppLocalizations.of(context)!.ridePayCashLocked,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -110,7 +132,7 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
             GlassPanel(
               accent: MaekelColors.danger,
               child: Text(
-                'No online drivers nearby. Ask a test driver to go Online on Drive, then Request again.',
+                AppLocalizations.of(context)!.rideNoDrivers,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -137,12 +159,17 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         Text(
-                          '${driver.carModel} · ${driver.plate} · ★ ${driver.rating}',
+                          AppLocalizations.of(context)!.rideDriverMeta(
+                            driver.carModel,
+                            driver.plate,
+                            driver.rating,
+                          ),
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         if (trip.etaMinutes != null)
                           Text(
-                            'Arriving in about ${trip.etaMinutes} min',
+                            AppLocalizations.of(context)!
+                                .rideArrivingIn(trip.etaMinutes!),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                       ],
@@ -157,7 +184,7 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
                       foregroundColor: MaekelColors.voidBlack,
                     ),
                     icon: const Icon(Icons.call_rounded),
-                    tooltip: 'Call driver',
+                    tooltip: AppLocalizations.of(context)!.rideCallDriver,
                   ),
                 ],
               ),
@@ -177,13 +204,13 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
                   }
                 }
               },
-              child: const Text('CANCEL TRIP'),
+              child: Text(AppLocalizations.of(context)!.rideCancelTrip),
             ),
           if (trip.status == TripStatus.completed &&
               trip.passengerRating == null) ...[
             const SizedBox(height: 16),
             Text(
-              'Rate your driver',
+              AppLocalizations.of(context)!.rideRateDriver,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             Slider(
@@ -199,12 +226,15 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
               onPressed: () {
                 ref.read(rideRepositoryProvider).rateTrip(trip.id, _rating);
               },
-              child: const Text('SUBMIT RATING'),
+              child: Text(AppLocalizations.of(context)!.rideSubmitRating),
             ),
           ],
           if (trip.passengerRating != null) ...[
             const SizedBox(height: 12),
-            Text('You rated ${trip.passengerRating}★'),
+            Text(
+              AppLocalizations.of(context)!
+                  .rideYouRated(trip.passengerRating!),
+            ),
           ],
         ],
       ),

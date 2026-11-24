@@ -4,10 +4,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
-import '../../../core/constants/app_constants.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FoodMerchantScreen extends ConsumerWidget {
   const FoodMerchantScreen({super.key, required this.merchantId});
@@ -20,11 +21,13 @@ class FoodMerchantScreen extends ConsumerWidget {
     final menu = ref.watch(foodMenuProvider(merchantId));
     final cart = ref.watch(foodCartProvider);
 
+    final l10n = AppLocalizations.of(context)!;
+
     if (merchant == null) {
-      return const FoodShell(
-        title: 'Merchant',
+      return FoodShell(
+        title: l10n.foodMerchantTitle,
         showBottomNav: false,
-        child: Center(child: Text('Not found')),
+        child: Center(child: Text(l10n.notFound)),
       );
     }
 
@@ -37,7 +40,8 @@ class FoodMerchantScreen extends ConsumerWidget {
               backgroundColor: MaekelColors.food,
               foregroundColor: MaekelColors.ink,
               label: Text(
-                'CART · ${cart.subtotalEtb} ${AppConstants.currencyCode}',
+                AppLocalizations.of(context)!
+                    .foodCartTotal(cart.subtotalEtb),
               ),
             )
           : null,
@@ -59,11 +63,14 @@ class FoodMerchantScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '${merchant.subcity} · ${merchant.hoursLabel} · min ${merchant.minOrderEtb} ETB',
+            '${localizedPlace(l10n, merchant.subcity)} · ${merchant.hoursLabel} · ${l10n.foodMinOrder(merchant.minOrderEtb)}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
-          Text('MENU', style: Theme.of(context).textTheme.labelLarge),
+          Text(
+            l10n.foodMenu.toUpperCase(),
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
           const SizedBox(height: 10),
           ...menu.map((item) {
             final unavailable = !item.available;
@@ -99,13 +106,13 @@ class FoodMerchantScreen extends ConsumerWidget {
                   title: Text(item.name),
                   subtitle: Text(
                     unavailable
-                        ? 'Unavailable\n${item.priceEtb} ${AppConstants.currencyCode}'
-                        : '${item.description}\n${item.priceEtb} ${AppConstants.currencyCode}',
+                        ? '${l10n.foodUnavailable}\n${l10n.marketPriceEtb('${item.priceEtb}')}'
+                        : '${item.description}\n${l10n.marketPriceEtb('${item.priceEtb}')}',
                   ),
                   isThreeLine: true,
                   trailing: unavailable
                       ? Text(
-                          'Unavailable',
+                          l10n.foodUnavailable,
                           style:
                               Theme.of(context).textTheme.labelLarge?.copyWith(
                                     color: MaekelColors.danger,
@@ -138,7 +145,8 @@ class FoodMerchantScreen extends ConsumerWidget {
       final result = await showModalBottomSheet<Set<String>>(
         context: context,
         backgroundColor: MaekelColors.panel,
-        builder: (context) {
+        builder: (ctx) {
+          final sheetL10n = AppLocalizations.of(ctx)!;
           return StatefulBuilder(
             builder: (context, setModal) {
               return SafeArea(
@@ -149,7 +157,7 @@ class FoodMerchantScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Customize ${item.name}',
+                        sheetL10n.foodCustomize(item.name),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
@@ -157,7 +165,9 @@ class FoodMerchantScreen extends ConsumerWidget {
                         final on = selected.contains(m.id);
                         return CheckboxListTile(
                           value: on,
-                          title: Text('${m.name} (+${m.priceEtb} ETB)'),
+                          title: Text(
+                            '${m.name} ${sheetL10n.foodModifierPrice(m.priceEtb)}',
+                          ),
                           activeColor: MaekelColors.food,
                           onChanged: (v) {
                             setModal(() {
@@ -172,7 +182,7 @@ class FoodMerchantScreen extends ConsumerWidget {
                       }),
                       FilledButton(
                         onPressed: () => Navigator.pop(context, selected),
-                        child: const Text('ADD TO CART'),
+                        child: Text(AppLocalizations.of(context)!.foodAddToCart),
                       ),
                     ],
                   ),
@@ -194,7 +204,11 @@ class FoodMerchantScreen extends ConsumerWidget {
           );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${item.name} added')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.foodAdded(item.name),
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -203,16 +217,16 @@ class FoodMerchantScreen extends ConsumerWidget {
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: MaekelColors.panel,
-          title: const Text('Replace cart?'),
+          title: Text(AppLocalizations.of(context)!.foodReplaceCart),
           content: Text('$e'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Keep'),
+              child: Text(AppLocalizations.of(context)!.keep),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Clear & add'),
+              child: Text(AppLocalizations.of(context)!.foodClearAndAdd),
             ),
           ],
         ),

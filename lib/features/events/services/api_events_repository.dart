@@ -149,6 +149,7 @@ class ApiEventsRepository implements EventsRepository {
     required int capacity,
     required int priceEtb,
     required EventPaymentMode paymentMode,
+    List<String> imageUrls = const [],
   }) async {
     final raw = await _client.post(
       '/v1/events/events',
@@ -165,6 +166,8 @@ class ApiEventsRepository implements EventsRepository {
         'capacity': capacity,
         'priceEtb': priceEtb,
         'paymentMode': paymentModeApi(paymentMode),
+        if (imageUrls.isNotEmpty) 'imageUrls': imageUrls,
+        if (imageUrls.isNotEmpty) 'coverUrl': imageUrls.first,
       },
     ) as Map<String, dynamic>;
     final event = _parseEvent(raw);
@@ -187,6 +190,7 @@ class ApiEventsRepository implements EventsRepository {
     int? capacity,
     int? priceEtb,
     EventPaymentMode? paymentMode,
+    List<String>? imageUrls,
   }) async {
     final raw = await _client.patch(
       '/v1/events/events/$id',
@@ -203,6 +207,10 @@ class ApiEventsRepository implements EventsRepository {
         if (capacity != null) 'capacity': capacity,
         if (priceEtb != null) 'priceEtb': priceEtb,
         if (paymentMode != null) 'paymentMode': paymentModeApi(paymentMode),
+        if (imageUrls != null) 'imageUrls': imageUrls,
+        if (imageUrls != null && imageUrls.isNotEmpty)
+          'coverUrl': imageUrls.first,
+        if (imageUrls != null && imageUrls.isEmpty) 'coverUrl': null,
       },
     ) as Map<String, dynamic>;
     final event = _parseEvent(raw);
@@ -210,6 +218,22 @@ class ApiEventsRepository implements EventsRepository {
     await refreshAuthed();
     await refreshCatalog();
     return event;
+  }
+
+  @override
+  Future<String> uploadPhoto({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  }) async {
+    final raw = await _client.postMultipart(
+      '/v1/events/media',
+      bytes: bytes,
+      filename: filename,
+      contentType: contentType,
+      auth: true,
+    ) as Map<String, dynamic>;
+    return raw['url'] as String;
   }
 
   @override
@@ -285,6 +309,7 @@ class ApiEventsRepository implements EventsRepository {
         paymentMode: event.paymentMode,
         status: event.status,
         coverUrl: event.coverUrl,
+        imageUrls: event.imageUrls,
         checkInCode: code,
         rejectionReason: event.rejectionReason,
         createdAt: event.createdAt,
@@ -393,6 +418,10 @@ class ApiEventsRepository implements EventsRepository {
       paymentMode: parsePaymentMode(j['paymentMode'] as String? ?? 'free'),
       status: parseEventStatus(j['status'] as String? ?? 'pending'),
       coverUrl: j['coverUrl'] as String?,
+      imageUrls: ((j['imageUrls'] as List?) ?? const [])
+          .map((e) => '$e')
+          .where((e) => e.isNotEmpty)
+          .toList(),
       checkInCode: j['checkInCode'] as String?,
       rejectionReason: j['rejectionReason'] as String?,
       createdAt: parseDt(j['createdAt']),

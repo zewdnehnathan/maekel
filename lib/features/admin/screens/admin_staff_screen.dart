@@ -9,6 +9,8 @@ import '../../../core/network/api_providers.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/glass_panel.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/locale/auth_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class AdminStaffScreen extends ConsumerStatefulWidget {
   const AdminStaffScreen({super.key});
@@ -90,7 +92,8 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Enter a ${AppConstants.localPhoneLength}-digit local number.',
+            AppLocalizations.of(context)!
+                .adminPhoneDigits(AppConstants.localPhoneLength),
           ),
         ),
       );
@@ -109,10 +112,8 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
       _phone.clear();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Role granted. They must sign out and OTP again to refresh the JWT.',
-          ),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.adminRoleGranted),
         ),
       );
       await _load();
@@ -136,7 +137,11 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Revoked $role from ${row.phone}')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.adminRevoked(role, row.phone),
+          ),
+        ),
       );
       await _load();
     } on ApiException catch (e) {
@@ -157,7 +162,7 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
         body: FuturisticBackdrop(
           child: Center(
             child: Text(
-              'Platform admin only',
+              AppLocalizations.of(context)!.adminPlatformOnly,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
@@ -167,7 +172,7 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Staff & admins'),
+        title: Text(AppLocalizations.of(context)!.adminTitle),
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
@@ -197,14 +202,20 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
                         accent: MaekelColors.amber,
                         child: Text(
                           _bootstrapPhones.isEmpty
-                              ? 'No ADMIN_PHONES configured on the API. Set that env var to bootstrap the first platform admin.'
-                              : 'Bootstrap phones (env): ${_bootstrapPhones.join(', ')}',
+                              ? AppLocalizations.of(context)!
+                                  .adminNoAdminPhones
+                              : AppLocalizations.of(context)!
+                                  .adminBootstrapPhones(
+                                    _bootstrapPhones.join(', '),
+                                  ),
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'GRANT ROLE',
+                        AppLocalizations.of(context)!
+                            .adminGrantRole
+                            .toUpperCase(),
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
@@ -217,9 +228,11 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
                               controller: _phone,
                               keyboardType: TextInputType.phone,
                               style: const TextStyle(color: MaekelColors.ink),
-                              decoration: const InputDecoration(
-                                labelText: 'Local phone (9 digits)',
-                                prefixText: '+251 ',
+                              decoration: InputDecoration(
+                                labelText: AppLocalizations.of(context)!
+                                    .adminLocalPhone,
+                                prefixText:
+                                    '${AppLocalizations.of(context)!.phonePrefix} ',
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -227,40 +240,41 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
                               // ignore: deprecated_member_use
                               value: _role,
                               dropdownColor: MaekelColors.panel,
-                              decoration:
-                                  const InputDecoration(labelText: 'Role'),
-                              items: const [
+                              decoration: InputDecoration(
+                                labelText: AppLocalizations.of(context)!.adminRole,
+                              ),
+                              items: [
                                 DropdownMenuItem(
                                   value: 'market_moderator',
-                                  child: Text('Market moderator'),
+                                  child: Text(AppLocalizations.of(context)!.adminMarketModerator),
                                 ),
                                 DropdownMenuItem(
                                   value: 'platform_admin',
-                                  child: Text('Platform admin'),
+                                  child: Text(AppLocalizations.of(context)!.adminPlatformAdmin),
                                 ),
                                 DropdownMenuItem(
                                   value: 'market_ops',
-                                  child: Text('Market ops'),
+                                  child: Text(AppLocalizations.of(context)!.adminMarketOps),
                                 ),
                                 DropdownMenuItem(
                                   value: 'food_ops',
-                                  child: Text('Food ops'),
+                                  child: Text(AppLocalizations.of(context)!.foodOps),
                                 ),
                                 DropdownMenuItem(
                                   value: 'food_merchant',
-                                  child: Text('Food merchant'),
+                                  child: Text(AppLocalizations.of(context)!.adminFoodMerchant),
                                 ),
                                 DropdownMenuItem(
                                   value: 'food_rider',
-                                  child: Text('Food rider'),
+                                  child: Text(AppLocalizations.of(context)!.adminFoodRider),
                                 ),
                                 DropdownMenuItem(
                                   value: 'ride_ops',
-                                  child: Text('Ride ops'),
+                                  child: Text(AppLocalizations.of(context)!.adminRideOps),
                                 ),
                                 DropdownMenuItem(
                                   value: 'events_ops',
-                                  child: Text('Events ops'),
+                                  child: Text(AppLocalizations.of(context)!.eventsOps),
                                 ),
                               ],
                               onChanged: (v) {
@@ -278,20 +292,22 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
                                         strokeWidth: 2.4,
                                       ),
                                     )
-                                  : const Text('GRANT'),
+                                  : Text(AppLocalizations.of(context)!.adminGrant),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'STAFF (${_items.length})',
+                        AppLocalizations.of(context)!
+                            .adminStaff(_items.length)
+                            .toUpperCase(),
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
                       if (_items.isEmpty)
-                        const GlassPanel(
-                          child: Text('No staff roles assigned yet.'),
+                        GlassPanel(
+                          child: Text(AppLocalizations.of(context)!.adminNoStaff),
                         )
                       else
                         for (final row in _items) ...[
@@ -313,7 +329,12 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
                                   children: [
                                     for (final role in row.roles)
                                       Chip(
-                                        label: Text(role),
+                                        label: Text(
+                                          localizedAdminRole(
+                                            AppLocalizations.of(context)!,
+                                            role,
+                                          ),
+                                        ),
                                         backgroundColor: MaekelColors.panelLift,
                                         side: const BorderSide(
                                           color: MaekelColors.glassBorder,

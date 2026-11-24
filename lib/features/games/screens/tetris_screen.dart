@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/maekel_app_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../components/score_submit_helper.dart';
 import '../models/games_models.dart';
 import '../tetris/tetris_engine.dart';
@@ -73,10 +74,12 @@ class _TetrisScreenState extends ConsumerState<TetrisScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: MaekelAppBar(
-        title: 'Tetris',
+        title: AppLocalizations.of(context)!.tetris,
         actions: [
           IconButton(
-            tooltip: _engine.isPaused ? 'Resume' : 'Pause',
+            tooltip: _engine.isPaused
+                ? AppLocalizations.of(context)!.gamesResume
+                : AppLocalizations.of(context)!.gamesPause,
             onPressed: () => _mutate(_engine.togglePause),
             icon: Icon(
               _engine.isPaused
@@ -85,7 +88,7 @@ class _TetrisScreenState extends ConsumerState<TetrisScreen> {
             ),
           ),
           IconButton(
-            tooltip: 'Restart',
+            tooltip: AppLocalizations.of(context)!.gamesRestart,
             onPressed: () => _mutate(() {
               _scoreSubmitted = false;
               _engine.reset();
@@ -152,11 +155,15 @@ class _TetrisScreenState extends ConsumerState<TetrisScreen> {
                                   if (_engine.isPaused || _engine.isGameOver)
                                     _OverlayBanner(
                                       label: _engine.isGameOver
-                                          ? 'GAME OVER'
-                                          : 'PAUSED',
+                                          ? AppLocalizations.of(context)!
+                                              .gamesGameOver
+                                          : AppLocalizations.of(context)!
+                                              .gamesPaused,
                                       detail: _engine.isGameOver
-                                          ? 'Tap refresh to play again'
-                                          : 'Tap pause to resume',
+                                          ? AppLocalizations.of(context)!
+                                              .gamesTapRefreshPlay
+                                          : AppLocalizations.of(context)!
+                                              .gamesTapPauseResume,
                                     ),
                                 ],
                               ),
@@ -177,7 +184,7 @@ class _TetrisScreenState extends ConsumerState<TetrisScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Swipe · tap rotate · double-tap hard drop',
+                  AppLocalizations.of(context)!.gamesTetrisHint,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: MaekelColors.muted,
                       ),
@@ -208,9 +215,18 @@ class _Hud extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _Stat(label: 'SCORE', value: '$score'),
-        _Stat(label: 'LINES', value: '$lines'),
-        _Stat(label: 'LVL', value: '$level'),
+        _Stat(
+          label: AppLocalizations.of(context)!.gamesScore,
+          value: '$score',
+        ),
+        _Stat(
+          label: AppLocalizations.of(context)!.gamesLines,
+          value: '$lines',
+        ),
+        _Stat(
+          label: AppLocalizations.of(context)!.gamesLevel,
+          value: '$level',
+        ),
         const Spacer(),
         Container(
           width: 56,

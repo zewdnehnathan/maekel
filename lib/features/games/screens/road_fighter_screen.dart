@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/maekel_app_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../components/score_submit_helper.dart';
 import '../models/games_models.dart';
 import '../road_fighter/road_fighter_audio.dart';
@@ -95,10 +96,12 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: MaekelAppBar(
-        title: 'Road Fighter',
+        title: AppLocalizations.of(context)!.roadFighter,
         actions: [
           IconButton(
-            tooltip: _audio.isMuted ? 'Unmute' : 'Mute',
+            tooltip: _audio.isMuted
+                ? AppLocalizations.of(context)!.gamesUnmute
+                : AppLocalizations.of(context)!.gamesMute,
             onPressed: () async {
               await _audio.setMuted(!_audio.isMuted);
               if (mounted) setState(() {});
@@ -110,7 +113,7 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
             ),
           ),
           IconButton(
-            tooltip: 'Restart',
+            tooltip: AppLocalizations.of(context)!.gamesRestart,
             onPressed: _restart,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -125,10 +128,16 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _Stat(label: 'SCORE', value: '${_engine.score}'),
-                    _Stat(label: 'KM', value: '${_engine.distanceMeters}'),
                     _Stat(
-                      label: 'SPD',
+                      label: AppLocalizations.of(context)!.gamesScore,
+                      value: '${_engine.score}',
+                    ),
+                    _Stat(
+                      label: AppLocalizations.of(context)!.gamesKm,
+                      value: '${_engine.distanceMeters}',
+                    ),
+                    _Stat(
+                      label: AppLocalizations.of(context)!.gamesSpeed,
                       value: '${_engine.displaySpeed}',
                     ),
                     const Spacer(),
@@ -138,7 +147,7 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'FUEL',
+                            AppLocalizations.of(context)!.gamesFuel,
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -214,17 +223,22 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
                               child: Stack(
                                 children: [
                                   if (_engine.awaitingStart)
-                                    const _Banner(
-                                      label: 'ROAD FIGHTER',
-                                      detail: 'Tap / drag to drive',
+                                    _Banner(
+                                      label: AppLocalizations.of(context)!
+                                          .roadFighter
+                                          .toUpperCase(),
+                                      detail: AppLocalizations.of(context)!
+                                          .gamesTapDragDrive,
                                     ),
                                   if (_engine.isGameOver)
                                     _Banner(
                                       label: _engine.endedByFuel
-                                          ? 'OUT OF FUEL'
-                                          : 'CRASH!',
-                                      detail:
-                                          'Score ${_engine.score} · tap to retry',
+                                          ? AppLocalizations.of(context)!
+                                              .gamesOutOfFuel
+                                          : AppLocalizations.of(context)!
+                                              .gamesCrash,
+                                      detail: AppLocalizations.of(context)!
+                                          .gamesScoreTapRetry(_engine.score),
                                     ),
                                   Positioned(
                                     left: 12,
@@ -261,7 +275,7 @@ class _RoadFighterScreenState extends ConsumerState<RoadFighterScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '◀ ▶ dodge · purple-stripe cars change lanes · grab F for fuel',
+                  AppLocalizations.of(context)!.gamesRoadHint,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: MaekelColors.muted,
                       ),

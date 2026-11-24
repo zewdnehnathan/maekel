@@ -9,6 +9,8 @@ import '../components/events_shell.dart';
 import '../models/events_models.dart';
 import '../providers/events_providers.dart';
 import '../services/api_events_repository.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({super.key, required this.eventId});
@@ -56,7 +58,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('RSVP confirmed · ${ticket.ticketCode}')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!
+                .eventsRsvpConfirmed(ticket.ticketCode),
+          ),
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -72,7 +79,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       await ref.read(eventsRepositoryProvider).cancelRsvp(widget.eventId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('RSVP cancelled')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.eventsRsvpCancelled)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -90,8 +97,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     final mine = myTickets.where((t) => t.eventId == widget.eventId).toList();
     final isOwner = session != null && event?.organizerId == session.userId;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return EventsShell(
-      title: 'Event',
+      title: l10n.eventsTitle,
       showBottomNav: false,
       child: event == null
           ? Center(
@@ -108,9 +117,40 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${event.categoryName} · ${event.subcity}',
+                  '${event.categoryName} · ${localizedPlace(AppLocalizations.of(context)!, event.subcity)}',
                   style: const TextStyle(color: MaekelColors.muted),
                 ),
+                if (event.displayImageUrls.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 220,
+                    child: PageView.builder(
+                      itemCount: event.displayImageUrls.length,
+                      itemBuilder: (context, index) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(
+                            event.displayImageUrls[index],
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const ColoredBox(
+                              color: MaekelColors.panelLift,
+                              child: Center(
+                                child: Icon(Icons.broken_image_outlined),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (event.displayImageUrls.length > 1) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '${event.displayImageUrls.length} ${l10n.eventsPhotos.toLowerCase()}',
+                      style: const TextStyle(color: MaekelColors.muted),
+                    ),
+                  ],
+                ],
                 const SizedBox(height: 16),
                 GlassPanel(
                   child: Padding(
@@ -129,19 +169,22 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           ),
                         ],
                         const SizedBox(height: 8),
-                        _row(Icons.payments_outlined, event.priceLabel),
+                        _row(
+                          Icons.payments_outlined,
+                          event.priceLabelLocalized(l10n),
+                        ),
                         const SizedBox(height: 8),
                         _row(
                           Icons.event_seat_outlined,
                           event.isSoldOut
-                              ? 'Sold out'
-                              : '${event.seatsLeft} of ${event.capacity} left',
+                              ? l10n.eventsSoldOut
+                              : l10n.eventsSeatsLeft(event.seatsLeft),
                         ),
                         const SizedBox(height: 8),
                         _row(
                           Icons.person_outline,
                           event.organizerName.isEmpty
-                              ? 'Organizer'
+                              ? l10n.eventsOrganizer
                               : event.organizerName,
                         ),
                       ],
@@ -168,7 +211,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Your ticket',
+                            AppLocalizations.of(context)!.eventsYourTicket,
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 8),
@@ -179,12 +222,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 .headlineSmall
                                 ?.copyWith(color: MaekelColors.events),
                           ),
-                          Text('Qty ${mine.first.qty} · ${mine.first.status.name}'),
+                          Text(
+                            AppLocalizations.of(context)!.eventsTicketQtyStatus(
+                              mine.first.qty,
+                              mine.first.status.localized(
+                                AppLocalizations.of(context)!,
+                              ),
+                            ),
+                          ),
                           if (mine.first.status == TicketStatus.reserved) ...[
                             const SizedBox(height: 12),
                             OutlinedButton(
                               onPressed: _busy ? null : _cancel,
-                              child: const Text('Cancel RSVP'),
+                              child: Text(AppLocalizations.of(context)!.eventsCancelRsvp),
                             ),
                           ],
                         ],
@@ -194,7 +244,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 ] else if (!isOwner && event.status == EventStatus.approved) ...[
                   Row(
                     children: [
-                      const Text('Qty'),
+                      Text(AppLocalizations.of(context)!.qty),
                       const SizedBox(width: 12),
                       IconButton(
                         onPressed: _qty <= 1
@@ -216,10 +266,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     onPressed: _busy || event.isSoldOut ? null : _rsvp,
                     child: Text(
                       event.isSoldOut
-                          ? 'Sold out'
+                          ? l10n.eventsSoldOut
                           : event.isFree
-                              ? 'RSVP free'
-                              : 'RSVP · pay at door',
+                              ? l10n.eventsRsvpFree
+                              : l10n.eventsRsvpPayDoor,
                     ),
                   ),
                 ],

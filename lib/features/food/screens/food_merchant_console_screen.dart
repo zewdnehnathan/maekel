@@ -14,6 +14,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FoodMerchantConsoleScreen extends ConsumerStatefulWidget {
   const FoodMerchantConsoleScreen({super.key});
@@ -157,7 +159,11 @@ class _FoodMerchantConsoleScreenState
 
             return AlertDialog(
               backgroundColor: MaekelColors.panel,
-              title: Text(existing == null ? 'Add dish' : 'Edit dish'),
+              title: Text(
+                existing == null
+                    ? AppLocalizations.of(context)!.foodAddDish
+                    : '${AppLocalizations.of(context)!.edit} ${AppLocalizations.of(context)!.foodAddDish}',
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -189,7 +195,7 @@ class _FoodMerchantConsoleScreenState
                                     color: MaekelColors.panelLift,
                                     alignment: Alignment.center,
                                     child: Text(
-                                      'Add a photo',
+                                      AppLocalizations.of(context)!.photos,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium,
@@ -203,12 +209,12 @@ class _FoodMerchantConsoleScreenState
                         TextButton.icon(
                           onPressed: () => pick(ImageSource.gallery),
                           icon: const Icon(Icons.photo_library_outlined, size: 18),
-                          label: const Text('Gallery'),
+                          label: Text(AppLocalizations.of(context)!.gallery),
                         ),
                         TextButton.icon(
                           onPressed: () => pick(ImageSource.camera),
                           icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                          label: const Text('Camera'),
+                          label: Text(AppLocalizations.of(context)!.camera),
                         ),
                       ],
                     ),
@@ -216,29 +222,33 @@ class _FoodMerchantConsoleScreenState
                     TextField(
                       controller: name,
                       style: const TextStyle(color: MaekelColors.ink),
-                      decoration: const InputDecoration(labelText: 'Name'),
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.eventsFieldTitle,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: price,
                       keyboardType: TextInputType.number,
                       style: const TextStyle(color: MaekelColors.ink),
-                      decoration: const InputDecoration(
-                        labelText: 'Price (ETB)',
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.marketFieldPrice,
                       ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: desc,
                       style: const TextStyle(color: MaekelColors.ink),
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.eventsFieldDescription,
                       ),
                       maxLines: 2,
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Available'),
+                      title: Text(
+                        AppLocalizations.of(context)!.foodAvailableLabel,
+                      ),
                       value: available,
                       activeThumbColor: MaekelColors.food,
                       onChanged: (v) => setLocal(() => available = v),
@@ -247,7 +257,7 @@ class _FoodMerchantConsoleScreenState
                     Row(
                       children: [
                         Text(
-                          'OPTIONS',
+                          AppLocalizations.of(context)!.foodOptions,
                           style: Theme.of(context).textTheme.labelLarge,
                         ),
                         const Spacer(),
@@ -261,7 +271,7 @@ class _FoodMerchantConsoleScreenState
                                   .add(TextEditingController(text: '0'));
                             });
                           },
-                          child: const Text('Add option'),
+                          child: Text(AppLocalizations.of(context)!.foodAddOption),
                         ),
                       ],
                     ),
@@ -275,9 +285,10 @@ class _FoodMerchantConsoleScreenState
                               child: TextField(
                                 controller: modNameControllers[i],
                                 style: const TextStyle(color: MaekelColors.ink),
-                                decoration: const InputDecoration(
-                                  labelText: 'Option name',
-                                  hintText: 'e.g. Extra cheese',
+                                decoration: InputDecoration(
+                                  labelText: AppLocalizations.of(context)!.foodOptions,
+                                  hintText: AppLocalizations.of(context)!
+                                      .foodExtraCheeseHint,
                                 ),
                               ),
                             ),
@@ -287,8 +298,8 @@ class _FoodMerchantConsoleScreenState
                                 controller: modPriceControllers[i],
                                 keyboardType: TextInputType.number,
                                 style: const TextStyle(color: MaekelColors.ink),
-                                decoration: const InputDecoration(
-                                  labelText: 'ETB',
+                                decoration: InputDecoration(
+                                  labelText: AppLocalizations.of(context)!.currencyEtb,
                                 ),
                               ),
                             ),
@@ -311,7 +322,7 @@ class _FoodMerchantConsoleScreenState
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Cancel'),
+                  child: Text(AppLocalizations.of(context)!.cancel),
                 ),
                 FilledButton(
                   style: FilledButton.styleFrom(
@@ -319,7 +330,11 @@ class _FoodMerchantConsoleScreenState
                     foregroundColor: MaekelColors.ink,
                   ),
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: Text(existing == null ? 'Add' : 'Save'),
+                  child: Text(
+                    existing == null
+                        ? AppLocalizations.of(context)!.add
+                        : AppLocalizations.of(context)!.save,
+                  ),
                 ),
               ],
             );
@@ -409,12 +424,12 @@ class _FoodMerchantConsoleScreenState
     final session = ref.watch(authProvider).session;
 
     return FoodShell(
-      title: 'Merchant',
+      title: AppLocalizations.of(context)!.foodMerchantConsole,
       showBottomNav: false,
       actions: [
         if (_merchant != null)
           IconButton(
-            tooltip: 'Add dish',
+            tooltip: AppLocalizations.of(context)!.foodAddDish,
             onPressed: _busy ? null : () => _editMenuItem(),
             icon: const Icon(Icons.add_rounded),
             color: MaekelColors.food,
@@ -443,7 +458,7 @@ class _FoodMerchantConsoleScreenState
                   children: [
                     if (_merchant == null) ...[
                       Text(
-                        'NO RESTAURANT LINKED',
+                        AppLocalizations.of(context)!.foodNoRestaurant.toUpperCase(),
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
@@ -451,8 +466,9 @@ class _FoodMerchantConsoleScreenState
                         accent: MaekelColors.food,
                         child: Text(
                           session?.isFoodOps == true
-                              ? 'Food ops does not edit restaurant menus here. Open Food ops to create a merchant and Assign owner phone to the restaurant staff. Only that owner can add dishes.'
-                              : 'Ask Food ops to assign your phone as the owner of one restaurant. You can only edit that restaurant’s menu — never another store’s.',
+                              ? AppLocalizations.of(context)!.foodOpsMenuExplain
+                              : AppLocalizations.of(context)!
+                                  .foodMerchantAssignExplain,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
@@ -465,7 +481,7 @@ class _FoodMerchantConsoleScreenState
                           ),
                           onPressed: () => context.go(AppRoutes.foodOps),
                           icon: const Icon(Icons.admin_panel_settings_outlined),
-                          label: const Text('Open Food ops'),
+                          label: Text(AppLocalizations.of(context)!.foodOpenOps),
                         ),
                       ],
                     ] else ...[
@@ -480,7 +496,7 @@ class _FoodMerchantConsoleScreenState
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${_merchant!.subcity} · ${_merchant!.hoursLabel}',
+                              '${localizedPlace(AppLocalizations.of(context)!, _merchant!.subcity)} · ${_merchant!.hoursLabel}',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             const SizedBox(height: 12),
@@ -488,8 +504,8 @@ class _FoodMerchantConsoleScreenState
                               contentPadding: EdgeInsets.zero,
                               title: Text(
                                 _merchant!.isOpen
-                                    ? 'Store open'
-                                    : 'Store paused',
+                                    ? AppLocalizations.of(context)!.foodStoreOpen
+                                    : AppLocalizations.of(context)!.foodStorePaused,
                               ),
                               value: _merchant!.isOpen,
                               activeThumbColor: MaekelColors.food,
@@ -511,22 +527,22 @@ class _FoodMerchantConsoleScreenState
                         children: [
                           Expanded(
                             child: Text(
-                              'MENU (${_menu.length})',
+                              '${AppLocalizations.of(context)!.foodMenu.toUpperCase()} (${_menu.length})',
                               style: Theme.of(context).textTheme.labelLarge,
                             ),
                           ),
                           TextButton.icon(
                             onPressed: _busy ? null : () => _editMenuItem(),
                             icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Add dish'),
+                            label: Text(AppLocalizations.of(context)!.foodAddDish),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       if (_menu.isEmpty)
-                        const GlassPanel(
+                        GlassPanel(
                           child: Text(
-                            'No dishes yet. Add name + price so customers can order.',
+                            AppLocalizations.of(context)!.foodNoDishes,
                           ),
                         ),
                       for (final item in _menu) ...[
@@ -568,7 +584,8 @@ class _FoodMerchantConsoleScreenState
                                               .titleMedium,
                                         ),
                                         Text(
-                                          '${item.priceEtb} ETB',
+                                          AppLocalizations.of(context)!
+                                              .foodPriceEtb(item.priceEtb),
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleMedium
@@ -578,7 +595,10 @@ class _FoodMerchantConsoleScreenState
                                         ),
                                         if (item.modifiers.isNotEmpty)
                                           Text(
-                                            '${item.modifiers.length} option(s)',
+                                            AppLocalizations.of(context)!
+                                                .foodOptionsCount(
+                                              item.modifiers.length,
+                                            ),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall,
@@ -597,7 +617,9 @@ class _FoodMerchantConsoleScreenState
                               ],
                               const SizedBox(height: 4),
                               Text(
-                                item.available ? 'Available' : 'Unavailable',
+                                item.available
+                                    ? AppLocalizations.of(context)!.foodAvailableLabel
+                                    : AppLocalizations.of(context)!.foodUnavailable,
                                 style: Theme.of(context)
                                     .textTheme
                                     .labelLarge
@@ -615,7 +637,7 @@ class _FoodMerchantConsoleScreenState
                                     onPressed: _busy
                                         ? null
                                         : () => _editMenuItem(existing: item),
-                                    child: const Text('Edit'),
+                                    child: Text(AppLocalizations.of(context)!.edit),
                                   ),
                                   TextButton(
                                     onPressed: _busy
@@ -635,8 +657,8 @@ class _FoodMerchantConsoleScreenState
                                             ),
                                     child: Text(
                                       item.available
-                                          ? 'Mark unavailable'
-                                          : 'Mark available',
+                                          ? AppLocalizations.of(context)!.foodMarkUnavailable
+                                          : AppLocalizations.of(context)!.foodMarkAvailable,
                                     ),
                                   ),
                                   TextButton(
@@ -651,9 +673,9 @@ class _FoodMerchantConsoleScreenState
                                                     .deleteMenuItem(item.id);
                                               },
                                             ),
-                                    child: const Text(
-                                      'Delete',
-                                      style: TextStyle(
+                                    child: Text(
+                                      AppLocalizations.of(context)!.delete,
+                                      style: const TextStyle(
                                         color: MaekelColors.danger,
                                       ),
                                     ),
@@ -666,13 +688,15 @@ class _FoodMerchantConsoleScreenState
                       ],
                       const SizedBox(height: 22),
                       Text(
-                        'ORDER QUEUE (${_orders.length})',
+                        AppLocalizations.of(context)!
+                            .foodOrderQueue(_orders.length)
+                            .toUpperCase(),
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
                       if (_orders.isEmpty)
-                        const GlassPanel(
-                          child: Text('No open kitchen orders.'),
+                        GlassPanel(
+                          child: Text(AppLocalizations.of(context)!.foodNoKitchenOrders),
                         ),
                       for (final order in _orders) ...[
                         const SizedBox(height: 10),
@@ -683,11 +707,11 @@ class _FoodMerchantConsoleScreenState
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Text(
-                                '#${order.id.substring(0, 8)} · ${order.status.label}',
+                                '#${order.id.substring(0, 8)} · ${order.status.localized(AppLocalizations.of(context)!)}',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               Text(
-                                '${order.address.subcity} · ${order.grandTotalEtb} ETB COD',
+                                '${localizedPlace(AppLocalizations.of(context)!, order.address.subcity)} · ${AppLocalizations.of(context)!.foodPriceEtbCod(order.grandTotalEtb)}',
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               Text(
@@ -718,7 +742,7 @@ class _FoodMerchantConsoleScreenState
                                                       .merchantAccept(order.id);
                                                 },
                                               ),
-                                      child: const Text('Accept'),
+                                      child: Text(AppLocalizations.of(context)!.accept),
                                     ),
                                   if (order.status == OrderStatus.placed ||
                                       order.status == OrderStatus.confirmed)
@@ -734,7 +758,7 @@ class _FoodMerchantConsoleScreenState
                                                       .merchantReject(order.id);
                                                 },
                                               ),
-                                      child: const Text('Reject'),
+                                      child: Text(AppLocalizations.of(context)!.reject),
                                     ),
                                   if (order.status == OrderStatus.confirmed)
                                     FilledButton(
@@ -755,7 +779,7 @@ class _FoodMerchantConsoleScreenState
                                                       );
                                                 },
                                               ),
-                                      child: const Text('Preparing'),
+                                      child: Text(AppLocalizations.of(context)!.preparing),
                                     ),
                                   if (order.status == OrderStatus.preparing)
                                     FilledButton(
@@ -774,7 +798,7 @@ class _FoodMerchantConsoleScreenState
                                                       .merchantReady(order.id);
                                                 },
                                               ),
-                                      child: const Text('Ready'),
+                                      child: Text(AppLocalizations.of(context)!.ready),
                                     ),
                                 ],
                               ),

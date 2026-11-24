@@ -7,6 +7,8 @@ import '../../../core/widgets/glass_panel.dart';
 import '../components/ride_shell.dart';
 import '../models/ride_models.dart';
 import '../providers/ride_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RideHistoryScreen extends ConsumerWidget {
   const RideHistoryScreen({super.key});
@@ -17,9 +19,9 @@ class RideHistoryScreen extends ConsumerWidget {
     final repo = ref.watch(rideRepositoryProvider);
 
     return RideShell(
-      title: 'Trips',
+      title: AppLocalizations.of(context)!.rideTripsTitle,
       child: trips.isEmpty
-          ? const Center(child: Text('No trips yet.'))
+          ? Center(child: Text(AppLocalizations.of(context)!.rideNoTripsYet))
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               itemCount: trips.length,
@@ -35,6 +37,16 @@ class RideHistoryScreen extends ConsumerWidget {
                 final whenLabel =
                     '${when.year}-${when.month.toString().padLeft(2, '0')}-${when.day.toString().padLeft(2, '0')}'
                     ' ${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}';
+                final l10n = AppLocalizations.of(context)!;
+                final vehicleLabel = localizedVehicleClass(l10n, trip.vehicleClass);
+                final pickupLabel = localizedPlace(
+                  l10n,
+                  pickup?.name ?? '?',
+                );
+                final dropoffLabel = localizedPlace(
+                  l10n,
+                  dropoff?.name ?? '?',
+                );
                 return InkWell(
                   onTap: () => context.push('${AppRoutes.rideTrips}/${trip.id}'),
                   borderRadius: BorderRadius.circular(16),
@@ -48,12 +60,12 @@ class RideHistoryScreen extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                '${pickup?.name ?? '?'} → ${dropoff?.name ?? '?'}',
+                                '$pickupLabel → $dropoffLabel',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                             ),
                             Text(
-                              trip.status.label,
+                              trip.status.localized(AppLocalizations.of(context)!),
                               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                     fontSize: 10,
                                   ),
@@ -62,7 +74,7 @@ class RideHistoryScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${trip.fareEtb} ETB cash · ${trip.vehicleClass}',
+                          l10n.rideCashVehicle(trip.fareEtb, vehicleLabel),
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 2),

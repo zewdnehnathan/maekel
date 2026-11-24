@@ -27,23 +27,1327 @@
   "rideTitle": "Ride",
   "rideConsumer": "Request a ride",
   "rideDriver": "Drive with Maekel",
-  "rideStubBody": "Ride matching and maps come in a later pass. This is the consumer placeholder.",
-  "rideDriverStubBody": "Driver mode placeholder — availability, jobs, and earnings will live here.",
+  "rideStubBody": "Ride matching and maps come in a later pass.",
+  "rideDriverStubBody": "Driver mode — availability, jobs, and earnings.",
   "marketTitle": "Market",
   "marketBrowse": "Browse listings",
   "marketSell": "Sell something",
-  "marketStubBody": "Jiji-style listings for Addis. Browse placeholder — real catalog later.",
-  "marketSellStubBody": "Create a listing with photos and price in ETB. Upload flow comes later.",
+  "marketStubBody": "Classifieds for Addis.",
+  "marketSellStubBody": "Create a listing with photos and price in ETB.",
   "foodTitle": "Food",
-  "foodStubBody": "Restaurant browse and cart placeholders for Addis delivery.",
+  "foodStubBody": "Restaurant browse and cart for Addis delivery.",
   "gamesTitle": "Games",
-  "gamesHubBody": "Pick a game. Playable versions land in a later pass.",
+  "gamesHubBody": "Play offline, sync your best scores to the Addis board.",
   "brickBreaker": "Brick Breaker",
-  "brickBreakerStub": "Brick Breaker stub — Flame gameplay comes later.",
+  "brickBreakerStub": "Drag to move paddle · tap to launch",
   "tetris": "Tetris",
-  "tetrisStub": "Tetris stub — playable board comes later.",
-  "candyCrush": "Candy Crush",
+  "tetrisStub": "Swipe · tap rotate · double-tap hard drop",
+  "candyCrush": "Match 3",
   "roadFighter": "Road Fighter",
   "comingSoon": "Coming soon",
-  "backHome": "Back to home"
+  "backHome": "Back to home",
+  "languageTitle": "Language",
+  "languageSubtitle": "Choose how Maekel speaks to you",
+  "cancel": "Cancel",
+  "save": "Save",
+  "edit": "Edit",
+  "delete": "Delete",
+  "open": "Open",
+  "submit": "Submit",
+  "approve": "Approve",
+  "reject": "Reject",
+  "clear": "Clear",
+  "apply": "Apply",
+  "add": "Add",
+  "dismiss": "Dismiss",
+  "keep": "Keep",
+  "search": "Search",
+  "online": "Online",
+  "offline": "Offline",
+  "closed": "Closed",
+  "accept": "Accept",
+  "skip": "Skip",
+  "signInRequired": "Sign in required",
+  "notFound": "Not found",
+  "retry": "Retry",
+  "yes": "Yes",
+  "no": "No",
+  "all": "All",
+  "qty": "Qty",
+  "details": "Details",
+  "photos": "Photos",
+  "cover": "Cover",
+  "gallery": "Gallery",
+  "camera": "Camera",
+  "soldOut": "Sold out",
+  "unavailable": "Unavailable",
+  "preparing": "Preparing",
+  "ready": "Ready",
+  "rideSubtitle": "Go across Addis",
+  "rideDriveTitle": "Drive",
+  "rideTripTitle": "Trip",
+  "rideTripsTitle": "Trips",
+  "rideOpsTitle": "Ride ops",
+  "rideSetPickup": "Set pickup",
+  "rideSetDropoff": "Set dropoff",
+  "rideUseMyLocation": "Use my location",
+  "rideGetQuote": "Get upfront quote",
+  "rideRequest": "Request ride",
+  "rideEconomy": "Economy",
+  "rideActiveTrip": "Active trip",
+  "rideOutsideServiceArea": "Pickup or drop-off is outside the Addis Ababa service area.",
+  "rideNoTripsYet": "No trips yet.",
+  "rideCancelTrip": "Cancel trip",
+  "rideRateDriver": "Rate your driver",
+  "rideSubmitRating": "Submit rating",
+  "rideTripNotFound": "Trip not found",
+  "rideNoDrivers": "No online drivers nearby. Ask a test driver to go Online on Drive, then Request again.",
+  "rideDriverEta": "Driver ETA about {minutes} min",
+  "@rideDriverEta": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "rideArrivingIn": "Arriving in about {minutes} min",
+  "@rideArrivingIn": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "rideYouRated": "You rated {rating}★",
+  "@rideYouRated": {
+    "placeholders": {
+      "rating": {
+        "type": "Object"
+      }
+    }
+  },
+  "rideFrom": "From: {place}",
+  "@rideFrom": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "rideTo": "To: {place}",
+  "@rideTo": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "rideFareEtb": "{amount} ETB",
+  "@rideFareEtb": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "ridePendingApproval": "Pending Ride ops approval before you can go online.",
+  "rideActiveJob": "Active job",
+  "rideCompleteCash": "Complete + confirm cash",
+  "rideReportProblem": "Report a problem",
+  "ridePassengerNoShow": "Passenger no-show",
+  "rideWrongPin": "Wrong pin",
+  "rideOffers": "Offers",
+  "rideGoOnlineHint": "Go online to see matching requests.",
+  "rideNoOffers": "No open offers right now. When a passenger requests nearby, the offer appears here with a time limit.",
+  "rideTodaysEarnings": "Today's earnings",
+  "rideFareConfig": "Fare config",
+  "rideSaveFareParams": "Save fare params",
+  "rideDrivers": "Drivers ({count})",
+  "@rideDrivers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rideActiveTrips": "Active trips ({count})",
+  "@rideActiveTrips": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rideNoActiveTrips": "No active trips.",
+  "rideForceCancel": "Force cancel",
+  "rideFareConfigSaved": "Fare config saved",
+  "rideMapHint": "+/− zoom · click to pin · drag to pan",
+  "rideFareDueCash": "Fare due: {amount} ETB cash",
+  "@rideFareDueCash": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "marketSellAction": "Sell",
+  "marketSubtitle": "Buy & sell in Addis",
+  "marketBlurb": "Classifieds with chat. Inspect before you pay.",
+  "marketSearchHint": "Search phones, cars, furniture…",
+  "marketCategories": "Categories",
+  "marketNearYou": "Near you",
+  "marketAdsCount": "{count} ads",
+  "@marketAdsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketNoMatch": "No listings match. Try another area or clear filters.",
+  "marketAllAreas": "All areas",
+  "marketCondition": "Condition",
+  "marketAnyCondition": "Any condition",
+  "marketPriceRange": "Price range",
+  "marketPriceRangeEtb": "Price range (ETB)",
+  "marketMinimum": "Minimum",
+  "marketMaximum": "Maximum",
+  "marketMinMaxError": "Minimum cannot be higher than maximum.",
+  "marketSortNewest": "Newest",
+  "marketSortPriceLow": "Price: low to high",
+  "marketSortPriceHigh": "Price: high to low",
+  "marketAdNotFound": "Ad not found",
+  "marketSeller": "Seller",
+  "marketChatSeller": "Chat with seller",
+  "marketCallSeller": "Call seller",
+  "marketSellerHidPhone": "Seller hid their phone. Use chat.",
+  "marketYourListing": "This is your listing.",
+  "marketEditListing": "Edit listing",
+  "marketReportListing": "Report listing",
+  "marketReportSent": "Report sent to ops.",
+  "marketNoAdsInCategory": "No ads in this category yet.",
+  "marketNoFavorites": "No saved ads yet.",
+  "marketNoChats": "No chats yet. Open an ad and tap Chat.",
+  "marketShowPhone": "Show phone on ads",
+  "marketNoAdsYet": "No ads yet",
+  "marketPostSomething": "Post something to sell in Addis.",
+  "marketSellNow": "Sell now",
+  "marketMarkSold": "Mark sold",
+  "marketBeforeContact": "Before you contact",
+  "marketIUnderstand": "I understand",
+  "marketMaxPhotos": "Max 8 photos.",
+  "marketPickCategoryArea": "Pick a category and area.",
+  "marketAddPhoto": "Add at least one photo.",
+  "marketKeyDetails": "Key details",
+  "marketOpsPending": "Pending ads ({count})",
+  "@marketOpsPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketOpsQueueEmpty": "Queue empty — nothing to moderate.",
+  "marketOpsReports": "Open reports ({count})",
+  "@marketOpsReports": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketOpsNoReports": "No open reports.",
+  "marketOpsCategories": "Category config ({count})",
+  "@marketOpsCategories": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketOpsNoCategories": "No categories yet. Add the first one to unlock Sell.",
+  "marketOpsLimits": "Limits",
+  "marketOpsSuspendSeller": "Suspend seller",
+  "marketOpsUnpublish": "Unpublish",
+  "marketOpsSuspend": "Suspend",
+  "marketOpsOpenAd": "Open ad",
+  "marketOpsRejectAd": "Reject ad",
+  "marketOpsAddCategory": "Add category",
+  "marketOpsMaxFreeAds": "Max active free ads",
+  "foodSubtitle": "Deliver in Addis",
+  "foodBlurb": "Restaurants & groceries · COD · OTP handover",
+  "foodDeliveryPin": "Delivery pin",
+  "foodSearchHint": "Search merchants or dishes…",
+  "foodRestaurants": "Restaurants",
+  "foodGroceries": "Groceries",
+  "foodNoMerchants": "No merchants deliver to {pin}",
+  "@foodNoMerchants": {
+    "placeholders": {
+      "pin": {
+        "type": "String"
+      }
+    }
+  },
+  "foodTryOtherPin": "Try another delivery pin nearby.",
+  "foodMerchantConsole": "Merchant console",
+  "foodRider": "Rider",
+  "foodOps": "Food ops",
+  "foodCartEmpty": "Your cart is empty.",
+  "foodCheckoutCod": "Checkout · COD",
+  "foodMinOrder": "Min order {amount} ETB",
+  "@foodMinOrder": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodAddressSaved": "Address saved",
+  "foodCodBlurb": "Pay cash on delivery. Delivery fee shown before you confirm — no surprises.",
+  "foodSavedPlaces": "Saved places",
+  "foodNoSavedPlaces": "No saved places yet — fill address below and tap Save.",
+  "foodMenu": "Menu",
+  "foodAddToCart": "Add to cart",
+  "foodAdded": "{name} added",
+  "@foodAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "foodReplaceCart": "Replace cart?",
+  "foodClearAndAdd": "Clear & add",
+  "foodCartTotal": "Cart · {amount} ETB",
+  "@foodCartTotal": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodOrdersTitle": "Orders",
+  "foodNoOrders": "No orders yet.",
+  "foodOrderNotFound": "Order not found",
+  "foodItems": "Items",
+  "foodDeliveryOtp": "Delivery OTP",
+  "foodDeliveryOtpHint": "Show this code to the rider. They collect COD and enter OTP in the rider app.",
+  "foodCancelOrder": "Cancel order",
+  "foodCannotCancel": "You can no longer cancel. The shop has already started preparing this order.",
+  "foodNoRestaurant": "No restaurant linked yet",
+  "foodOpenOps": "Open Food ops",
+  "foodAddDish": "Add dish",
+  "foodNoDishes": "No dishes yet. Add name + price so customers can order.",
+  "foodOrderQueue": "Order queue ({count})",
+  "@foodOrderQueue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "foodNoKitchenOrders": "No open kitchen orders.",
+  "foodPickup": "Pickup",
+  "foodDropoff": "Dropoff",
+  "foodClaimJob": "Claim job",
+  "foodPickedUp": "Picked up",
+  "foodOnTheWay": "On the way",
+  "foodCompleteCod": "Complete + COD",
+  "foodMyJobs": "My jobs ({count})",
+  "@foodMyJobs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "foodNoActiveDelivery": "No active delivery.",
+  "foodAvailable": "Available ({count})",
+  "@foodAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "foodNoReadyOrders": "No ready orders waiting for a rider.",
+  "foodConfirmCod": "Confirm COD",
+  "foodCollectCod": "Collect {amount} ETB COD",
+  "@foodCollectCod": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodOrderBoard": "Order board ({count})",
+  "@foodOrderBoard": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "foodNoRecentOrders": "No recent orders.",
+  "foodOnboardMerchant": "Onboard merchant",
+  "foodCreateMerchant": "Create merchant",
+  "foodMerchants": "Merchants ({count})",
+  "@foodMerchants": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "foodSupportCancel": "Support cancel",
+  "foodClearRider": "Clear rider",
+  "foodAssign": "Assign",
+  "eventsTitle": "Events",
+  "eventsOps": "Events ops",
+  "eventsCreate": "Create event",
+  "eventsSearchHint": "Search events, venues…",
+  "eventsAnyArea": "Any area",
+  "eventsEmpty": "No upcoming events yet. Host one from the + button.",
+  "eventsRsvpConfirmed": "RSVP confirmed · {code}",
+  "@eventsRsvpConfirmed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "eventsRsvpCancelled": "RSVP cancelled",
+  "eventsYourTicket": "Your ticket",
+  "eventsCancelRsvp": "Cancel RSVP",
+  "eventsSubmitted": "Submitted for review — Events ops must approve.",
+  "eventsStarts": "Starts",
+  "eventsPick": "Pick",
+  "eventsCheckedIn": "Checked in",
+  "eventsNotHosted": "You have not hosted an event yet.",
+  "eventsAttendees": "Attendees",
+  "eventsDoorCode": "Door code: {code}",
+  "@eventsDoorCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "eventsCheckIn": "Check in",
+  "eventsNoTickets": "No tickets yet. RSVP from Browse.",
+  "eventsPending": "Pending ({count})",
+  "@eventsPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "eventsQueueClear": "Queue clear.",
+  "eventsLive": "Live ({count})",
+  "@eventsLive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "eventsForceCancel": "Force cancel",
+  "eventsSuspendOrganizer": "Suspend organizer",
+  "eventsReject": "Reject event",
+  "eventsMyEvents": "My events",
+  "eventsTickets": "Tickets",
+  "gamesQuickPlay": "Quick play",
+  "gamesAddisTop3": "Addis top 3",
+  "gamesLeaderboardOffline": "Leaderboard offline — start backend games-service to see Addis top 3.",
+  "gamesTop3Title": "Top 3 · Addis · {game}",
+  "@gamesTop3Title": {
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "gamesNoScores": "No scores yet — be the first in Addis.",
+  "gamesScoreNotSaved": "Score not saved — username required.",
+  "gamesSyncFailed": "Could not sync score. Is the API running?",
+  "gamesChooseUsername": "Choose a username",
+  "gamesUsernameHint": "Shown on the Addis Ababa top 3 leaderboard.",
+  "gamesSaveScore": "Save score",
+  "gamesTapToLaunch": "Tap to launch",
+  "gamesBrickHint": "Drag to move paddle · tap to launch",
+  "gamesCandyHint": "Drag a candy onto a neighbor · or tap-tap to swap",
+  "gamesTetrisHint": "Swipe · tap rotate · double-tap hard drop",
+  "gamesRoadHint": "◀ ▶ dodge · purple-stripe cars change lanes · grab F for fuel",
+  "gamesFuel": "Fuel",
+  "gamesTetrisSubtitle": "Stack · clear lines · level up",
+  "gamesBrickSubtitle": "Bounce · smash bricks · survive",
+  "gamesCandySubtitle": "Swap · match 3 · cascade score",
+  "gamesRoadSubtitle": "Dodge · fuel up · drive farther",
+  "adminTitle": "Staff & admins",
+  "adminPlatformOnly": "Platform admin only",
+  "adminGrantRole": "Grant role",
+  "adminGrant": "Grant",
+  "adminStaff": "Staff ({count})",
+  "@adminStaff": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminNoStaff": "No staff roles assigned yet.",
+  "adminRoleGranted": "Role granted. They must sign out and OTP again to refresh the JWT.",
+  "adminMarketModerator": "Market moderator",
+  "adminPlatformAdmin": "Platform admin",
+  "adminMarketOps": "Market ops",
+  "adminFoodOps": "Food ops",
+  "adminFoodMerchant": "Food merchant",
+  "adminFoodRider": "Food rider",
+  "adminRideOps": "Ride ops",
+  "adminEventsOps": "Events ops",
+  "rideStatusQuote": "Quote",
+  "rideStatusRequested": "Requested",
+  "rideStatusMatching": "Finding driver",
+  "rideStatusAssigned": "Driver assigned",
+  "rideStatusArriving": "Driver arriving",
+  "rideStatusArrived": "Driver arrived",
+  "rideStatusInProgress": "On trip",
+  "rideStatusCompleted": "Completed",
+  "rideStatusCancelled": "Cancelled",
+  "rideNavRide": "Ride",
+  "rideNavTrips": "Trips",
+  "rideNavDrive": "Drive",
+  "rideStartArriving": "Start arriving",
+  "rideMarkArrived": "Mark arrived",
+  "rideStartTrip": "Start trip",
+  "rideAdvance": "Advance",
+  "rideExpired": "Expired",
+  "rideRefreshing": "Refreshing…",
+  "rideCompletedTripsToday": "{count} completed trip(s) today",
+  "@rideCompletedTripsToday": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rideRouteArrow": "{from} → {to}",
+  "@rideRouteArrow": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "rideFareStatusCountdown": "{amount} ETB · {status} · {countdown}",
+  "@rideFareStatusCountdown": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      },
+      "status": {
+        "type": "String"
+      },
+      "countdown": {
+        "type": "String"
+      }
+    }
+  },
+  "rideReported": "Reported: {reason}",
+  "@rideReported": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "rideActiveTripStatus": "Active trip · {status}",
+  "@rideActiveTripStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "rideVehicleFare": "{amount} ETB · {vehicle}",
+  "@rideVehicleFare": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      },
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "rideDriverMeta": "{car} · {plate} · ★ {rating}",
+  "@rideDriverMeta": {
+    "placeholders": {
+      "car": {
+        "type": "String"
+      },
+      "plate": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "Object"
+      }
+    }
+  },
+  "marketConditionNew": "Brand new",
+  "marketConditionUsed": "Used",
+  "marketConditionRefurbished": "Refurbished",
+  "marketStatusPending": "Pending",
+  "marketStatusActive": "Active",
+  "marketStatusDeclined": "Declined",
+  "marketStatusSold": "Sold",
+  "marketNavBrowse": "Browse",
+  "marketNavMyAds": "My ads",
+  "marketNavSaved": "Saved",
+  "marketNavChats": "Chats",
+  "marketSafetyBody": "Meet in a public place. Inspect before you pay. Never send deposits to strangers. Maekel staff never ask for fees in chat.",
+  "marketSafetyShort": "Safety: Meet in public. Inspect before paying. Never send deposits to strangers.",
+  "marketPriceEtb": "{amount} ETB",
+  "@marketPriceEtb": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "marketSubcityCondition": "{subcity} · {condition}",
+  "@marketSubcityCondition": {
+    "placeholders": {
+      "subcity": {
+        "type": "String"
+      },
+      "condition": {
+        "type": "String"
+      }
+    }
+  },
+  "marketPriceSubcity": "{amount} ETB · {subcity}",
+  "@marketPriceSubcity": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      },
+      "subcity": {
+        "type": "String"
+      }
+    }
+  },
+  "marketCategoryTitle": "Category",
+  "marketChatTitle": "Chat",
+  "marketFavoritesTitle": "Favorites",
+  "foodStatusPlaced": "Placed",
+  "foodStatusConfirmed": "Confirmed",
+  "foodStatusPreparing": "Preparing",
+  "foodStatusReadyPickup": "Ready for pickup",
+  "foodStatusPickedUp": "Picked up",
+  "foodStatusOnTheWay": "On the way",
+  "foodStatusDelivered": "Delivered",
+  "foodStatusCancelled": "Cancelled",
+  "foodClosedHours": "Closed · {hours}",
+  "@foodClosedHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "foodOrderLine": "{qty}× {name} — {amount} ETB",
+  "@foodOrderLine": {
+    "placeholders": {
+      "qty": {
+        "type": "Object"
+      },
+      "name": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodOrderSummary": "{amount} ETB · {count} item(s)",
+  "@foodOrderSummary": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "foodTotalCod": "Total {amount} ETB · COD",
+  "@foodTotalCod": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodOrderBoardLine": "{merchant} → {subcity} · {amount} ETB",
+  "@foodOrderBoardLine": {
+    "placeholders": {
+      "merchant": {
+        "type": "String"
+      },
+      "subcity": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodUnitPriceEach": "{amount} ETB each",
+  "@foodUnitPriceEach": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodNoDeliverPin": "No merchants deliver to {pin}",
+  "@foodNoDeliverPin": {
+    "placeholders": {
+      "pin": {
+        "type": "String"
+      }
+    }
+  },
+  "foodMerchantTitle": "Merchant",
+  "foodOrderTitle": "Order",
+  "foodCartTitle": "Cart",
+  "eventsEditTitle": "Edit event",
+  "eventsFieldTitle": "Title",
+  "eventsFieldDescription": "Description",
+  "eventsFieldCategory": "Category",
+  "eventsFieldSubcity": "Subcity",
+  "eventsFieldVenue": "Venue name",
+  "eventsFieldAddress": "Address (optional)",
+  "eventsFieldCapacity": "Capacity",
+  "eventsFieldPrice": "Price ETB (0 = free)",
+  "eventsPayAtDoor": "Guests pay at the door (COD-style).",
+  "eventsFreeRsvp": "Free RSVP.",
+  "eventsSubmitReview": "Submit for review",
+  "eventsWhenSubcity": "{when} · {subcity}",
+  "@eventsWhenSubcity": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "subcity": {
+        "type": "String"
+      }
+    }
+  },
+  "eventsVenueCategory": "{venue} · {category}",
+  "@eventsVenueCategory": {
+    "placeholders": {
+      "venue": {
+        "type": "String"
+      },
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "eventsTicketQtyStatus": "Qty {qty} · {status}",
+  "@eventsTicketQtyStatus": {
+    "placeholders": {
+      "qty": {
+        "type": "Object"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "eventsHostMeta": "{status} · {sold}/{capacity} · {subcity}",
+  "@eventsHostMeta": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "sold": {
+        "type": "Object"
+      },
+      "capacity": {
+        "type": "Object"
+      },
+      "subcity": {
+        "type": "String"
+      }
+    }
+  },
+  "gamesScore": "Score",
+  "gamesLives": "Lives",
+  "gamesMoves": "Moves",
+  "gamesCombo": "Combo",
+  "gamesRestart": "Restart",
+  "gamesPause": "Pause",
+  "gamesResume": "Resume",
+  "gamesMute": "Mute",
+  "gamesUnmute": "Unmute",
+  "gamesRefreshBoard": "Refresh leaderboard",
+  "gamesPersonalBest": "New personal best: {score}",
+  "@gamesPersonalBest": {
+    "placeholders": {
+      "score": {
+        "type": "Object"
+      }
+    }
+  },
+  "gamesScoreSavedBest": "Score saved. Best remains {score}",
+  "@gamesScoreSavedBest": {
+    "placeholders": {
+      "score": {
+        "type": "Object"
+      }
+    }
+  },
+  "gamesUsernameLabel": "Username",
+  "gamesUsernameHintExample": "e.g. BoleAce",
+  "adminPhoneDigits": "Enter a {count}-digit local number.",
+  "@adminPhoneDigits": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminRevoked": "Revoked {role} from {phone}",
+  "@adminRevoked": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "adminNoAdminPhones": "No ADMIN_PHONES configured on the API. Set that env var to bootstrap the first platform admin.",
+  "adminBootstrapPhones": "Bootstrap phones (env): {phones}",
+  "@adminBootstrapPhones": {
+    "placeholders": {
+      "phones": {
+        "type": "String"
+      }
+    }
+  },
+  "gamesGameOver": "GAME OVER",
+  "gamesPaused": "PAUSED",
+  "gamesOutOfMoves": "OUT OF MOVES",
+  "gamesOutOfFuel": "OUT OF FUEL",
+  "gamesCrash": "CRASH!",
+  "gamesLines": "Lines",
+  "gamesLevel": "Lvl",
+  "gamesKm": "KM",
+  "gamesSpeed": "SPD",
+  "gamesTapRefreshPlay": "Tap refresh to play again",
+  "gamesTapRefreshTry": "Tap refresh to try again",
+  "gamesTapPauseResume": "Tap pause to resume",
+  "gamesScoreTapRefresh": "Score {score} · tap refresh",
+  "@gamesScoreTapRefresh": {
+    "placeholders": {
+      "score": {
+        "type": "Object"
+      }
+    }
+  },
+  "gamesScoreTapRetry": "Score {score} · tap to retry",
+  "@gamesScoreTapRetry": {
+    "placeholders": {
+      "score": {
+        "type": "Object"
+      }
+    }
+  },
+  "gamesTapDragDrive": "Tap / drag to drive",
+  "rideCallDriver": "Call driver",
+  "ridePayCashLocked": "Pay cash at complete — fare locked at request.",
+  "rideNoDriverAvailable": "No driver was available. Go back and try again.",
+  "rideAcceptSoon": "Accept soon",
+  "rideSecsLeft": "{secs}s left",
+  "@rideSecsLeft": {
+    "placeholders": {
+      "secs": {
+        "type": "int"
+      }
+    }
+  },
+  "foodPlaceOrderEtb": "PLACE ORDER · {amount} ETB",
+  "@foodPlaceOrderEtb": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "marketDetails": "Details",
+  "marketAdd": "Add",
+  "marketOpsQueueTooltip": "Ops queue",
+  "foodAssignOwner": "Assign owner · {name}",
+  "@foodAssignOwner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "foodRestaurant": "Restaurant",
+  "foodGrocery": "Grocery",
+  "foodAddOption": "Add option",
+  "marketNameMinChars": "Name must be at least 2 characters.",
+  "marketAddedName": "Added “{name}”.",
+  "@marketAddedName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "marketUpdatedName": "Updated “{name}”.",
+  "@marketUpdatedName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "marketEditCategory": "Edit {id}",
+  "@marketEditCategory": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "marketEnterMaxAds": "Enter a number between 1 and 50.",
+  "marketMaxActiveSet": "Max active ads set to {value}.",
+  "@marketMaxActiveSet": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodAvailableLabel": "Available",
+  "foodOptions": "Options",
+  "marketSortPriceUpChip": "Price ↑",
+  "marketSortPriceDownChip": "Price ↓",
+  "marketPriceRangeMinMax": "ETB {min}–{max}",
+  "@marketPriceRangeMinMax": {
+    "placeholders": {
+      "min": {
+        "type": "Object"
+      },
+      "max": {
+        "type": "Object"
+      }
+    }
+  },
+  "marketPriceRangeMinPlus": "ETB {min}+",
+  "@marketPriceRangeMinPlus": {
+    "placeholders": {
+      "min": {
+        "type": "Object"
+      }
+    }
+  },
+  "marketPriceRangeUpTo": "Up to ETB {max}",
+  "@marketPriceRangeUpTo": {
+    "placeholders": {
+      "max": {
+        "type": "Object"
+      }
+    }
+  },
+  "marketAny": "Any",
+  "marketCatPhones": "Phones & Tablets",
+  "marketCatElectronics": "Electronics",
+  "marketCatVehicles": "Vehicles",
+  "marketCatProperty": "Property",
+  "marketCatFurniture": "Home & Furniture",
+  "marketCatFashion": "Fashion",
+  "marketEditAd": "Edit ad",
+  "marketCover": "Cover",
+  "marketFieldTitle": "Title",
+  "marketFieldDescription": "Description",
+  "marketFieldPrice": "Price (ETB)",
+  "marketFieldBrand": "Brand",
+  "marketBrandHint": "e.g. Apple, Toyota",
+  "marketRequired": "Required",
+  "marketMinChars": "Min {count} characters",
+  "@marketMinChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketValidPrice": "Enter a valid price",
+  "marketSpecStorage": "Storage",
+  "marketSpecYear": "Year",
+  "marketSpecType": "Type",
+  "marketSpecSize": "Size",
+  "marketSpecGeneric": "Spec",
+  "marketSpecHintPhones": "e.g. 128GB",
+  "marketSpecHintVehicles": "e.g. 2019",
+  "marketSpecHintProperty": "e.g. Rent / Sale",
+  "marketSpecHintElectronics": "e.g. 55 inch",
+  "marketSpecHintGeneric": "Main spec",
+  "marketExtraDetailName": "Extra detail name",
+  "marketExtraDetailHint": "e.g. Color",
+  "marketExtraValue": "Value",
+  "marketExtraValueHint": "e.g. Black",
+  "marketFieldSubcity": "Subcity",
+  "marketUploadingPhotos": "Uploading photos…",
+  "marketSubmitting": "Submitting…",
+  "marketSaveResubmit": "Save & re-submit",
+  "marketSubmitReview": "Submit for review",
+  "marketUpdatedPending": "Updated — pending review again.",
+  "marketSubmittedModeration": "Submitted for moderation. You’ll be notified when reviewed.",
+  "marketListing": "Listing",
+  "marketPhoneVisible": "Phone visible on your ads (rate-limited).",
+  "marketPhoneHidden": "Phone hidden — buyers use chat only.",
+  "marketCallCtaBuyers": "Call CTA for buyers (daily limit applies)",
+  "marketYourNumber": "Number: {phone}",
+  "@marketYourNumber": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "marketUpdates": "Updates",
+  "marketUpdatesUnread": "Updates ({count} new)",
+  "@marketUpdatesUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketRejectReason": "Reason: {reason}",
+  "@marketRejectReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "marketReportHint": "Spam, scam, prohibited item…",
+  "marketMessageHint": "Message…",
+  "marketStartChatting": "Start chatting",
+  "marketMessages": "Messages",
+  "marketDisplayName": "Display name",
+  "marketDisplayNameHint": "e.g. Babies & Kids",
+  "marketIdOptional": "Id (optional)",
+  "marketIdAutoHint": "auto from name if empty",
+  "marketIconKey": "Icon key",
+  "marketRejectReasonHint": "Reason shown to seller…",
+  "marketLimitLabel": "Limit (1–50)",
+  "marketLimitHelper": "Per seller: approved + pending count",
+  "marketCurrentPerSeller": "Current: {value} per seller",
+  "@marketCurrentPerSeller": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "marketOpsTitle": "Ops",
+  "marketDismissed": "Dismissed",
+  "marketSuspendedFromOps": "Suspended from ops queue",
+  "marketCategoryMeta": "id: {id} · icon: {icon}",
+  "@marketCategoryMeta": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "foodNavBrowse": "Browse",
+  "foodNavOrders": "Orders",
+  "foodSubtotal": "Subtotal",
+  "foodDeliveryFee": "Delivery fee",
+  "foodTotal": "Total",
+  "foodCheckout": "Checkout",
+  "foodLabel": "Label",
+  "foodSubcity": "Subcity",
+  "foodAddressDetails": "Address details",
+  "foodNotesRider": "Notes for rider / kitchen",
+  "foodSaving": "Saving…",
+  "foodSaveAddress": "Save this address",
+  "foodPaymentCod": "Payment: Cash on delivery (COD)",
+  "foodCustomize": "Customize {name}",
+  "@foodCustomize": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "foodAskOtp": "Ask customer for OTP",
+  "foodKind": "Kind",
+  "foodStoreOpen": "Store open",
+  "foodStorePaused": "Store paused",
+  "foodMarkAvailable": "Mark available",
+  "foodMarkUnavailable": "Mark unavailable",
+  "foodOwner": "Owner: {name}",
+  "@foodOwner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "foodCovers": "Covers {areas}",
+  "@foodCovers": {
+    "placeholders": {
+      "areas": {
+        "type": "String"
+      }
+    }
+  },
+  "foodReassign": "Reassign",
+  "foodStaffPhone": "Staff phone",
+  "foodStaffPhoneHelper": "Local 9 digits or +251…",
+  "foodUnavailable": "Unavailable",
+  "foodSoldOut": "Sold out",
+  "foodRsvpFree": "RSVP free",
+  "foodRsvpPayDoor": "RSVP · pay at door",
+  "rideGoAcross": "Go across Addis",
+  "rideMapPickPickup": "Tap the map to set pickup",
+  "rideMapPickDropoff": "Tap the map to set drop-off",
+  "rideMapActiveTrip": "Trip in progress — map is for reference",
+  "rideSearchHint": "Bole, Piassa, Airport…",
+  "ridePickupYou": "Pickup · you",
+  "ridePickup": "Pickup",
+  "rideWaitingLocation": "Waiting for location…",
+  "rideTapMapOnce": "Tap the map once to set",
+  "rideMapPinWaiting": "Map pin set — waiting for places from API",
+  "rideOutsideNote": "That pin is outside Addis. Move it into the service area.",
+  "rideBaseEtb": "Base ETB",
+  "ridePerKmEtb": "Per km ETB",
+  "rideMinFareEtb": "Min fare ETB",
+  "rideOfferRadiusKm": "Offer radius km",
+  "rideOpsApiOnly": "Ride ops requires API mode.",
+  "rideCancelledByOps": "Cancelled by Ride ops",
+  "rideApprove": "Approve",
+  "rideSuspend": "Suspend",
+  "rideCashVehicle": "{amount} ETB cash · {vehicle}",
+  "@rideCashVehicle": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      },
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "rideDriverMode": "Driver mode",
+  "rideGoOnline": "Go online",
+  "eventsNavBrowse": "Browse",
+  "eventsNavHost": "Host",
+  "eventsSoldOut": "Sold out",
+  "eventsSeatsLeft": "{count} seats left",
+  "@eventsSeatsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "eventsOrganizer": "Organizer",
+  "eventsRsvpFree": "RSVP free",
+  "eventsRsvpPayDoor": "RSVP · pay at door",
+  "eventsFree": "Free",
+  "eventsPricePayDoor": "ETB {amount} · pay at door",
+  "@eventsPricePayDoor": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "eventsTicketCode": "Ticket code",
+  "eventsReason": "Reason",
+  "eventsMonthJan": "Jan",
+  "eventsMonthFeb": "Feb",
+  "eventsMonthMar": "Mar",
+  "eventsMonthApr": "Apr",
+  "eventsMonthMay": "May",
+  "eventsMonthJun": "Jun",
+  "eventsMonthJul": "Jul",
+  "eventsMonthAug": "Aug",
+  "eventsMonthSep": "Sep",
+  "eventsMonthOct": "Oct",
+  "eventsMonthNov": "Nov",
+  "eventsMonthDec": "Dec",
+  "adminLocalPhone": "Local phone (9 digits)",
+  "adminRole": "Role",
+  "homeAddisOs": "Addis OS",
+  "homeStaff": "Staff",
+  "authSignalEthiopia": "Signal · Ethiopia",
+  "authVerifyChannel": "Verify channel",
+  "authPhoneInvalid": "Enter a valid Ethiopian mobile number",
+  "authOtpInvalid": "Enter the 6-digit code",
+  "back": "Back",
+  "moduleOnlineSoon": "Module · online soon",
+  "suspend": "Suspend",
+  "pending": "Pending",
+  "approved": "Approved",
+  "foodExtraCheeseHint": "e.g. Extra cheese",
+  "foodOpsMenuExplain": "Food ops does not edit restaurant menus here. Open Food ops to create a merchant and Assign owner phone to the restaurant staff. Only that owner can add dishes.",
+  "foodMerchantAssignExplain": "Ask Food ops to assign your phone as the owner of one restaurant. You can only edit that restaurant’s menu — never another store’s.",
+  "foodRiderLabel": "Rider: {id}",
+  "@foodRiderLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "foodCoverageLabel": "Coverage (comma-separated)",
+  "foodUnassigned": "unassigned",
+  "foodOpsMarkDelivered": "Ops: mark delivered (no OTP)",
+  "foodOpsForceAdvance": "Ops: force advance status",
+  "foodHomeLabel": "Home",
+  "eventsTicketHint": "MK-…",
+  "listSeparator": ",",
+  "placeAddisAbaba": "Addis Ababa",
+  "placeAddisKetema": "Addis Ketema",
+  "placeArada": "Arada",
+  "placeBole": "Bole",
+  "placeBoleAirport": "Bole Airport",
+  "placeBoleAtlas": "Bole Atlas",
+  "placeCmc": "CMC",
+  "placeCmcMichael": "CMC Michael",
+  "placeGulele": "Gulele",
+  "placeKazanchis": "Kazanchis",
+  "placeKirkos": "Kirkos",
+  "placeLideta": "Lideta",
+  "placeMexicoSquare": "Mexico Square",
+  "placeNifasSilk": "Nifas Silk",
+  "placePiassa": "Piassa",
+  "placeSarbet": "Sarbet",
+  "placeYeka": "Yeka",
+  "locationTurnOn": "Turn on location services to use pickup.",
+  "locationDenied": "Location permission denied.",
+  "locationBlocked": "Location permission is blocked. Enable it in system settings.",
+  "locationNoPickupPlaces": "No pickup places available.",
+  "authStartAgain": "Start again with your phone number.",
+  "authApiUnreachable": "Could not reach Maekel API at {url}",
+  "@authApiUnreachable": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "authOtpGateway": "Could not verify OTP. Is the gateway running?",
+  "eventsCategoriesNotLoaded": "Categories/areas not loaded yet.",
+  "eventsTitleVenueRequired": "Title and venue are required.",
+  "eventsCapacityMin": "Capacity must be at least 1.",
+  "eventsRejectDefault": "Does not meet guidelines",
+  "foodSavedLabel": "Saved",
+  "foodEtaFee": "{minutes} min · {fee} ETB fee",
+  "@foodEtaFee": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      },
+      "fee": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodCheckoutSummary": "Subtotal {subtotal} ETB + delivery {fee} ETB = {total} ETB",
+  "@foodCheckoutSummary": {
+    "placeholders": {
+      "subtotal": {
+        "type": "Object"
+      },
+      "fee": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodModifierPrice": "(+{amount} ETB)",
+  "@foodModifierPrice": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodOptionsCount": "{count} option(s)",
+  "@foodOptionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "foodPriceEtb": "{amount} ETB",
+  "@foodPriceEtb": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "foodPriceEtbCod": "{amount} ETB COD",
+  "@foodPriceEtbCod": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "rideVehicleEconomy": "Economy",
+  "requestFailed": "Request failed ({code})",
+  "@requestFailed": {
+    "placeholders": {
+      "code": {
+        "type": "Object"
+      }
+    }
+  },
+  "sellerYou": "You",
+  "marketLocationAddis": "{subcity}, Addis Ababa",
+  "@marketLocationAddis": {
+    "placeholders": {
+      "subcity": {
+        "type": "String"
+      }
+    }
+  },
+  "eventStatusDraft": "Draft",
+  "eventStatusRejected": "Rejected",
+  "eventStatusEnded": "Ended",
+  "ticketStatusReserved": "Reserved",
+  "ticketStatusCheckedIn": "Checked in",
+  "eventsPhotos": "Photos",
+  "eventsAddPhoto": "Add at least one photo.",
+  "eventsMaxPhotos": "Max 8 photos.",
+  "eventsPhotosOptional": "Photos (optional, up to 8)"
 }

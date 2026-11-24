@@ -6,11 +6,13 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/location/device_location.dart';
+import '../../../core/locale/place_l10n.dart';
 import '../../../core/widgets/glass_panel.dart';
 import '../components/ride_map.dart';
 import '../components/ride_shell.dart';
 import '../models/ride_models.dart';
 import '../providers/ride_providers.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RideScreen extends ConsumerStatefulWidget {
   const RideScreen({super.key});
@@ -79,8 +81,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
           _pickingPickup = false;
           _quote = null;
           _didAutoLocate = true;
-          _locationNote =
-              'Your location is outside the Addis Ababa service area. Rides can only be requested in Addis.';
+          _locationNote = AppLocalizations.of(context)!.rideOutsideServiceArea;
         });
         return;
       }
@@ -94,6 +95,15 @@ class _RideScreenState extends ConsumerState<RideScreen> {
         _quote = null;
         _didAutoLocate = true;
         _locationNote = null;
+      });
+    } on DeviceLocationException catch (e) {
+      if (!mounted) return;
+      final noteL10n = AppLocalizations.of(context)!;
+      setState(() {
+        _usingGpsPickup = false;
+        _pickingPickup = true;
+        _locationNote = deviceLocationMessage(noteL10n, e);
+        _didAutoLocate = true;
       });
     } catch (e) {
       if (!mounted) return;
@@ -121,8 +131,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
           _dropoffPoint = point;
           _dropoffId = null;
         }
-        _locationNote =
-            'Outside the Addis Ababa service area. Move the pin closer to the city to request a ride.';
+        _locationNote = AppLocalizations.of(context)!.rideOutsideNote;
         return;
       }
 
@@ -132,7 +141,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
         _usingGpsPickup = false;
         _pickingPickup = false;
         _locationNote = places.isEmpty
-            ? 'Map pin set — waiting for places from API'
+            ? AppLocalizations.of(context)!.rideMapPinWaiting
             : null;
         if (_dropoffId != null && _dropoffId == _pickupId) {
           _dropoffPoint = null;
@@ -142,7 +151,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
         _dropoffPoint = point;
         if (places.isEmpty) {
           _dropoffId = null;
-          _locationNote = 'Map pin set — waiting for places from API';
+          _locationNote = AppLocalizations.of(context)!.rideMapPinWaiting;
         } else {
           _dropoffId = nearestPlace(point, places).id;
           _locationNote = null;
@@ -175,22 +184,24 @@ class _RideScreenState extends ConsumerState<RideScreen> {
       }
     });
 
+    final l10n = AppLocalizations.of(context)!;
+
     return RideShell(
-      title: 'Ride',
+      title: l10n.rideTitle,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Text(
-            'Go across Addis',
+            l10n.rideGoAcross,
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 6),
           Text(
             active != null
-                ? 'Finish or open the active trip to pick a new dropoff'
+                ? l10n.rideMapActiveTrip
                 : _pickingPickup
-                    ? 'Single-click or long-press the map to set pickup'
-                    : 'Single-click or long-press the map to set dropoff',
+                    ? l10n.rideMapPickPickup
+                    : l10n.rideMapPickDropoff,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: active != null
                       ? MaekelColors.muted
@@ -215,7 +226,9 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Active trip · ${active.status.label}',
+                        l10n.rideActiveTripStatus(
+                          active.status.localized(l10n),
+                        ),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
@@ -253,18 +266,18 @@ class _RideScreenState extends ConsumerState<RideScreen> {
             runSpacing: 8,
             children: [
               ChoiceChip(
-                label: const Text('Set pickup'),
+                label: Text(l10n.rideSetPickup),
                 selected: _pickingPickup,
                 onSelected: (_) => setState(() => _pickingPickup = true),
               ),
               ChoiceChip(
-                label: const Text('Set dropoff'),
+                label: Text(l10n.rideSetDropoff),
                 selected: !_pickingPickup,
                 onSelected: (_) => setState(() => _pickingPickup = false),
               ),
               ActionChip(
                 avatar: const Icon(Icons.my_location_rounded, size: 16),
-                label: const Text('Use my location'),
+                label: Text(l10n.rideUseMyLocation),
                 onPressed: places.isEmpty || active != null
                     ? null
                     : () => _useMyLocation(places),
@@ -277,10 +290,9 @@ class _RideScreenState extends ConsumerState<RideScreen> {
             enabled: active == null,
             style: const TextStyle(color: MaekelColors.ink),
             decoration: InputDecoration(
-              labelText: _pickingPickup
-                  ? 'Search pickup place'
-                  : 'Search drop-off place',
-              hintText: 'Bole, Piassa, Airport…',
+              labelText:
+                  _pickingPickup ? l10n.rideSetPickup : l10n.rideSetDropoff,
+              hintText: l10n.rideSearchHint,
               prefixIcon: const Icon(Icons.search_rounded),
             ),
             onChanged: (v) => setState(() => _searchQuery = v.trim()),
@@ -303,8 +315,8 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      title: Text(p.name),
-                      subtitle: Text(p.subcity),
+                      title: Text(localizedPlace(l10n, p.name)),
+                      subtitle: Text(localizedPlace(l10n, p.subcity)),
                       onTap: () => _selectPlace(p),
                     ),
                   ),
@@ -317,17 +329,19 @@ class _RideScreenState extends ConsumerState<RideScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _CoordRow(
-                  label: _usingGpsPickup ? 'PICKUP · YOU' : 'PICKUP',
+                  label: _usingGpsPickup
+                      ? l10n.ridePickupYou.toUpperCase()
+                      : l10n.ridePickup.toUpperCase(),
                   value: _pickupPoint == null
-                      ? 'Waiting for location…'
+                      ? l10n.rideWaitingLocation
                       : _fmt(_pickupPoint!),
                   accent: MaekelColors.signal,
                 ),
                 const SizedBox(height: 14),
                 _CoordRow(
-                  label: 'DROPOFF',
+                  label: l10n.foodDropoff,
                   value: _dropoffPoint == null
-                      ? 'Tap the map once to set'
+                      ? l10n.rideTapMapOnce
                       : _fmt(_dropoffPoint!),
                   accent: MaekelColors.amber,
                 ),
@@ -345,7 +359,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('GET UPFRONT QUOTE'),
+                      : Text(l10n.rideGetQuote),
                 ),
               ],
             ),
@@ -358,12 +372,13 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'ECONOMY',
+                    localizedVehicleClass(l10n, _quote!.vehicleClass)
+                        .toUpperCase(),
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${_quote!.totalEtb} ETB',
+                    l10n.rideFareEtb(_quote!.totalEtb),
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           color: MaekelColors.signal,
                           fontSize: 40,
@@ -371,15 +386,10 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                   ),
                   Text(
                     _quote!.distanceKm == null
-                        ? 'Binding quote · ETA ${_quote!.etaMinutes} min'
-                        : 'Binding quote · ${_quote!.distanceKm!.toStringAsFixed(1)} km · ETA ${_quote!.etaMinutes} min',
+                        ? l10n.rideDriverEta(_quote!.etaMinutes)
+                        : '${l10n.rideStatusQuote} · ${_quote!.distanceKm!.toStringAsFixed(1)} km · ${l10n.rideDriverEta(_quote!.etaMinutes)}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  if (_quote!.baseEtb != null && _quote!.perKmEtb != null)
-                    Text(
-                      'Fare = max(min, ${_quote!.baseEtb} + ${_quote!.perKmEtb}×km)',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _requesting || active != null ? null : _request,
@@ -389,7 +399,7 @@ class _RideScreenState extends ConsumerState<RideScreen> {
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2.4),
                           )
-                        : const Text('REQUEST RIDE'),
+                        : Text(l10n.rideRequest),
                   ),
                 ],
               ),
@@ -410,10 +420,8 @@ class _RideScreenState extends ConsumerState<RideScreen> {
     if (!isInRideServiceArea(_pickupPoint!) ||
         !isInRideServiceArea(_dropoffPoint!)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Pickup or drop-off is outside the Addis Ababa service area.',
-          ),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.rideOutsideServiceArea),
         ),
       );
       return;

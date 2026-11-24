@@ -12,6 +12,8 @@ import '../components/market_safety_banner.dart';
 import '../components/market_shell.dart';
 import '../models/market_models.dart';
 import '../providers/market_providers.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MarketAdDetailScreen extends ConsumerWidget {
   const MarketAdDetailScreen({super.key, required this.adId});
@@ -25,10 +27,10 @@ class MarketAdDetailScreen extends ConsumerWidget {
     final favorites = ref.watch(favoriteIdsProvider);
 
     if (ad == null) {
-      return const MarketShell(
-        title: 'Ad',
+      return MarketShell(
+        title: AppLocalizations.of(context)!.marketListing,
         showBottomNav: false,
-        child: Center(child: Text('Ad not found')),
+        child: Center(child: Text(AppLocalizations.of(context)!.marketAdNotFound)),
       );
     }
 
@@ -36,8 +38,10 @@ class MarketAdDetailScreen extends ConsumerWidget {
     final isMine = userId != null && ad.sellerId == userId;
     final isFavorite = favorites.contains(ad.id);
 
+    final l10n = AppLocalizations.of(context)!;
+
     return MarketShell(
-      title: 'Listing',
+      title: l10n.marketListing,
       showBottomNav: false,
       actions: [
         IconButton(
@@ -96,13 +100,16 @@ class MarketAdDetailScreen extends ConsumerWidget {
           Text(ad.title, style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
           Text(
-            '${ad.subcity}, ${ad.locationLabel} · ${ad.condition.label}',
+            '${localizedPlace(AppLocalizations.of(context)!, ad.subcity)}, ${ad.locationLabel} · ${ad.condition.localized(AppLocalizations.of(context)!)}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
-          const MarketSafetyBanner(message: MarketSafetyCopy.shortTip),
+          MarketSafetyBanner(compact: true),
           const SizedBox(height: 16),
-          Text('DETAILS', style: Theme.of(context).textTheme.labelLarge),
+          Text(
+            AppLocalizations.of(context)!.marketDetails.toUpperCase(),
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
           const SizedBox(height: 8),
           Text(ad.description, style: Theme.of(context).textTheme.bodyLarge),
           if (ad.attributes.isNotEmpty) ...[
@@ -131,7 +138,10 @@ class MarketAdDetailScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 18),
-          Text('SELLER', style: Theme.of(context).textTheme.labelLarge),
+          Text(
+            AppLocalizations.of(context)!.marketSeller.toUpperCase(),
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
           const SizedBox(height: 8),
           GlassPanel(
             borderRadius: 18,
@@ -151,7 +161,7 @@ class MarketAdDetailScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        seller?.name ?? 'Seller',
+                        seller?.name ?? l10n.marketSeller,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Text(
@@ -171,7 +181,7 @@ class MarketAdDetailScreen extends ConsumerWidget {
                   ? null
                   : () => _startChat(context, ref, userId, ad.id),
               icon: const Icon(Icons.chat_rounded),
-              label: const Text('CHAT WITH SELLER'),
+              label: Text(AppLocalizations.of(context)!.marketChatSeller),
             ),
             const SizedBox(height: 10),
             if (seller != null && seller.showPhone)
@@ -180,16 +190,16 @@ class MarketAdDetailScreen extends ConsumerWidget {
                     ? null
                     : () => _callSeller(context, ref, ad.id),
                 icon: const Icon(Icons.call_rounded),
-                label: const Text('CALL SELLER'),
+                label: Text(AppLocalizations.of(context)!.marketCallSeller),
               )
             else if (seller != null)
               Text(
-                'Seller hid their phone. Use chat.',
+                l10n.marketSellerHidPhone,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
           ] else ...[
             Text(
-              'This is your listing.',
+              l10n.marketYourListing,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (ad.status != AdStatus.sold) ...[
@@ -197,7 +207,7 @@ class MarketAdDetailScreen extends ConsumerWidget {
               OutlinedButton(
                 onPressed: () =>
                     context.push('${AppRoutes.marketSell}?edit=${ad.id}'),
-                child: const Text('EDIT LISTING'),
+                child: Text(AppLocalizations.of(context)!.marketEditListing),
               ),
             ],
           ],
@@ -285,23 +295,23 @@ class MarketAdDetailScreen extends ConsumerWidget {
       builder: (context) {
         return AlertDialog(
           backgroundColor: MaekelColors.panel,
-          title: const Text('Report listing'),
+          title: Text(AppLocalizations.of(context)!.marketReportListing),
           content: TextField(
             controller: controller,
             maxLines: 3,
             style: const TextStyle(color: MaekelColors.ink),
-            decoration: const InputDecoration(
-              hintText: 'Spam, scam, prohibited item…',
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.marketReportHint,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Submit'),
+              child: Text(AppLocalizations.of(context)!.submit),
             ),
           ],
         );
@@ -315,7 +325,7 @@ class MarketAdDetailScreen extends ConsumerWidget {
           );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Report sent to ops.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.marketReportSent)),
         );
       }
     }

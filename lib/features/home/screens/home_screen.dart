@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/locale/place_l10n.dart';
+import '../../../core/locale/language_picker.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/module_card.dart';
 import '../../../l10n/app_localizations.dart';
@@ -50,7 +52,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final session = ref.watch(authProvider).session;
 
     return Scaffold(
@@ -76,7 +77,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'ADDIS OS',
+                                    AppLocalizations.of(context)!.homeAddisOs.toUpperCase(),
                                     style: Theme.of(context)
                                         .textTheme
                                         .labelLarge
@@ -94,7 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       ).createShader(bounds);
                                     },
                                     child: Text(
-                                      l10n.appName,
+                                      AppLocalizations.of(context)!.appName,
                                       style: Theme.of(context)
                                           .textTheme
                                           .displayLarge
@@ -108,7 +109,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               ),
                             ),
                             IconButton(
-                              tooltip: l10n.signOut,
+                              tooltip: AppLocalizations.of(context)!.languageTitle,
+                              onPressed: () => showLanguagePicker(context, ref),
+                              style: IconButton.styleFrom(
+                                backgroundColor:
+                                    MaekelColors.panel.withValues(alpha: 0.7),
+                                side: const BorderSide(
+                                  color: MaekelColors.glassBorder,
+                                ),
+                              ),
+                              icon: const Icon(Icons.translate_rounded),
+                              color: MaekelColors.signal,
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              tooltip: AppLocalizations.of(context)!.signOut,
                               onPressed: () {
                                 ref.read(authProvider.notifier).signOut();
                                 context.go(AppRoutes.auth);
@@ -127,7 +142,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          l10n.homeGreeting,
+                          AppLocalizations.of(context)!.homeGreeting,
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 color: MaekelColors.muted,
                               ),
@@ -148,7 +163,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               ),
                             ),
                             child: Text(
-                              '${session.phoneE164}  ·  ${AppConstants.cityName}',
+                              '${session.phoneE164}  ·  ${localizedPlace(AppLocalizations.of(context)!, AppConstants.cityName)}',
                               style: Theme.of(context)
                                   .textTheme
                                   .labelLarge
@@ -176,7 +191,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       Icons.admin_panel_settings_outlined,
                                       size: 18,
                                     ),
-                                    label: const Text('Market ops'),
+                                    label: Text(AppLocalizations.of(context)!.adminMarketOps),
                                   ),
                                 if (session.isFoodOps)
                                   TextButton.icon(
@@ -186,7 +201,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       Icons.ramen_dining_outlined,
                                       size: 18,
                                     ),
-                                    label: const Text('Food ops'),
+                                    label: Text(AppLocalizations.of(context)!.foodOps),
                                   ),
                                 if (session.isRideOps)
                                   TextButton.icon(
@@ -196,7 +211,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       Icons.local_taxi_outlined,
                                       size: 18,
                                     ),
-                                    label: const Text('Ride ops'),
+                                    label: Text(AppLocalizations.of(context)!.adminRideOps),
                                   ),
                                 if (session.isEventsOps)
                                   TextButton.icon(
@@ -206,7 +221,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       Icons.event_available_outlined,
                                       size: 18,
                                     ),
-                                    label: const Text('Events ops'),
+                                    label: Text(AppLocalizations.of(context)!.eventsOps),
                                   ),
                                 if (session.isPlatformAdmin)
                                   TextButton.icon(
@@ -216,7 +231,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       Icons.group_outlined,
                                       size: 18,
                                     ),
-                                    label: const Text('Staff'),
+                                    label: Text(AppLocalizations.of(context)!.homeStaff),
                                   ),
                               ],
                             ),
@@ -235,40 +250,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     childAspectRatio: 0.92,
                     children: [
                       ModuleCard(
-                        title: l10n.moduleRide,
-                        subtitle: l10n.moduleRideDesc,
+                        title: AppLocalizations.of(context)!.moduleRide,
+                        subtitle: AppLocalizations.of(context)!.moduleRideDesc,
                         icon: Icons.electric_car_rounded,
                         accent: MaekelColors.ride,
                         delay: const Duration(milliseconds: 120),
                         onTap: () => context.push(AppRoutes.ride),
                       ),
                       ModuleCard(
-                        title: l10n.moduleMarket,
-                        subtitle: l10n.moduleMarketDesc,
+                        title: AppLocalizations.of(context)!.moduleMarket,
+                        subtitle: AppLocalizations.of(context)!.moduleMarketDesc,
                         icon: Icons.hub_rounded,
                         accent: MaekelColors.market,
                         delay: const Duration(milliseconds: 220),
                         onTap: () => context.push(AppRoutes.market),
                       ),
                       ModuleCard(
-                        title: l10n.moduleFood,
-                        subtitle: l10n.moduleFoodDesc,
+                        title: AppLocalizations.of(context)!.moduleFood,
+                        subtitle: AppLocalizations.of(context)!.moduleFoodDesc,
                         icon: Icons.ramen_dining_rounded,
                         accent: MaekelColors.food,
                         delay: const Duration(milliseconds: 320),
                         onTap: () => context.push(AppRoutes.food),
                       ),
                       ModuleCard(
-                        title: l10n.moduleEvents,
-                        subtitle: l10n.moduleEventsDesc,
+                        title: AppLocalizations.of(context)!.moduleEvents,
+                        subtitle: AppLocalizations.of(context)!.moduleEventsDesc,
                         icon: Icons.event_rounded,
                         accent: MaekelColors.events,
                         delay: const Duration(milliseconds: 420),
                         onTap: () => context.push(AppRoutes.events),
                       ),
                       ModuleCard(
-                        title: l10n.moduleGames,
-                        subtitle: l10n.moduleGamesDesc,
+                        title: AppLocalizations.of(context)!.moduleGames,
+                        subtitle: AppLocalizations.of(context)!.moduleGamesDesc,
                         icon: Icons.videogame_asset_rounded,
                         accent: MaekelColors.games,
                         delay: const Duration(milliseconds: 520),

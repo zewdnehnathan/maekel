@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FoodShell extends StatelessWidget {
   const FoodShell({
@@ -31,6 +32,7 @@ class FoodShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final loc = GoRouterState.of(context).uri.toString();
     final index = _indexFor(loc);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       floatingActionButton: floatingActionButton,
@@ -86,18 +88,18 @@ class FoodShell extends StatelessWidget {
                     context.go(AppRoutes.foodCart);
                 }
               },
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.restaurant_rounded),
-                  label: 'Browse',
+                  icon: const Icon(Icons.restaurant_rounded),
+                  label: l10n.foodNavBrowse,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.receipt_long_rounded),
-                  label: 'Orders',
+                  icon: const Icon(Icons.receipt_long_rounded),
+                  label: l10n.foodNavOrders,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.shopping_bag_outlined),
-                  label: 'Cart',
+                  icon: const Icon(Icons.shopping_bag_outlined),
+                  label: l10n.foodCartTitle,
                 ),
               ],
             )

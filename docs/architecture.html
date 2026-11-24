@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Maekel System Architecture</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body {
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.45;
+      color: #1a1a1a;
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1, h2, h3, h4 { color: #0a1018; page-break-after: avoid; }
+    h1 { font-size: 22pt; border-bottom: 2px solid #2ef3c5; padding-bottom: 8px; }
+    h2 { font-size: 16pt; margin-top: 1.6em; border-bottom: 1px solid #d0d7de; padding-bottom: 4px; }
+    h3 { font-size: 13pt; margin-top: 1.2em; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12px 0 18px;
+      font-size: 10pt;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #c9d1d9;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eef6f4; }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+      background: #eef2f6;
+      color: #111827;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f3f6f9;
+      color: #111827;
+      border: 1px solid #c9d1d9;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 9pt;
+      line-height: 1.35;
+      page-break-inside: avoid;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    pre.mermaid {
+      background: #ffffff;
+      color: #111827;
+      border: 1px solid #d0d7de;
+      text-align: center;
+    }
+    blockquote {
+      border-left: 4px solid #2ef3c5;
+      margin-left: 0;
+      padding: 4px 12px;
+      color: #444;
+      background: #f7fbfa;
+    }
+    a { color: #0b6e4f; }
+    hr { border: none; border-top: 1px solid #d0d7de; margin: 24px 0; }
+  </style>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+  </script>
+</head>
+<body>
+<h1 id="maekel-system-architecture">Maekel System Architecture</h1>
+<p><strong>Product:</strong> Maekel — Addis Ababa super app (Flutter)<br />
+<strong>Modules:</strong> Ride · Food · Market · (Games stub client-only for now)<br />
+<strong>Backend style:</strong> <strong>Microservice per product module</strong>, plus shared platform services<br />
+<strong>Aligned to:</strong> <a href="./mvp-cut-ride-food-market.md">MVP cut</a>, <a href="./ride-functional-requirements.md">Ride FRD</a>, <a href="./food-delivery-functional-requirements.md">Food FRD</a>, <a href="./market-functional-requirements.md">Market FRD</a><br />
+<strong>Version:</strong> 0.1<br />
+<strong>Status:</strong> Proposed architecture (ready for engineering lock)</p>
+<hr />
+<h2 id="1-goals-constraints">1. Goals &amp; constraints</h2>
+<table>
+<thead>
+<tr>
+<th>Goal</th>
+<th>Implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One phone → one identity, many roles</td>
+<td>Central <strong>Identity</strong> service; modules grant roles</td>
+</tr>
+<tr>
+<td>Independent module delivery</td>
+<td>Deploy/scale Ride ≠ Food ≠ Market</td>
+</tr>
+<tr>
+<td>Clear data ownership</td>
+<td>No shared writable DB across modules</td>
+</tr>
+<tr>
+<td>Realtime where needed</td>
+<td>Ride location/matching; Food order events; Market chat</td>
+</tr>
+<tr>
+<td>Ethiopia launch (Addis)</td>
+<td>ETB, +251, SMS OTP provider, local wallets later</td>
+</tr>
+<tr>
+<td>Flutter-only mobile clients (MVP)</td>
+<td>BFF/API Gateway exposes mobile-friendly HTTP + WebSocket/SSE</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Non-goals (architecture v0.1):</strong> multi-region active-active, multi-tenant white-label, Games backend, full loyalty ledger.</p>
+<hr />
+<h2 id="2-high-level-context">2. High-level context</h2>
+<pre class="mermaid">
+flowchart TB
+  subgraph clients [Clients]
+    Flutter[Maekel Flutter App]
+    AdminWeb[Ops Admin Web]
+  end
+
+  subgraph edge [Edge]
+    GW[API Gateway / BFF]
+    CDN[CDN - images]
+  end
+
+  subgraph platform [Platform services]
+    Identity[identity-service]
+    Profile[profile-service]
+    Media[media-service]
+    Notify[notification-service]
+    Chat[chat-service]
+    Places[places-service]
+  end
+
+  subgraph modules [Module microservices]
+    Ride[ride-service]
+    Food[food-service]
+    Market[market-service]
+  end
+
+  subgraph data [Managed data plane]
+    PG[(Postgres per service)]
+    Redis[(Redis)]
+    MQ{{Event bus}}
+    Obj[(Object storage)]
+  end
+
+  Flutter --> GW
+  AdminWeb --> GW
+  Flutter --> CDN
+  GW --> Identity
+  GW --> Profile
+  GW --> Media
+  GW --> Notify
+  GW --> Chat
+  GW --> Places
+  GW --> Ride
+  GW --> Food
+  GW --> Market
+  Media --> Obj
+  CDN --> Obj
+  Ride --> PG
+  Food --> PG
+  Market --> PG
+  Identity --> PG
+  Ride --> Redis
+  Food --> Redis
+  Ride --> MQ
+  Food --> MQ
+  Market --> MQ
+  Notify --> MQ
+  Chat --> MQ
+</pre>
+
+<hr />
+<h2 id="3-architecture-principles">3. Architecture principles</h2>
+<ol>
+<li><strong>Microservice per module</strong> — <code>ride-service</code>, <code>food-service</code>, <code>market-service</code> own their domain APIs, DBs, and deploy cycles.</li>
+<li><strong>Platform services are shared</strong> — identity, profile, places, media, notifications, chat are not “modules”; they are reusable infrastructure domains.</li>
+<li><strong>Database per service</strong> — no cross-service joins; integrate via APIs and events.</li>
+<li><strong>Sync for commands, async for facts</strong> — HTTP/gRPC for request/response; event bus for “TripStarted”, “OrderDelivered”, “AdApproved”.</li>
+<li><strong>Gateway is the only public entry</strong> for mobile/admin (except CDN for media).</li>
+<li><strong>Idempotency on money/logistics commands</strong> — place ride request, place food order, payment confirm.</li>
+<li><strong>Same user across sides</strong> — roles (<code>passenger</code>, <code>driver</code>, <code>customer</code>, <code>merchant_staff</code>, <code>food_rider</code>, <code>buyer</code>, <code>seller</code>, <code>admin</code>) attached to one <code>userId</code>.</li>
+</ol>
+<hr />
+<h2 id="4-client-architecture-flutter">4. Client architecture (Flutter)</h2>
+<pre><code class="language-text">lib/
+  app/                 # MaekelApp, router, theme
+  core/                # network, auth session, DI, logging, constants
+  features/
+    auth/
+    home/
+    ride/              # passenger + driver UI
+    food/              # customer (+ merchant/rider modes later)
+    market/            # browse + sell + messages
+    games/             # stub
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Navigation</td>
+<td><code>go_router</code></td>
+</tr>
+<tr>
+<td>State</td>
+<td>Riverpod (session + feature notifiers)</td>
+</tr>
+<tr>
+<td>Networking</td>
+<td>Single <code>ApiClient</code> → Gateway base URL; attach Bearer access token</td>
+</tr>
+<tr>
+<td>Realtime</td>
+<td>WebSocket (or SSE) channels scoped by module: <code>/ws/ride</code>, <code>/ws/food</code>, <code>/ws/chat</code></td>
+</tr>
+<tr>
+<td>Auth storage</td>
+<td>Secure storage for refresh token; access token in memory</td>
+</tr>
+<tr>
+<td>Offline</td>
+<td>Optimistic drafts (Market sell draft, Food cart local); hard fail at place-order/request-ride</td>
+</tr>
+</tbody>
+</table>
+<p>Client never talks to module services directly in production.</p>
+<hr />
+<h2 id="5-edge-api-gateway-mobile-bff">5. Edge: API Gateway / Mobile BFF</h2>
+<p><strong>Responsibility</strong></p>
+<ul>
+<li>TLS termination, rate limiting, request logging  </li>
+<li>JWT validation (or opaque token introspection via identity)  </li>
+<li>Route <code>/v1/ride/*</code> → ride-service, <code>/v1/food/*</code> → food-service, etc.  </li>
+<li>Aggregate <strong>lightweight</strong> mobile responses only where needed (e.g. Home badges)  </li>
+<li>CORS for admin web</li>
+</ul>
+<p><strong>Suggested public API shape</strong></p>
+<pre><code class="language-text">/v1/auth/*
+/v1/me/*
+/v1/places/*
+/v1/media/*
+/v1/notifications/*
+/v1/chat/*
+/v1/ride/*
+/v1/food/*
+/v1/market/*
+/v1/admin/*
+/ws                        # multiplexed or path-prefixed realtime
+</code></pre>
+<p>Gateway does <strong>not</strong> contain business rules for matching, fare, cart, or moderation.</p>
+<hr />
+<h2 id="6-microservice-catalog">6. Microservice catalog</h2>
+<h3 id="61-module-services-one-per-product-module">6.1 Module services (one per product module)</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Domain ownership</th>
+<th>MVP must expose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ride-service</code></td>
+<td>Trip request, fare quote, matching, trip lifecycle, driver availability, ratings, ride earnings ledger</td>
+<td>Passenger request/track/complete; driver online/accept/complete; cash fare</td>
+</tr>
+<tr>
+<td><code>food-service</code></td>
+<td>Merchants, menus, carts, orders, delivery jobs, OTP handover, delivery fees</td>
+<td>Browse food+grocery; cart; COD order; status; merchant accept; rider OTP complete</td>
+</tr>
+<tr>
+<td><code>market-service</code></td>
+<td>Categories, ads, favorites, moderation state, seller listings</td>
+<td>Browse/search; post ad; moderate; favorites; report</td>
+</tr>
+</tbody>
+</table>
+<p>Each module service:</p>
+<ul>
+<li>Has its <strong>own Postgres schema/database</strong>  </li>
+<li>Publishes domain events  </li>
+<li>Consumes identity <code>userId</code> as foreign reference (string/UUID), not a FK to identity DB  </li>
+<li>May call platform services synchronously (profile, media, places, notify, chat)</li>
+</ul>
+<h3 id="62-platform-services">6.2 Platform services</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Why shared</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>identity-service</code></td>
+<td>Phone OTP, tokens, sessions, role grants/revokes</td>
+</tr>
+<tr>
+<td><code>profile-service</code></td>
+<td>Display name, avatar, prefs; thin user projection for UI</td>
+</tr>
+<tr>
+<td><code>places-service</code></td>
+<td>Saved Home/Work/pins; geocode helpers; shared by Ride + Food</td>
+</tr>
+<tr>
+<td><code>media-service</code></td>
+<td>Upload URLs, image processing, CDN keys (Market ads, Food menus, avatars)</td>
+</tr>
+<tr>
+<td><code>notification-service</code></td>
+<td>FCM push fan-out; templates; device token registry</td>
+</tr>
+<tr>
+<td><code>chat-service</code></td>
+<td>Threads/messages (Market MVP; Ride optional reuse)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-optional-later-services-not-mvp">6.3 Optional later services (not MVP)</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Trigger to split</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>payment-service</code></td>
+<td>Multiple wallets, refunds, Market premium billing</td>
+</tr>
+<tr>
+<td><code>loyalty-service</code></td>
+<td>Feres Miles–class rewards</td>
+</tr>
+<tr>
+<td><code>dispatch-optimizer</code></td>
+<td>Heavy Ride matching algorithms</td>
+</tr>
+<tr>
+<td><code>search-service</code></td>
+<td>Elasticsearch/OpenSearch for Market at scale</td>
+</tr>
+<tr>
+<td><code>games-service</code></td>
+<td>If Games needs accounts/scores</td>
+</tr>
+</tbody>
+</table>
+<p>Until then, keep payment stubs <strong>inside</strong> the module that needs them (Ride cash confirm; Food COD; Market no goods checkout).</p>
+<hr />
+<h2 id="7-identity-roles-both-sides-one-phone">7. Identity, roles &amp; “both sides, one phone”</h2>
+<pre class="mermaid">
+sequenceDiagram
+  participant App as Flutter
+  participant GW as Gateway
+  participant ID as identity-service
+  participant Ride as ride-service
+
+  App->>GW: POST /v1/auth/otp/request {phone}
+  GW->>ID: requestOtp
+  ID-->>App: ok
+  App->>GW: POST /v1/auth/otp/verify {phone,code}
+  GW->>ID: verify
+  ID-->>App: accessToken, refreshToken, userId, roles[]
+  App->>GW: POST /v1/ride/driver/go-online
+  GW->>Ride: Authorization userId + role driver
+  Ride-->>App: online
+</pre>
+
+<p><strong>Rules</strong></p>
+<ul>
+<li>One <code>userId</code> per phone number (E.164, e.g. <code>+2519…</code>).  </li>
+<li>Roles are claims and/or server-side grants:  </li>
+<li>Ride: <code>ride_passenger</code> (default), <code>ride_driver</code> (after ops approve)  </li>
+<li>Food: <code>food_customer</code> (default), <code>food_merchant</code>, <code>food_rider</code>  </li>
+<li>Market: <code>market_buyer</code> (default), <code>market_seller</code> (implicit on first post)  </li>
+<li>Ops: <code>admin</code>, <code>moderator</code>, <code>dispatcher</code></li>
+<li>Module services <strong>enforce</strong> role on privileged endpoints; Gateway only authenticates identity.  </li>
+<li>Driver/merchant approval lives in module + mirrored role grant via identity API/event.</li>
+</ul>
+<hr />
+<h2 id="8-data-ownership-database-per-service">8. Data ownership (database per service)</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Primary store</th>
+<th>Typical entities</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>identity</td>
+<td>Postgres</td>
+<td>User, Phone, OtpChallenge, Session, RoleGrant</td>
+</tr>
+<tr>
+<td>profile</td>
+<td>Postgres</td>
+<td>Profile, DevicePreference</td>
+</tr>
+<tr>
+<td>places</td>
+<td>Postgres</td>
+<td>Place, GeocodeCache</td>
+</tr>
+<tr>
+<td>media</td>
+<td>Postgres + Object storage</td>
+<td>Asset, UploadSession</td>
+</tr>
+<tr>
+<td>notification</td>
+<td>Postgres</td>
+<td>DeviceToken, NotificationLog</td>
+</tr>
+<tr>
+<td>chat</td>
+<td>Postgres (+ Redis pub/sub)</td>
+<td>Thread, Participant, Message</td>
+</tr>
+<tr>
+<td><strong>ride</strong></td>
+<td>Postgres + Redis</td>
+<td>Driver, Vehicle, FareQuote, Trip, TripEvent, DriverLocation (hot in Redis)</td>
+</tr>
+<tr>
+<td><strong>food</strong></td>
+<td>Postgres + Redis</td>
+<td>Merchant, MenuItem, Cart, Order, DeliveryJob, DeliveryOtp</td>
+</tr>
+<tr>
+<td><strong>market</strong></td>
+<td>Postgres</td>
+<td>Category, Ad, AdPhoto, Favorite, ModerationDecision, Report</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Redis use</strong></p>
+<ul>
+<li>Ride: geospatial driver index, offer locks, idempotency keys  </li>
+<li>Food: active order fan-out / short-lived locks  </li>
+<li>Chat: presence / pub-sub  </li>
+<li>Gateway/identity: rate limits</li>
+</ul>
+<p><strong>No shared Postgres</strong> across ride/food/market.</p>
+<hr />
+<h2 id="9-inter-service-communication">9. Inter-service communication</h2>
+<h3 id="91-synchronous-http-or-grpc-internal">9.1 Synchronous (HTTP or gRPC internal)</h3>
+<table>
+<thead>
+<tr>
+<th>Caller</th>
+<th>Callee</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway</td>
+<td>any</td>
+<td>External request routing</td>
+</tr>
+<tr>
+<td>ride-service</td>
+<td>profile-service</td>
+<td>Driver card display fields</td>
+</tr>
+<tr>
+<td>food-service</td>
+<td>places-service</td>
+<td>Validate saved address</td>
+</tr>
+<tr>
+<td>market-service</td>
+<td>media-service</td>
+<td>Attach photo asset IDs</td>
+</tr>
+<tr>
+<td>any module</td>
+<td>notification-service</td>
+<td>“Send push to userId”</td>
+</tr>
+<tr>
+<td>market-service</td>
+<td>chat-service</td>
+<td>Ensure thread for ad+buyer+seller</td>
+</tr>
+<tr>
+<td>any module</td>
+<td>identity-service</td>
+<td>Check/grant role (admin flows)</td>
+</tr>
+</tbody>
+</table>
+<p>Prefer <strong>timeouts + retries with idempotency keys</strong> on writes.</p>
+<h3 id="92-asynchronous-event-bus">9.2 Asynchronous (event bus)</h3>
+<p><strong>Bus:</strong> Kafka / NATS / RabbitMQ (pick one; see §15).</p>
+<table>
+<thead>
+<tr>
+<th>Event (examples)</th>
+<th>Publisher</th>
+<th>Consumers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>identity.user.registered</code></td>
+<td>identity</td>
+<td>profile (create stub)</td>
+</tr>
+<tr>
+<td><code>identity.role.granted</code></td>
+<td>identity</td>
+<td>modules cache invalidation</td>
+</tr>
+<tr>
+<td><code>ride.trip.completed</code></td>
+<td>ride</td>
+<td>notification; (later loyalty)</td>
+</tr>
+<tr>
+<td><code>food.order.status_changed</code></td>
+<td>food</td>
+<td>notification; chat optional</td>
+</tr>
+<tr>
+<td><code>market.ad.approved</code></td>
+<td>market</td>
+<td>notification; search indexer later</td>
+</tr>
+<tr>
+<td><code>media.asset.ready</code></td>
+<td>media</td>
+<td>market/food</td>
+</tr>
+<tr>
+<td><code>chat.message.created</code></td>
+<td>chat</td>
+<td>notification</td>
+</tr>
+</tbody>
+</table>
+<p>Modules must remain available if a consumer is down (at-least-once delivery + idempotent handlers).</p>
+<hr />
+<h2 id="10-realtime-design">10. Realtime design</h2>
+<table>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Mechanism</th>
+<th>Payload focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ride tracking</td>
+<td>WebSocket from Gateway → ride-service</td>
+<td>Driver lat/lng, trip status</td>
+</tr>
+<tr>
+<td>Food order</td>
+<td>WebSocket or push+poll hybrid</td>
+<td>Order status transitions</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>WebSocket via chat-service</td>
+<td>New messages, read receipts later</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ride location path (MVP)</strong></p>
+<ol>
+<li>Driver app posts location every N seconds to <code>ride-service</code> (or gateway WS).</li>
+<li><code>ride-service</code> writes Redis geo + latest point; persists trail sampling to Postgres.</li>
+<li>Passenger subscribed to <code>tripId</code> receives location updates.</li>
+</ol>
+<hr />
+<h2 id="11-module-deep-dives">11. Module deep dives</h2>
+<h3 id="111-ride-service">11.1 <code>ride-service</code></h3>
+<pre class="mermaid">
+flowchart LR
+  P[Passenger API] --> Quote[Fare engine]
+  P --> Req[Request trip]
+  Req --> Match[Matcher]
+  Match --> Offers[Driver offers]
+  Offers --> Trip[Trip state machine]
+  D[Driver API] --> Avail[Availability + geo]
+  Avail --> Match
+  Trip --> Track[Tracking]
+  Trip --> Pay[Cash confirm]
+  Trip --> Rate[Ratings]
+</pre>
+
+<p><strong>Critical invariants</strong></p>
+<ul>
+<li>Idempotent <code>POST /trips</code> (client <code>Idempotency-Key</code>)  </li>
+<li>Binding fare quote ID referenced by trip  </li>
+<li>Single active trip per passenger (configurable)  </li>
+<li>Driver cannot go online without <code>ride_driver</code> role + approved vehicle</li>
+</ul>
+<p><strong>Internal packages (same deployable, not separate microservices yet):</strong> matching, pricing, trip-state — split only when scaling demands.</p>
+<h3 id="112-food-service">11.2 <code>food-service</code></h3>
+<pre class="mermaid">
+flowchart LR
+  C[Customer API] --> Cat[Catalog]
+  C --> Cart[Cart]
+  Cart --> Ord[Order]
+  Ord --> Mer[Merchant workflow]
+  Mer --> Job[Delivery job]
+  Job --> OTP[OTP handover]
+  R[Rider API] --> Job
+  M[Merchant API] --> Mer
+  M --> Cat
+</pre>
+
+<p><strong>Critical invariants</strong></p>
+<ul>
+<li>Single-merchant cart in MVP  </li>
+<li>Status machine matches FRD; Delivered requires OTP  </li>
+<li>Delivery riders are <strong>not</strong> Ride drivers (separate role + tables)</li>
+</ul>
+<h3 id="113-market-service">11.3 <code>market-service</code></h3>
+<pre class="mermaid">
+flowchart LR
+  B[Browse API] --> Search[Search/Filter]
+  S[Sell API] --> Ads[Ad store]
+  Ads --> Mod[Moderation]
+  Mod --> Search
+  B --> Fav[Favorites]
+  Ads --> ChatHook[Create/open chat thread]
+  ChatHook --> ChatSvc[chat-service]
+</pre>
+
+<p><strong>Critical invariants</strong></p>
+<ul>
+<li>Ads not publicly listed until Approved  </li>
+<li>Chat is owned by <code>chat-service</code>; market stores <code>threadId</code> reference  </li>
+<li>No goods payment in MVP</li>
+</ul>
+<hr />
+<h2 id="12-cross-cutting-concerns">12. Cross-cutting concerns</h2>
+<h3 id="121-security">12.1 Security</h3>
+<ul>
+<li>HTTPS everywhere; HSTS at edge  </li>
+<li>Short-lived access JWT + refresh rotation  </li>
+<li>OTP rate limits per phone/IP  </li>
+<li>PII minimization; no tokens in logs  </li>
+<li>Masked calling: integrate provider later; MVP may dial direct with rate limits  </li>
+<li>Admin routes behind extra role checks + audit log</li>
+</ul>
+<h3 id="122-observability">12.2 Observability</h3>
+<ul>
+<li>Structured logs with <code>requestId</code>, <code>userId</code>, <code>module</code>  </li>
+<li>Metrics: trip match time, order OTP success, ad approve latency  </li>
+<li>Tracing: Gateway → service (OpenTelemetry)  </li>
+<li>Per-service health: <code>/healthz</code>, <code>/readyz</code></li>
+</ul>
+<h3 id="123-idempotency-consistency">12.3 Idempotency &amp; consistency</h3>
+<ul>
+<li>Write APIs accepting <code>Idempotency-Key</code>  </li>
+<li>Outbox pattern (or transactional inbox) for reliable event publish from Postgres</li>
+</ul>
+<h3 id="124-file-uploads">12.4 File uploads</h3>
+<ol>
+<li>Client asks <code>media-service</code> for signed upload URL</li>
+<li>Client uploads to object storage</li>
+<li><code>media.asset.ready</code> → module attaches asset ID to ad/menu/avatar</li>
+</ol>
+<hr />
+<h2 id="13-admin-ops">13. Admin / ops</h2>
+<p>Thin <strong>Admin Web</strong> (or Flutter Web) talks to Gateway <code>/v1/admin/</code>*, which routes to:</p>
+<table>
+<thead>
+<tr>
+<th>Ops need</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Suspend user / grant roles</td>
+<td>identity (+ module flags)</td>
+</tr>
+<tr>
+<td>Approve drivers / vehicles</td>
+<td>ride-service</td>
+</tr>
+<tr>
+<td>Onboard merchants / reassign delivery</td>
+<td>food-service</td>
+</tr>
+<tr>
+<td>Moderate ads / handle reports</td>
+<td>market-service</td>
+</tr>
+<tr>
+<td>Push test / templates</td>
+<td>notification-service</td>
+</tr>
+</tbody>
+</table>
+<p>Do <strong>not</strong> build one mega-admin DB; compose via APIs.</p>
+<hr />
+<h2 id="14-deployment-topology">14. Deployment topology</h2>
+<pre class="mermaid">
+flowchart TB
+  subgraph k8s [Kubernetes / container platform]
+    GW
+    identity
+    profile
+    places
+    media
+    notify
+    chat
+    ride
+    food
+    market
+  end
+
+  subgraph managed [Managed cloud]
+    PG1[(Postgres instances)]
+    R[(Redis)]
+    Bus{{Event bus}}
+    S3[(Object storage)]
+    FCM[FCM]
+    SMS[SMS OTP provider]
+  end
+
+  ride --> PG1
+  food --> PG1
+  market --> PG1
+  identity --> PG1
+  ride --> R
+  ride --> Bus
+  food --> Bus
+  market --> Bus
+  notify --> FCM
+  identity --> SMS
+  media --> S3
+</pre>
+
+<p><strong>Environments:</strong> <code>dev</code> · <code>staging</code> · <code>prod</code><br />
+<strong>CI/CD:</strong> build per service; independent version tags; contract tests at Gateway<br />
+<strong>Secrets:</strong> cloud secret manager; never in git  </p>
+<p><strong>Local dev:</strong> Docker Compose with all services + Postgres/Redis; Flutter points at local Gateway.</p>
+<hr />
+<h2 id="15-recommended-tech-stack-proposed-lock">15. Recommended tech stack (proposed lock)</h2>
+<blockquote>
+<p>Frontend is already Flutter. Backend choices below optimize for microservice-per-module + Ethiopia MVP.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Recommendation</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway/BFF</td>
+<td><strong>NestJS</strong> or <strong>Envoy + small BFF</strong></td>
+<td>NestJS faster for mobile aggregation</td>
+</tr>
+<tr>
+<td>Module &amp; platform APIs</td>
+<td><strong>NestJS (TypeScript)</strong> <em>or</em> <strong>Go</strong> for Ride hot path</td>
+<td>Pick <strong>one</strong> primary language for team velocity; Go optional for <code>ride-service</code> later</td>
+</tr>
+<tr>
+<td>Primary language (default)</td>
+<td><strong>TypeScript / NestJS</strong> for all MVP services</td>
+<td>Same patterns, shared libs (<code>auth-guard</code>, <code>otel</code>, <code>outbox</code>)</td>
+</tr>
+<tr>
+<td>DB</td>
+<td><strong>PostgreSQL</strong> (DB-per-service)</td>
+<td>Strong consistency for orders/trips/ads</td>
+</tr>
+<tr>
+<td>Cache / geo</td>
+<td><strong>Redis</strong></td>
+<td>Ride driver geo, locks, rate limits</td>
+</tr>
+<tr>
+<td>Event bus</td>
+<td><strong>NATS</strong> (simpler MVP) or <strong>Kafka</strong> (if already standard)</td>
+<td>Prefer NATS JetStream for MVP size</td>
+</tr>
+<tr>
+<td>Object storage</td>
+<td><strong>S3-compatible</strong></td>
+<td>Images</td>
+</tr>
+<tr>
+<td>Push</td>
+<td><strong>Firebase Cloud Messaging</strong></td>
+<td>Via notification-service</td>
+</tr>
+<tr>
+<td>SMS OTP</td>
+<td>Local aggregator / Twilio-class provider</td>
+<td>Behind identity-service</td>
+</tr>
+<tr>
+<td>Maps</td>
+<td>Google Maps / Mapbox</td>
+<td>Flutter + server geocode</td>
+</tr>
+<tr>
+<td>Admin web</td>
+<td>Next.js or Flutter Web</td>
+<td>Calls same Gateway</td>
+</tr>
+<tr>
+<td>Containers</td>
+<td>Docker + Kubernetes (or ECS)</td>
+<td>Service-per-deploy</td>
+</tr>
+<tr>
+<td>Auth tokens</td>
+<td>JWT access + refresh</td>
+<td>Issued by identity-service</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Explicitly not the MVP backbone:</strong> Firebase/Firestore as system of record for Ride/Food (realtime toy OK for prototypes only). Use FCM as a <strong>push channel</strong>, not the domain database.</p>
+<h3 id="shared-libraries-monorepo-option">Shared libraries (monorepo option)</h3>
+<pre><code class="language-text">backend/
+  apps/
+    gateway/
+    identity-service/
+    profile-service/
+    places-service/
+    media-service/
+    notification-service/
+    chat-service/
+    ride-service/
+    food-service/
+    market-service/
+  libs/
+    auth/
+    events/
+    tracing/
+    errors/
+</code></pre>
+<p><strong>Monorepo + independently deployable services</strong> is preferred so contracts stay aligned without forcing a monolith.</p>
+<hr />
+<h2 id="16-mvp-service-slice-what-to-build-first">16. MVP service slice (what to build first)</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Ship</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M0</td>
+<td>Gateway + identity + profile + notification (FCM)</td>
+</tr>
+<tr>
+<td>M1</td>
+<td>media + places</td>
+</tr>
+<tr>
+<td>M2</td>
+<td><strong>market-service</strong> + chat-service + admin moderate</td>
+</tr>
+<tr>
+<td>M3</td>
+<td><strong>food-service</strong> (customer/merchant/rider APIs)</td>
+</tr>
+<tr>
+<td>M4</td>
+<td><strong>ride-service</strong> (passenger/driver + matching + WS tracking)</td>
+</tr>
+</tbody>
+</table>
+<p>Matches product build order in the MVP cut (Market → Food → Ride) after shell platform.</p>
+<hr />
+<h2 id="17-failure-modes-resilience">17. Failure modes &amp; resilience</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>notification-service down</td>
+<td>Domain write succeeds; push retries from outbox</td>
+</tr>
+<tr>
+<td>chat-service down</td>
+<td>Market posting still works; contact CTA degraded</td>
+</tr>
+<tr>
+<td>Redis down</td>
+<td>Ride matching degraded/fail closed; do not corrupt trips</td>
+</tr>
+<tr>
+<td>Duplicate client submit</td>
+<td>Idempotency returns original trip/order</td>
+</tr>
+<tr>
+<td>Partial deploy</td>
+<td>Gateway feature flags hide unfinished module routes</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="18-security-compliance-checklist">18. Security &amp; compliance checklist</h2>
+<ul>
+<li>[ ] Phone numbers stored normalized; access audited  </li>
+<li>[ ] OTP codes hashed/TTL; brute-force lockout  </li>
+<li>[ ] Driver location retention policy documented  </li>
+<li>[ ] Media scanned for abuse size/type limits  </li>
+<li>[ ] Admin actions append-only audit  </li>
+<li>[ ] Secrets rotated; least-privilege DB users per service  </li>
+</ul>
+<hr />
+<h2 id="19-open-decisions-need-producteng-lock">19. Open decisions (need product/eng lock)</h2>
+<ol>
+<li>NestJS-everywhere vs Go for <code>ride-service</code> day one</li>
+<li>NATS vs Kafka</li>
+<li>Masked-number provider for Ride/Market calls</li>
+<li>Single Postgres cluster with separate databases vs separate instances</li>
+<li>Admin as Next.js vs Flutter Web</li>
+</ol>
+<hr />
+<h2 id="20-document-map">20. Document map</h2>
+<table>
+<thead>
+<tr>
+<th>Doc</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="./architecture.md">architecture.md</a></td>
+<td>This file — system &amp; microservices</td>
+</tr>
+<tr>
+<td><a href="./mvp-cut-ride-food-market.md">mvp-cut-ride-food-market.md</a></td>
+<td>What to build first</td>
+</tr>
+<tr>
+<td><a href="./ride-functional-requirements.md">ride-functional-requirements.md</a></td>
+<td>Ride behavior</td>
+</tr>
+<tr>
+<td><a href="./food-delivery-functional-requirements.md">food-delivery-functional-requirements.md</a></td>
+<td>Food behavior</td>
+</tr>
+<tr>
+<td><a href="./market-functional-requirements.md">market-functional-requirements.md</a></td>
+<td>Market behavior</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="21-document-history">21. Document history</h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1</td>
+<td>2026-11-15</td>
+<td>Initial full architecture; microservice per module + platform services</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

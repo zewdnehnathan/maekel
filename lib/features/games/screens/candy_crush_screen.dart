@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/futuristic_backdrop.dart';
 import '../../../core/widgets/maekel_app_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../candy_crush/candy_crush_engine.dart';
 import '../components/score_submit_helper.dart';
 import '../models/games_models.dart';
@@ -272,10 +273,12 @@ class _CandyCrushScreenState extends ConsumerState<CandyCrushScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: MaekelAppBar(
-        title: 'Candy Crush',
+        title: AppLocalizations.of(context)!.candyCrush,
         actions: [
           IconButton(
-            tooltip: _engine.isPaused ? 'Resume' : 'Pause',
+            tooltip: _engine.isPaused
+                ? AppLocalizations.of(context)!.gamesResume
+                : AppLocalizations.of(context)!.gamesPause,
             onPressed: _playingFx || _swapFlight != null
                 ? null
                 : () => setState(_engine.togglePause),
@@ -286,7 +289,7 @@ class _CandyCrushScreenState extends ConsumerState<CandyCrushScreen>
             ),
           ),
           IconButton(
-            tooltip: 'Restart',
+            tooltip: AppLocalizations.of(context)!.gamesRestart,
             onPressed:
                 _playingFx || _swapFlight != null ? null : _restart,
             icon: const Icon(Icons.refresh_rounded),
@@ -302,10 +305,16 @@ class _CandyCrushScreenState extends ConsumerState<CandyCrushScreen>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _Stat(label: 'SCORE', value: '${_engine.score}'),
-                    _Stat(label: 'MOVES', value: '${_engine.movesLeft}'),
                     _Stat(
-                      label: 'COMBO',
+                      label: AppLocalizations.of(context)!.gamesScore,
+                      value: '${_engine.score}',
+                    ),
+                    _Stat(
+                      label: AppLocalizations.of(context)!.gamesMoves,
+                      value: '${_engine.movesLeft}',
+                    ),
+                    _Stat(
+                      label: AppLocalizations.of(context)!.gamesCombo,
                       value: _engine.combo > 0 ? 'x${_engine.combo}' : '—',
                     ),
                   ],
@@ -435,11 +444,16 @@ class _CandyCrushScreenState extends ConsumerState<CandyCrushScreen>
                                           _engine.isGameOver)
                                         _OverlayBanner(
                                           label: _engine.isGameOver
-                                              ? 'OUT OF MOVES'
-                                              : 'PAUSED',
+                                              ? AppLocalizations.of(context)!
+                                                  .gamesOutOfMoves
+                                              : AppLocalizations.of(context)!
+                                                  .gamesPaused,
                                           detail: _engine.isGameOver
-                                              ? 'Score ${_engine.score} · tap refresh'
-                                              : 'Tap pause to resume',
+                                              ? AppLocalizations.of(context)!
+                                                  .gamesScoreTapRefresh(
+                                                      _engine.score)
+                                              : AppLocalizations.of(context)!
+                                                  .gamesTapPauseResume,
                                         ),
                                     ],
                                   );
@@ -454,7 +468,7 @@ class _CandyCrushScreenState extends ConsumerState<CandyCrushScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Drag a candy onto a neighbor · or tap-tap to swap',
+                  AppLocalizations.of(context)!.gamesCandyHint,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: MaekelColors.muted,
                       ),

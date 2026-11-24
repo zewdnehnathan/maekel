@@ -2,30 +2,25 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/widgets/glass_panel.dart';
-
-abstract final class MarketSafetyCopy {
-  static const tip =
-      'Meet in a public place. Inspect before you pay. Never send deposits to strangers. Maekel staff never ask for fees in chat.';
-
-  static const shortTip =
-      'Safety: Meet in public. Inspect before paying. Never send deposits to strangers.';
-
-  static const chatBanner =
-      'Safety banner: Meet publicly. Inspect before pay. Maekel staff never ask for fees here.';
-}
+import '../../../l10n/app_localizations.dart';
 
 class MarketSafetyBanner extends StatelessWidget {
   const MarketSafetyBanner({
     super.key,
-    this.message = MarketSafetyCopy.tip,
+    this.message,
     this.compact = false,
   });
 
-  final String message;
+  /// When null, uses [AppLocalizations.marketSafetyBody] (or short if compact).
+  final String? message;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final text = message ??
+        (compact ? l10n.marketSafetyShort : l10n.marketSafetyBody);
+
     if (compact) {
       return Container(
         width: double.infinity,
@@ -38,7 +33,7 @@ class MarketSafetyBanner extends StatelessWidget {
           ),
         ),
         child: Text(
-          message,
+          text,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: MaekelColors.amber,
                 fontSize: 12,
@@ -52,7 +47,7 @@ class MarketSafetyBanner extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       borderRadius: 18,
       child: Text(
-        message,
+        text,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: MaekelColors.amber,
             ),
@@ -67,16 +62,16 @@ Future<bool> showMarketSafetyGate(BuildContext context) async {
     builder: (context) {
       return AlertDialog(
         backgroundColor: MaekelColors.panel,
-        title: const Text('Before you contact'),
-        content: const Text(MarketSafetyCopy.tip),
+        title: Text(AppLocalizations.of(context)!.marketBeforeContact),
+        content: Text(AppLocalizations.of(context)!.marketSafetyBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('I understand'),
+            child: Text(AppLocalizations.of(context)!.marketIUnderstand),
           ),
         ],
       );

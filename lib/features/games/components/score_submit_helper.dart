@@ -5,6 +5,7 @@ import '../../../app/theme.dart';
 import '../../../core/network/api_exception.dart';
 import '../models/games_models.dart';
 import '../providers/games_providers.dart';
+import '../../../l10n/app_localizations.dart';
 
 Future<void> submitArcadeScore({
   required BuildContext context,
@@ -25,8 +26,8 @@ Future<void> submitArcadeScore({
       if (!context.mounted) return;
       if (displayName == null || displayName.trim().length < 2) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Score not saved — username required.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.gamesScoreNotSaved),
           ),
         );
         return;
@@ -43,9 +44,10 @@ Future<void> submitArcadeScore({
     ref.invalidate(gamesProfileProvider);
 
     if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final message = result.isNewBest
-        ? 'New personal best: ${result.personalBest}'
-        : 'Score saved. Best remains ${result.personalBest}';
+        ? l10n.gamesPersonalBest(result.personalBest)
+        : l10n.gamesScoreSavedBest(result.personalBest);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
@@ -57,7 +59,7 @@ Future<void> submitArcadeScore({
   } catch (_) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Could not sync score. Is the API running?')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.gamesSyncFailed)),
     );
   }
 }
@@ -70,13 +72,13 @@ Future<String?> _askDisplayName(BuildContext context) async {
     builder: (ctx) {
       return AlertDialog(
         backgroundColor: MaekelColors.panel,
-        title: const Text('Choose a username'),
+        title: Text(AppLocalizations.of(context)!.gamesChooseUsername),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Shown on the Addis Ababa top 3 leaderboard.',
+              AppLocalizations.of(context)!.gamesUsernameHint,
               style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
                     color: MaekelColors.muted,
                   ),
@@ -86,9 +88,9 @@ Future<String?> _askDisplayName(BuildContext context) async {
               controller: controller,
               autofocus: true,
               maxLength: 24,
-              decoration: const InputDecoration(
-                labelText: 'Username',
-                hintText: 'e.g. BoleAce',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.gamesUsernameLabel,
+                hintText: AppLocalizations.of(context)!.gamesUsernameHintExample,
               ),
             ),
           ],
@@ -96,11 +98,11 @@ Future<String?> _askDisplayName(BuildContext context) async {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Skip'),
+            child: Text(AppLocalizations.of(context)!.skip),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('Save score'),
+            child: Text(AppLocalizations.of(context)!.gamesSaveScore),
           ),
         ],
       );

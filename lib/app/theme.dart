@@ -37,9 +37,106 @@ abstract final class MaekelColors {
   static const Color leaf = signal;
 }
 
+/// Font helpers shared by theme + form controls.
+///
+/// Important: [TextFormField] inherits [DefaultTextStyle] / theme fallbacks.
+/// After Noto Sans Ethiopic loads (Amharic/Tigrinya), those fallbacks blow up
+/// input metrics on Flutter web. Use [latinUi] for every editable field so
+/// `fontFamilyFallback` is an empty list (clears inheritance).
+abstract final class MaekelFonts {
+  static final String spaceGrotesk = GoogleFonts.spaceGrotesk().fontFamily!;
+  static final String sora = GoogleFonts.sora().fontFamily!;
+  static final String notoSansEthiopic =
+      GoogleFonts.notoSansEthiopic().fontFamily!;
+  static final String notoSansSc = GoogleFonts.notoSansSc().fontFamily!;
+
+  static final List<String> scriptFallback = <String>[
+    notoSansEthiopic,
+    notoSansSc,
+  ];
+
+  static Future<void> prefetch() async {
+    GoogleFonts.spaceGrotesk();
+    GoogleFonts.sora();
+    GoogleFonts.notoSansEthiopic();
+    GoogleFonts.notoSansSc();
+    GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w600);
+    GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700);
+    GoogleFonts.sora(fontWeight: FontWeight.w600);
+    GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w600);
+    GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700);
+    GoogleFonts.notoSansSc(fontWeight: FontWeight.w600);
+    GoogleFonts.notoSansSc(fontWeight: FontWeight.w700);
+    await GoogleFonts.pendingFonts();
+  }
+
+  static TextStyle withScriptFallback(TextStyle style) {
+    return style.copyWith(fontFamilyFallback: scriptFallback);
+  }
+
+  /// Latin-only UI style — empty fallback list prevents Ethiopic metric leaks.
+  static TextStyle latinUi({
+    double fontSize = 16,
+    FontWeight fontWeight = FontWeight.w400,
+    double height = 1.25,
+    double? letterSpacing,
+    Color color = MaekelColors.ink,
+  }) {
+    return GoogleFonts.sora(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      height: height,
+      letterSpacing: letterSpacing,
+      color: color,
+    ).copyWith(fontFamilyFallback: const <String>[]);
+  }
+
+  static const StrutStyle latinStrut = StrutStyle(
+    fontSize: 16,
+    height: 1.25,
+    forceStrutHeight: true,
+  );
+}
+
 ThemeData buildMaekelTheme() {
   final display = GoogleFonts.spaceGroteskTextTheme();
   final body = GoogleFonts.soraTextTheme();
+
+  TextStyle displayFont({
+    required double fontSize,
+    FontWeight fontWeight = FontWeight.w600,
+    double height = 1.2,
+    double? letterSpacing,
+    Color color = MaekelColors.ink,
+  }) {
+    return MaekelFonts.withScriptFallback(
+      GoogleFonts.spaceGrotesk(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        height: height,
+        letterSpacing: letterSpacing,
+        color: color,
+      ),
+    );
+  }
+
+  TextStyle bodyFont({
+    required double fontSize,
+    FontWeight fontWeight = FontWeight.w400,
+    double height = 1.4,
+    double? letterSpacing,
+    Color color = MaekelColors.ink,
+  }) {
+    return MaekelFonts.withScriptFallback(
+      GoogleFonts.sora(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        height: height,
+        letterSpacing: letterSpacing,
+        color: color,
+      ),
+    );
+  }
 
   final colorScheme = ColorScheme.dark(
     primary: MaekelColors.signal,
@@ -59,69 +156,56 @@ ThemeData buildMaekelTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: MaekelColors.voidBlack,
     visualDensity: VisualDensity.standard,
+    fontFamily: MaekelFonts.sora,
   );
 
   return base.copyWith(
     appBarTheme: AppBarTheme(
-      backgroundColor: Colors.transparent,
+      backgroundColor: MaekelColors.voidBlack.withValues(alpha: 0.92),
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
       foregroundColor: MaekelColors.ink,
+      surfaceTintColor: Colors.transparent,
       iconTheme: const IconThemeData(color: MaekelColors.signal),
-      titleTextStyle: GoogleFonts.spaceGrotesk(
+      titleTextStyle: displayFont(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        color: MaekelColors.ink,
         letterSpacing: 0.4,
       ),
     ),
     textTheme: body.copyWith(
-      displayLarge: GoogleFonts.spaceGrotesk(
-        fontSize: 52,
+      displayLarge: displayFont(
+        fontSize: 48,
         fontWeight: FontWeight.w700,
-        height: 0.95,
-        letterSpacing: -1.6,
-        color: MaekelColors.ink,
+        height: 1.15,
+        letterSpacing: -1.2,
       ),
-      displayMedium: GoogleFonts.spaceGrotesk(
-        fontSize: 36,
+      displayMedium: displayFont(
+        fontSize: 34,
         fontWeight: FontWeight.w700,
-        height: 1.05,
-        letterSpacing: -1.0,
-        color: MaekelColors.ink,
+        height: 1.2,
+        letterSpacing: -0.8,
       ),
-      headlineMedium: GoogleFonts.spaceGrotesk(
+      headlineMedium: displayFont(
         fontSize: 24,
         fontWeight: FontWeight.w600,
-        color: MaekelColors.ink,
+        height: 1.25,
         letterSpacing: -0.2,
       ),
-      titleLarge: display.titleLarge?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: MaekelColors.ink,
+      titleLarge: MaekelFonts.withScriptFallback(
+        display.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: MaekelColors.ink,
+              height: 1.25,
+            ) ??
+            displayFont(fontSize: 18),
       ),
-      titleMedium: GoogleFonts.spaceGrotesk(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: MaekelColors.ink,
-      ),
-      titleSmall: GoogleFonts.spaceGrotesk(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: MaekelColors.ink,
-      ),
-      bodyLarge: GoogleFonts.sora(
-        fontSize: 16,
-        height: 1.5,
-        color: MaekelColors.ink,
-      ),
-      bodyMedium: GoogleFonts.sora(
-        fontSize: 14,
-        height: 1.45,
-        color: MaekelColors.muted,
-      ),
-      labelLarge: GoogleFonts.sora(
+      titleMedium: displayFont(fontSize: 16, fontWeight: FontWeight.w600),
+      titleSmall: displayFont(fontSize: 14, fontWeight: FontWeight.w600),
+      bodyLarge: bodyFont(fontSize: 16, height: 1.45),
+      bodyMedium: bodyFont(fontSize: 14, height: 1.4, color: MaekelColors.muted),
+      labelLarge: bodyFont(
         fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: 1.4,
@@ -136,10 +220,12 @@ ThemeData buildMaekelTheme() {
         elevation: 0,
         shadowColor: MaekelColors.signal.withValues(alpha: 0.45),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: GoogleFonts.spaceGrotesk(
+        textStyle: displayFont(
           fontSize: 16,
           fontWeight: FontWeight.w700,
+          height: 1.2,
           letterSpacing: 0.6,
+          color: MaekelColors.voidBlack,
         ),
       ),
     ),
@@ -149,17 +235,26 @@ ThemeData buildMaekelTheme() {
         minimumSize: const Size.fromHeight(50),
         side: BorderSide(color: MaekelColors.signal.withValues(alpha: 0.45)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: GoogleFonts.spaceGrotesk(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: displayFont(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
+      isDense: true,
       filled: true,
       fillColor: MaekelColors.panel.withValues(alpha: 0.85),
-      labelStyle: GoogleFonts.sora(color: MaekelColors.muted),
-      hintStyle: GoogleFonts.sora(color: MaekelColors.muted),
+      // Empty fallback list — do not inherit Ethiopic metrics into fields.
+      labelStyle: MaekelFonts.latinUi(color: MaekelColors.muted, fontSize: 14),
+      hintStyle: MaekelFonts.latinUi(color: MaekelColors.muted, fontSize: 14),
+      prefixStyle: MaekelFonts.latinUi(
+        color: MaekelColors.signal,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+      ),
+      floatingLabelStyle: MaekelFonts.latinUi(
+        color: MaekelColors.signal,
+        fontSize: 14,
+      ),
+      errorStyle: MaekelFonts.latinUi(color: MaekelColors.danger, fontSize: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: MaekelColors.glassBorder),
@@ -176,7 +271,7 @@ ThemeData buildMaekelTheme() {
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: MaekelColors.danger),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: MaekelColors.voidBlack,

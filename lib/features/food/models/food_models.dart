@@ -1,3 +1,5 @@
+import '../../../l10n/app_localizations.dart';
+
 enum MerchantKind { restaurant, grocery }
 
 enum OrderStatus {
@@ -285,9 +287,34 @@ extension OrderStatusLabel on OrderStatus {
         return 'Cancelled';
     }
   }
+
+  String localized(AppLocalizations l10n) {
+    switch (this) {
+      case OrderStatus.placed:
+        return l10n.foodStatusPlaced;
+      case OrderStatus.confirmed:
+        return l10n.foodStatusConfirmed;
+      case OrderStatus.preparing:
+        return l10n.foodStatusPreparing;
+      case OrderStatus.ready:
+        return l10n.foodStatusReadyPickup;
+      case OrderStatus.pickedUp:
+        return l10n.foodStatusPickedUp;
+      case OrderStatus.onTheWay:
+        return l10n.foodStatusOnTheWay;
+      case OrderStatus.delivered:
+        return l10n.foodStatusDelivered;
+      case OrderStatus.cancelled:
+        return l10n.foodStatusCancelled;
+    }
+  }
 }
 
 extension MerchantKindLabel on MerchantKind {
   String get label =>
       this == MerchantKind.restaurant ? 'Restaurants' : 'Groceries';
+
+  String localized(AppLocalizations l10n) => this == MerchantKind.restaurant
+      ? l10n.foodRestaurants
+      : l10n.foodGroceries;
 }
