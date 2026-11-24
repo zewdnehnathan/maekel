@@ -1098,17 +1098,12 @@ class AppLocalizationsOm extends AppLocalizations {
   }
 
   @override
-  String rideVehicleFare(Object amount, String vehicle, Object fare) {
+  String rideVehicleFare(Object amount, String vehicle) {
     return '$amount ETB · $vehicle Afaan Oromoo fi Jechoota Dinqisiiso Afaan Oromoo.';
   }
 
   @override
-  String rideDriverMeta(
-    String car,
-    String plate,
-    Object rating,
-    Object vehicle,
-  ) {
+  String rideDriverMeta(String car, String plate, Object rating) {
     return '$car · $plate · ★ $rating .';
   }
 
@@ -1164,7 +1159,7 @@ class AppLocalizationsOm extends AppLocalizations {
   }
 
   @override
-  String marketPriceSubcity(Object amount, String subcity, Object price) {
+  String marketPriceSubcity(Object amount, String subcity) {
     return '$amount ETB · $subcity Afaan Oromoo fi Jechoota Dinqisiiso Afaan Oromoo.';
   }
 
@@ -1222,14 +1217,7 @@ class AppLocalizationsOm extends AppLocalizations {
   }
 
   @override
-  String foodOrderBoardLine(
-    String merchant,
-    String subcity,
-    Object amount,
-    Object id,
-    Object status,
-    Object total,
-  ) {
+  String foodOrderBoardLine(String merchant, String subcity, Object amount) {
     return '$merchant → $subcity · $amount Birrii';
   }
 

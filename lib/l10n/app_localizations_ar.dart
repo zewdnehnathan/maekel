@@ -1083,18 +1083,13 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String rideVehicleFare(Object amount, String vehicle, Object fare) {
-    return '$vehicle · $fare بر';
+  String rideVehicleFare(Object amount, String vehicle) {
+    return '$amount بر · $vehicle';
   }
 
   @override
-  String rideDriverMeta(
-    String car,
-    String plate,
-    Object rating,
-    Object vehicle,
-  ) {
-    return '$vehicle · $plate';
+  String rideDriverMeta(String car, String plate, Object rating) {
+    return '$car · $plate · ★ $rating';
   }
 
   @override
@@ -1149,8 +1144,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String marketPriceSubcity(Object amount, String subcity, Object price) {
-    return '$price · $subcity';
+  String marketPriceSubcity(Object amount, String subcity) {
+    return '$amount بر · $subcity';
   }
 
   @override
@@ -1207,15 +1202,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String foodOrderBoardLine(
-    String merchant,
-    String subcity,
-    Object amount,
-    Object id,
-    Object status,
-    Object total,
-  ) {
-    return '#$id · $status · $total بر';
+  String foodOrderBoardLine(String merchant, String subcity, Object amount) {
+    return '$merchant ← $subcity · $amount بر';
   }
 
   @override

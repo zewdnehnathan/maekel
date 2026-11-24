@@ -2076,18 +2076,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} ETB · {vehicle}'**
-  String rideVehicleFare(Object amount, String vehicle, Object fare);
+  String rideVehicleFare(Object amount, String vehicle);
 
   /// No description provided for @rideDriverMeta.
   ///
   /// In en, this message translates to:
   /// **'{car} · {plate} · ★ {rating}'**
-  String rideDriverMeta(
-    String car,
-    String plate,
-    Object rating,
-    Object vehicle,
-  );
+  String rideDriverMeta(String car, String plate, Object rating);
 
   /// No description provided for @marketConditionNew.
   ///
@@ -2183,7 +2178,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} ETB · {subcity}'**
-  String marketPriceSubcity(Object amount, String subcity, Object price);
+  String marketPriceSubcity(Object amount, String subcity);
 
   /// No description provided for @marketCategoryTitle.
   ///
@@ -2279,14 +2274,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{merchant} → {subcity} · {amount} ETB'**
-  String foodOrderBoardLine(
-    String merchant,
-    String subcity,
-    Object amount,
-    Object id,
-    Object status,
-    Object total,
-  );
+  String foodOrderBoardLine(String merchant, String subcity, Object amount);
 
   /// No description provided for @foodUnitPriceEach.
   ///
