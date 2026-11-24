@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_aa.dart';
 import 'app_localizations_am.dart';
+import 'app_localizations_ar.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_om.dart';
 import 'app_localizations_so.dart';
@@ -102,6 +103,7 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('aa'),
     Locale('am'),
+    Locale('ar'),
     Locale('en'),
     Locale('om'),
     Locale('so'),
@@ -2074,13 +2076,18 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} ETB · {vehicle}'**
-  String rideVehicleFare(Object amount, String vehicle);
+  String rideVehicleFare(Object amount, String vehicle, Object fare);
 
   /// No description provided for @rideDriverMeta.
   ///
   /// In en, this message translates to:
   /// **'{car} · {plate} · ★ {rating}'**
-  String rideDriverMeta(String car, String plate, Object rating);
+  String rideDriverMeta(
+    String car,
+    String plate,
+    Object rating,
+    Object vehicle,
+  );
 
   /// No description provided for @marketConditionNew.
   ///
@@ -2176,7 +2183,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{amount} ETB · {subcity}'**
-  String marketPriceSubcity(Object amount, String subcity);
+  String marketPriceSubcity(Object amount, String subcity, Object price);
 
   /// No description provided for @marketCategoryTitle.
   ///
@@ -2272,7 +2279,14 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{merchant} → {subcity} · {amount} ETB'**
-  String foodOrderBoardLine(String merchant, String subcity, Object amount);
+  String foodOrderBoardLine(
+    String merchant,
+    String subcity,
+    Object amount,
+    Object id,
+    Object status,
+    Object total,
+  );
 
   /// No description provided for @foodUnitPriceEach.
   ///
@@ -4027,6 +4041,7 @@ class _AppLocalizationsDelegate
   bool isSupported(Locale locale) => <String>[
     'aa',
     'am',
+    'ar',
     'en',
     'om',
     'so',
@@ -4046,6 +4061,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsAa();
     case 'am':
       return AppLocalizationsAm();
+    case 'ar':
+      return AppLocalizationsAr();
     case 'en':
       return AppLocalizationsEn();
     case 'om':

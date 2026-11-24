@@ -48,10 +48,13 @@ abstract final class MaekelFonts {
   static final String sora = GoogleFonts.sora().fontFamily!;
   static final String notoSansEthiopic =
       GoogleFonts.notoSansEthiopic().fontFamily!;
+  static final String notoSansArabic =
+      GoogleFonts.notoSansArabic().fontFamily!;
   static final String notoSansSc = GoogleFonts.notoSansSc().fontFamily!;
 
   static final List<String> scriptFallback = <String>[
     notoSansEthiopic,
+    notoSansArabic,
     notoSansSc,
   ];
 
@@ -59,12 +62,15 @@ abstract final class MaekelFonts {
     GoogleFonts.spaceGrotesk();
     GoogleFonts.sora();
     GoogleFonts.notoSansEthiopic();
+    GoogleFonts.notoSansArabic();
     GoogleFonts.notoSansSc();
     GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w600);
     GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700);
     GoogleFonts.sora(fontWeight: FontWeight.w600);
     GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w600);
     GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700);
+    GoogleFonts.notoSansArabic(fontWeight: FontWeight.w600);
+    GoogleFonts.notoSansArabic(fontWeight: FontWeight.w700);
     GoogleFonts.notoSansSc(fontWeight: FontWeight.w600);
     GoogleFonts.notoSansSc(fontWeight: FontWeight.w700);
     await GoogleFonts.pendingFonts();

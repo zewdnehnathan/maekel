@@ -266,7 +266,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://maekel-api.onrend
 2. OTP: **`123456`** (mock).
 3. You land on Home (Ride, Market, Food, Games, Events, …).
 
-Languages: open the language picker (en / am / ti / om / aa / so / sw / zh). Preference is stored on device.
+Languages: open the language picker (en / am / ti / om / aa / so / ar / sw / zh). Preference is stored on device. Arabic uses RTL layout.
 
 ---
 

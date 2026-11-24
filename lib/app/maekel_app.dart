@@ -30,7 +30,8 @@ class MaekelApp extends ConsumerWidget {
       routerConfig: router,
       locale: materialLocale,
       supportedLocales: AppLocalizations.supportedLocales,
-      // Claim Material/Cupertino support for om/aa/so/ti via English fallback.
+      // Claim Material/Cupertino for om/aa/so/ti (and any unsupported locale)
+      // via English fallback. Arabic uses real Global* delegates (RTL).
       // Without this, auth fields and bottom sheets go blank after language switch.
       localizationsDelegates: const [
         AppLocalizations.delegate,

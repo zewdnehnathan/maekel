@@ -1096,12 +1096,17 @@ class AppLocalizationsAa extends AppLocalizations {
   }
 
   @override
-  String rideVehicleFare(Object amount, String vehicle) {
+  String rideVehicleFare(Object amount, String vehicle, Object fare) {
     return '${amount}ETB ·$vehicle';
   }
 
   @override
-  String rideDriverMeta(String car, String plate, Object rating) {
+  String rideDriverMeta(
+    String car,
+    String plate,
+    Object rating,
+    Object vehicle,
+  ) {
     return '$car$plate · $rating';
   }
 
@@ -1157,7 +1162,7 @@ class AppLocalizationsAa extends AppLocalizations {
   }
 
   @override
-  String marketPriceSubcity(Object amount, String subcity) {
+  String marketPriceSubcity(Object amount, String subcity, Object price) {
     return '${amount}ETB ·$subcity';
   }
 
@@ -1215,7 +1220,14 @@ class AppLocalizationsAa extends AppLocalizations {
   }
 
   @override
-  String foodOrderBoardLine(String merchant, String subcity, Object amount) {
+  String foodOrderBoardLine(
+    String merchant,
+    String subcity,
+    Object amount,
+    Object id,
+    Object status,
+    Object total,
+  ) {
     return '$merchant→$subcity${amount}ETB';
   }
 

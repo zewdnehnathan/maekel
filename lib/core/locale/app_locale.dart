@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Maekel app languages (Ethiopia-first + Swahili / Chinese).
+/// Maekel app languages (Ethiopia-first + Arabic / Swahili / Chinese).
 enum AppLocale {
   en,
   am,
@@ -8,6 +8,7 @@ enum AppLocale {
   om,
   aa,
   so,
+  ar,
   sw,
   zh;
 
@@ -23,6 +24,7 @@ enum AppLocale {
         AppLocale.om => 'Afaan Oromoo',
         AppLocale.aa => 'Qafar',
         AppLocale.so => 'Soomaali',
+        AppLocale.ar => 'العربية',
         AppLocale.sw => 'Kiswahili',
         AppLocale.zh => '中文',
       };
@@ -34,6 +36,7 @@ enum AppLocale {
         AppLocale.om => 'Oromo',
         AppLocale.aa => 'Afar',
         AppLocale.so => 'Somali',
+        AppLocale.ar => 'Arabic',
         AppLocale.sw => 'Swahili',
         AppLocale.zh => 'Chinese',
       };
@@ -41,7 +44,11 @@ enum AppLocale {
   bool get usesEthiopicScript =>
       this == AppLocale.am || this == AppLocale.ti;
 
+  bool get usesArabicScript => this == AppLocale.ar;
+
   bool get usesCjkScript => this == AppLocale.zh;
+
+  bool get isRtl => this == AppLocale.ar;
 
   static AppLocale fromLanguageCode(String? code) {
     return AppLocale.values.firstWhere(

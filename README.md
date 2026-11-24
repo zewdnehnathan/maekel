@@ -15,6 +15,7 @@ Addis Ababa super-app — Flutter client + Fastify microservices (identity, mark
 | [docs/architecture.md](docs/architecture.md) | System design |
 | [docs/qa-test-phones-and-roles.md](docs/qa-test-phones-and-roles.md) | QA phones, OTP, Staff roles |
 | [docs/qa-step-by-step-guide.md](docs/qa-step-by-step-guide.md) | Guided QA runbook |
+| [docs/how-to-deploy.md](docs/how-to-deploy.md) | Deploy API + web + APK yourself |
 | [docs/deploy-web-qa.md](docs/deploy-web-qa.md) | Cloudflare / GitHub Pages web deploy |
 | [docs/deploy-demo-render-neon.md](docs/deploy-demo-render-neon.md) | Render + Neon cloud API |
 

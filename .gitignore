@@ -61,3 +61,7 @@ backend/apps/market-service/build/
 
 .wrangler/
 
+
+# Local release artifacts (APKs)
+releases/
+
