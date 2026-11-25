@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/router.dart';
 import '../../../app/theme.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/glass_panel.dart';
@@ -216,8 +218,13 @@ class _OpsCard extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onSuspend;
 
+  Future<void> _openDetails(BuildContext context) async {
+    context.push('${AppRoutes.events}/${event.id}');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassPanel(
@@ -226,34 +233,59 @@ class _OpsCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(event.title, style: Theme.of(context).textTheme.titleMedium),
+              InkWell(
+                onTap: () => _openDetails(context),
+                child: Text(
+                  event.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: MaekelColors.signal,
+                      ),
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
-                '${localizedPlace(AppLocalizations.of(context)!, event.subcity)} · ${event.venueName} · ${event.organizerPhone}',
+                '${localizedPlace(l10n, event.subcity)} · ${event.venueName} · ${event.organizerPhone}',
                 style: const TextStyle(color: MaekelColors.muted),
               ),
               const SizedBox(height: 4),
               Text(
                 '${event.startsAt.toLocal()} · ${event.ticketsSold}/${event.capacity}',
               ),
+              if (event.description.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  event.description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [
+                  TextButton(
+                    onPressed: () => _openDetails(context),
+                    child: Text(l10n.eventsOpsViewDetails),
+                  ),
                   if (onApprove != null)
                     FilledButton(
                       onPressed: onApprove,
-                      child: Text(AppLocalizations.of(context)!.approve),
+                      child: Text(l10n.approve),
                     ),
                   if (onReject != null)
                     OutlinedButton(
                       onPressed: onReject,
-                      child: Text(AppLocalizations.of(context)!.reject),
+                      child: Text(l10n.reject),
                     ),
-                  TextButton(onPressed: onCancel, child: Text(AppLocalizations.of(context)!.rideForceCancel)),
+                  TextButton(
+                    onPressed: onCancel,
+                    child: Text(l10n.rideForceCancel),
+                  ),
                   TextButton(
                     onPressed: onSuspend,
-                    child: Text(AppLocalizations.of(context)!.eventsSuspendOrganizer),
+                    child: Text(l10n.eventsSuspendOrganizer),
                   ),
                 ],
               ),

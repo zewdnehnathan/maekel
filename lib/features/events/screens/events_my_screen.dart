@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/router.dart';
 import '../../../app/theme.dart';
@@ -28,6 +29,7 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
   String? _expandedId;
   List<EventAttendee> _attendees = const [];
   final _checkIn = TextEditingController();
+  final _doorId = TextEditingController();
 
   @override
   void initState() {
@@ -44,7 +46,22 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
   void dispose() {
     _poll?.cancel();
     _checkIn.dispose();
+    _doorId.dispose();
     super.dispose();
+  }
+
+  String _doorPrefsKey(String eventId) => 'events.doorId.$eventId';
+
+  Future<void> _loadDoorId(String eventId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_doorPrefsKey(eventId)) ?? '';
+    if (!mounted) return;
+    _doorId.text = saved;
+  }
+
+  Future<void> _persistDoorId(String eventId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_doorPrefsKey(eventId), _doorId.text.trim());
   }
 
   Future<void> _load({required bool silent}) async {
@@ -85,6 +102,7 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
       _busy = true;
     });
     try {
+      await _loadDoorId(event.id);
       _attendees =
           await ref.read(eventsRepositoryProvider).getAttendees(event.id);
     } on ApiException catch (e) {
@@ -97,13 +115,25 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
     }
   }
 
-  Future<void> _doCheckIn(String eventId) async {
+  Future<void> _doCheckIn(String eventId, {String? ticketId}) async {
+    final door = _doorId.text.trim();
+    if (door.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.eventsDoorIdRequired),
+        ),
+      );
+      return;
+    }
     final code = _checkIn.text.trim();
-    if (code.isEmpty) return;
+    if (ticketId == null && code.isEmpty) return;
     try {
+      await _persistDoorId(eventId);
       await ref.read(eventsRepositoryProvider).checkIn(
             eventId,
-            ticketCode: code,
+            ticketCode: ticketId == null ? code : null,
+            ticketId: ticketId,
+            doorId: door,
           );
       _checkIn.clear();
       _attendees =
@@ -136,12 +166,57 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
     }
   }
 
+  Future<void> _completeEvent(MaekelEvent event) async {
+    final l10n = AppLocalizations.of(context)!;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: MaekelColors.panel,
+          title: Text(l10n.eventsComplete),
+          content: Text(l10n.eventsCompleteConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.eventsComplete),
+            ),
+          ],
+        );
+      },
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(eventsRepositoryProvider).updateEventStatus(
+            event.id,
+            status: EventStatus.ended,
+          );
+      if (_expandedId == event.id) {
+        setState(() => _expandedId = null);
+      }
+      await _load(silent: false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.eventsCompleted)),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final mine = ref.watch(myEventsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return EventsShell(
-      title: AppLocalizations.of(context)!.eventsNavHost,
+      title: l10n.eventsNavHost,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.eventsCreate),
@@ -164,7 +239,7 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Text(
-                  AppLocalizations.of(context)!.eventsNotHosted,
+                  l10n.eventsNotHosted,
                   style: const TextStyle(color: MaekelColors.muted),
                 ),
               )
@@ -205,7 +280,7 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${e.status.localized(AppLocalizations.of(context)!)} · ${e.ticketsSold}/${e.capacity} · ${localizedPlace(AppLocalizations.of(context)!, e.subcity)}',
+                            '${e.status.localized(l10n)} · ${e.ticketsSold}/${e.capacity} · ${localizedPlace(l10n, e.subcity)}',
                             style: const TextStyle(color: MaekelColors.muted),
                           ),
                           if (e.rejectionReason != null) ...[
@@ -223,17 +298,22 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                                 onPressed: () => context.push(
                                   '${AppRoutes.eventsCreate}?edit=${e.id}',
                                 ),
-                                child: Text(AppLocalizations.of(context)!.edit),
+                                child: Text(l10n.edit),
                               ),
                               TextButton(
                                 onPressed: () => _openAttendees(e),
-                                child: Text(AppLocalizations.of(context)!.eventsAttendees),
+                                child: Text(l10n.eventsAttendees),
                               ),
+                              if (e.status == EventStatus.approved)
+                                TextButton(
+                                  onPressed: () => _completeEvent(e),
+                                  child: Text(l10n.eventsComplete),
+                                ),
                               if (e.status == EventStatus.approved ||
                                   e.status == EventStatus.pending)
                                 TextButton(
                                   onPressed: () => _cancelEvent(e),
-                                  child: Text(AppLocalizations.of(context)!.cancel),
+                                  child: Text(l10n.cancel),
                                 ),
                             ],
                           ),
@@ -241,26 +321,42 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                             const SizedBox(height: 8),
                             if (e.checkInCode != null)
                               Text(
-                                AppLocalizations.of(context)!
-                                    .eventsDoorCode(e.checkInCode ?? ''),
-                                style: TextStyle(
+                                l10n.eventsDoorCode(e.checkInCode ?? ''),
+                                style: const TextStyle(
                                   color: MaekelColors.events,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             const SizedBox(height: 8),
+                            Text(
+                              l10n.eventsDoorIdHelp,
+                              style: const TextStyle(
+                                color: MaekelColors.muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _doorId,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: InputDecoration(
+                                labelText: l10n.eventsDoorIdLabel,
+                                hintText: l10n.eventsDoorIdHint,
+                              ),
+                              onChanged: (_) => unawaited(_persistDoorId(e.id)),
+                            ),
+                            const SizedBox(height: 8),
                             TextField(
                               controller: _checkIn,
                               decoration: InputDecoration(
-                                labelText: AppLocalizations.of(context)!.eventsTicketCode,
-                                hintText: AppLocalizations.of(context)!
-                                    .eventsTicketHint,
+                                labelText: l10n.eventsTicketCode,
+                                hintText: l10n.eventsTicketHint,
                               ),
                             ),
                             const SizedBox(height: 8),
                             FilledButton(
                               onPressed: () => _doCheckIn(e.id),
-                              child: Text(AppLocalizations.of(context)!.eventsCheckIn),
+                              child: Text(l10n.eventsCheckIn),
                             ),
                             const SizedBox(height: 12),
                             ..._attendees.map(
@@ -269,25 +365,23 @@ class _EventsMyScreenState extends ConsumerState<EventsMyScreen> {
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(a.ticketCode),
                                 subtitle: Text(
-                                  AppLocalizations.of(context)!.eventsTicketQtyStatus(
-                                    a.qty,
-                                    a.status.localized(
-                                      AppLocalizations.of(context)!,
+                                  [
+                                    l10n.eventsTicketQtyStatus(
+                                      a.qty,
+                                      a.status.localized(l10n),
                                     ),
-                                  ),
+                                    if (a.doorId != null &&
+                                        a.doorId!.trim().isNotEmpty)
+                                      l10n.eventsCheckedInAtDoor(a.doorId!),
+                                  ].join(' · '),
                                 ),
                                 trailing: a.status == TicketStatus.reserved
                                     ? IconButton(
                                         icon: const Icon(Icons.done),
-                                        onPressed: () async {
-                                          await ref
-                                              .read(eventsRepositoryProvider)
-                                              .checkIn(
-                                                e.id,
-                                                ticketId: a.id,
-                                              );
-                                          await _openAttendees(e);
-                                        },
+                                        onPressed: () => _doCheckIn(
+                                          e.id,
+                                          ticketId: a.id,
+                                        ),
                                       )
                                     : const Icon(
                                         Icons.check_circle,

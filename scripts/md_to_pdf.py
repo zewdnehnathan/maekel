@@ -1,9 +1,15 @@
-"""Convert docs/architecture.md to a printable PDF via HTML + Chrome."""
+"""Convert docs/architecture.md to a printable PDF.
+
+Mermaid diagrams are pre-rendered to SVG with @mermaid-js/mermaid-cli so Chrome
+print never produces blank diagram boxes (CDN/async race).
+"""
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import markdown
@@ -19,20 +25,62 @@ CHROME_CANDIDATES = [
     Path.home() / r"AppData\Local\Google\Chrome\Application\chrome.exe",
 ]
 
+MERMAID_BLOCK = re.compile(
+    r"```mermaid\s*\n(.*?)```",
+    flags=re.DOTALL | re.IGNORECASE,
+)
+
+
+def find_chrome() -> Path:
+    for path in CHROME_CANDIDATES:
+        if path.exists():
+            return path
+    raise FileNotFoundError("Google Chrome not found (needed for PDF print).")
+
+
+def render_mermaid_svgs(md_text: str, work: Path) -> tuple[str, list[Path]]:
+    """Replace ```mermaid fences with inline SVG. Returns (md, svg_paths)."""
+    svgs: list[Path] = []
+    counter = 0
+
+    def repl(match: re.Match[str]) -> str:
+        nonlocal counter
+        counter += 1
+        body = match.group(1).strip() + "\n"
+        mmd = work / f"diagram_{counter:02d}.mmd"
+        svg = work / f"diagram_{counter:02d}.svg"
+        mmd.write_text(body, encoding="utf-8")
+        npx = shutil.which("npx") or shutil.which("npx.cmd")
+        if not npx:
+            raise FileNotFoundError("npx not found on PATH")
+        cmd = [
+            npx,
+            "--yes",
+            "@mermaid-js/mermaid-cli@11",
+            "-i",
+            str(mmd),
+            "-o",
+            str(svg),
+            "-b",
+            "transparent",
+            "-t",
+            "neutral",
+            "--quiet",
+        ]
+        print(f"  rendering mermaid #{counter} …")
+        subprocess.run(cmd, check=True, cwd=str(ROOT), shell=False)
+        if not svg.exists():
+            raise RuntimeError(f"mermaid-cli did not write {svg}")
+        svgs.append(svg)
+        svg_text = svg.read_text(encoding="utf-8")
+        # Strip XML declaration for cleaner HTML embed.
+        svg_text = re.sub(r"<\?xml[^>]*\?>", "", svg_text).strip()
+        return f'\n\n<div class="diagram">\n{svg_text}\n</div>\n\n'
+
+    return MERMAID_BLOCK.sub(repl, md_text), svgs
+
 
 def md_to_html(text: str) -> str:
-    # Keep mermaid fences as <pre class="mermaid"> for client-side render.
-    def mermaid_repl(match: re.Match[str]) -> str:
-        body = match.group(1).strip()
-        return f'<pre class="mermaid">\n{body}\n</pre>'
-
-    text = re.sub(
-        r"```mermaid\s*\n(.*?)```",
-        mermaid_repl,
-        text,
-        flags=re.DOTALL | re.IGNORECASE,
-    )
-
     body = markdown.markdown(
         text,
         extensions=[
@@ -50,30 +98,30 @@ def md_to_html(text: str) -> str:
   <meta charset="utf-8" />
   <title>Maekel System Architecture</title>
   <style>
-    @page {{ size: A4; margin: 18mm 16mm; }}
+    @page {{ size: A4; margin: 16mm 14mm; }}
     body {{
       font-family: "Segoe UI", Calibri, Arial, sans-serif;
-      font-size: 11pt;
+      font-size: 10.5pt;
       line-height: 1.45;
       color: #1a1a1a;
-      max-width: 920px;
+      max-width: 960px;
       margin: 0 auto;
-      padding: 24px;
+      padding: 20px;
     }}
     h1, h2, h3, h4 {{ color: #0a1018; page-break-after: avoid; }}
-    h1 {{ font-size: 22pt; border-bottom: 2px solid #2ef3c5; padding-bottom: 8px; }}
-    h2 {{ font-size: 16pt; margin-top: 1.6em; border-bottom: 1px solid #d0d7de; padding-bottom: 4px; }}
-    h3 {{ font-size: 13pt; margin-top: 1.2em; }}
+    h1 {{ font-size: 20pt; border-bottom: 2px solid #2ef3c5; padding-bottom: 8px; }}
+    h2 {{ font-size: 15pt; margin-top: 1.5em; border-bottom: 1px solid #d0d7de; padding-bottom: 4px; }}
+    h3 {{ font-size: 12.5pt; margin-top: 1.1em; }}
     table {{
       border-collapse: collapse;
       width: 100%;
-      margin: 12px 0 18px;
-      font-size: 10pt;
+      margin: 10px 0 16px;
+      font-size: 9.5pt;
       page-break-inside: avoid;
     }}
     th, td {{
       border: 1px solid #c9d1d9;
-      padding: 6px 8px;
+      padding: 5px 7px;
       text-align: left;
       vertical-align: top;
     }}
@@ -90,10 +138,10 @@ def md_to_html(text: str) -> str:
       background: #f3f6f9;
       color: #111827;
       border: 1px solid #c9d1d9;
-      padding: 12px;
+      padding: 10px;
       border-radius: 8px;
       overflow-x: auto;
-      font-size: 9pt;
+      font-size: 8.5pt;
       line-height: 1.35;
       page-break-inside: avoid;
       white-space: pre-wrap;
@@ -104,11 +152,19 @@ def md_to_html(text: str) -> str:
       color: inherit;
       padding: 0;
     }}
-    pre.mermaid {{
+    .diagram {{
+      margin: 14px 0 18px;
+      padding: 12px;
       background: #ffffff;
-      color: #111827;
       border: 1px solid #d0d7de;
+      border-radius: 10px;
       text-align: center;
+      page-break-inside: avoid;
+      overflow: hidden;
+    }}
+    .diagram svg {{
+      max-width: 100%;
+      height: auto;
     }}
     blockquote {{
       border-left: 4px solid #2ef3c5;
@@ -118,25 +174,14 @@ def md_to_html(text: str) -> str:
       background: #f7fbfa;
     }}
     a {{ color: #0b6e4f; }}
-    hr {{ border: none; border-top: 1px solid #d0d7de; margin: 24px 0; }}
+    hr {{ border: none; border-top: 1px solid #d0d7de; margin: 22px 0; }}
   </style>
-  <script type="module">
-    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-    mermaid.initialize({{ startOnLoad: true, theme: "neutral", securityLevel: "loose" }});
-  </script>
 </head>
 <body>
 {body}
 </body>
 </html>
 """
-
-
-def find_chrome() -> Path:
-    for path in CHROME_CANDIDATES:
-        if path.exists():
-            return path
-    raise FileNotFoundError("Google Chrome not found (needed for PDF print).")
 
 
 def html_to_pdf(chrome: Path, html: Path, pdf: Path) -> None:
@@ -147,7 +192,7 @@ def html_to_pdf(chrome: Path, html: Path, pdf: Path) -> None:
         "--headless=new",
         "--disable-gpu",
         "--no-pdf-header-footer",
-        "--virtual-time-budget=15000",
+        "--virtual-time-budget=5000",
         f"--print-to-pdf={pdf.resolve()}",
         html_uri,
     ]
@@ -159,9 +204,19 @@ def main() -> int:
         print(f"Missing source: {SRC}", file=sys.stderr)
         return 1
 
-    html = md_to_html(SRC.read_text(encoding="utf-8"))
-    HTML_OUT.write_text(html, encoding="utf-8")
-    print(f"Wrote {HTML_OUT}")
+    if not shutil.which("npx"):
+        print("npx not found — install Node.js to render Mermaid diagrams.", file=sys.stderr)
+        return 1
+
+    raw = SRC.read_text(encoding="utf-8")
+    with tempfile.TemporaryDirectory(prefix="maekel-arch-") as tmp:
+        work = Path(tmp)
+        print("Pre-rendering Mermaid diagrams to SVG…")
+        md_with_svg, svgs = render_mermaid_svgs(raw, work)
+        print(f"Rendered {len(svgs)} diagrams.")
+        html = md_to_html(md_with_svg)
+        HTML_OUT.write_text(html, encoding="utf-8")
+        print(f"Wrote {HTML_OUT}")
 
     chrome = find_chrome()
     html_to_pdf(chrome, HTML_OUT, PDF_OUT)

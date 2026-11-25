@@ -1210,6 +1210,48 @@ abstract class AppLocalizations {
   /// **'Max active free ads'**
   String get marketOpsMaxFreeAds;
 
+  /// No description provided for @marketOpsSuspendedSellers.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended sellers ({count})'**
+  String marketOpsSuspendedSellers(int count);
+
+  /// No description provided for @marketOpsNoSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'No suspended sellers.'**
+  String get marketOpsNoSuspended;
+
+  /// No description provided for @marketOpsReinstateSeller.
+  ///
+  /// In en, this message translates to:
+  /// **'Reinstate'**
+  String get marketOpsReinstateSeller;
+
+  /// No description provided for @marketAllCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get marketAllCategories;
+
+  /// No description provided for @marketShowPhoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Show number'**
+  String get marketShowPhoneNumber;
+
+  /// No description provided for @marketSellerPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone: {phone}'**
+  String marketSellerPhone(String phone);
+
+  /// No description provided for @eventsOpsViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View details'**
+  String get eventsOpsViewDetails;
+
   /// No description provided for @foodSubtitle.
   ///
   /// In en, this message translates to:
@@ -1657,14 +1699,62 @@ abstract class AppLocalizations {
   /// No description provided for @eventsDoorCode.
   ///
   /// In en, this message translates to:
-  /// **'Door code: {code}'**
+  /// **'Event PIN: {code}'**
   String eventsDoorCode(String code);
+
+  /// No description provided for @eventsDoorIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Door ID'**
+  String get eventsDoorIdLabel;
+
+  /// No description provided for @eventsDoorIdHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Gate A / Door 2'**
+  String get eventsDoorIdHint;
+
+  /// No description provided for @eventsDoorIdRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your Door ID before check-in'**
+  String get eventsDoorIdRequired;
+
+  /// No description provided for @eventsDoorIdHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Each checker uses a different Door ID. It is saved on every check-in.'**
+  String get eventsDoorIdHelp;
+
+  /// No description provided for @eventsCheckedInAtDoor.
+  ///
+  /// In en, this message translates to:
+  /// **'Door {door}'**
+  String eventsCheckedInAtDoor(String door);
 
   /// No description provided for @eventsCheckIn.
   ///
   /// In en, this message translates to:
   /// **'Check in'**
   String get eventsCheckIn;
+
+  /// No description provided for @eventsComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete event'**
+  String get eventsComplete;
+
+  /// No description provided for @eventsCompleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark this event as ended? It will leave the public browse list.'**
+  String get eventsCompleteConfirm;
+
+  /// No description provided for @eventsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Event marked as ended'**
+  String get eventsCompleted;
 
   /// No description provided for @eventsNoTickets.
   ///

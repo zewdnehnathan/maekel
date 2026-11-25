@@ -12,7 +12,7 @@ Addis Ababa super-app — Flutter client + Fastify microservices (identity, mark
 |-----|---------|
 | [docs/local-dev-setup.md](docs/local-dev-setup.md) | Local backend + frontend setup |
 | [backend/README.md](backend/README.md) | Backend services, ports, smoke curls |
-| [docs/architecture.md](docs/architecture.md) | System design |
+| [docs/architecture.md](docs/architecture.md) · [PDF](docs/architecture.pdf) | System architecture (as-built) |
 | [docs/qa-test-phones-and-roles.md](docs/qa-test-phones-and-roles.md) | QA phones, OTP, Staff roles |
 | [docs/qa-step-by-step-guide.md](docs/qa-step-by-step-guide.md) | Guided QA runbook |
 | [docs/how-to-deploy.md](docs/how-to-deploy.md) | Deploy API + web + APK yourself |

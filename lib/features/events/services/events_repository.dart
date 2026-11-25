@@ -63,7 +63,12 @@ abstract class EventsRepository {
 
   Future<List<EventAttendee>> getAttendees(String eventId);
   Future<String?> getCheckInCode(String eventId);
-  Future<void> checkIn(String eventId, {String? ticketCode, String? ticketId});
+  Future<void> checkIn(
+    String eventId, {
+    String? ticketCode,
+    String? ticketId,
+    required String doorId,
+  });
 
   Future<EventsOpsQueue> getOpsQueue();
   Future<void> suspendOrganizer(String organizerId, {bool suspended = true});

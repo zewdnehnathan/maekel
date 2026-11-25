@@ -116,10 +116,22 @@ class _MarketChatScreenState extends ConsumerState<MarketChatScreen> {
       title: ad?.title ?? l10n.marketChatTitle,
       showBottomNav: false,
       actions: [
-        if (other?.showPhone == true)
+        // Call only when seller opted into Show phone — goes through reveal limits.
+        if (other?.showPhone == true && t != null)
           IconButton(
-            onPressed: () =>
-                launchUrl(Uri(scheme: 'tel', path: other!.phoneE164)),
+            onPressed: () async {
+              try {
+                final phone = await ref
+                    .read(marketRepositoryProvider)
+                    .revealPhone(t!.adId);
+                await launchUrl(Uri(scheme: 'tel', path: phone));
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$e')),
+                );
+              }
+            },
             icon: const Icon(Icons.call_rounded),
             color: MaekelColors.signal,
           ),

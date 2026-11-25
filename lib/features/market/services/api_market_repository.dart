@@ -200,6 +200,31 @@ class ApiMarketRepository implements MarketRepository {
   }
 
   @override
+  Future<MarketAd?> fetchAd(String id) async {
+    try {
+      final raw = await _client.get('/v1/market/ads/$id') as Map<String, dynamic>;
+      final ad = _parseAd(raw);
+      final idx = _ads.indexWhere((a) => a.id == ad.id);
+      if (idx >= 0) {
+        _ads[idx] = ad;
+      } else {
+        _ads.add(ad);
+      }
+      // Ensure seller is cached for detail (phone redact rules apply).
+      try {
+        final sellerRaw =
+            await _client.get('/v1/market/sellers/${ad.sellerId}')
+                as Map<String, dynamic>;
+        _upsertSeller(_parseSeller(sellerRaw));
+      } catch (_) {}
+      _notify();
+      return ad;
+    } catch (_) {
+      return getAd(id);
+    }
+  }
+
+  @override
   List<MarketAd> searchAds(MarketFilters filters) {
     Iterable<MarketAd> result = _ads.where((a) => a.status == AdStatus.approved);
     if (filters.categoryId != null) {
@@ -436,11 +461,31 @@ class ApiMarketRepository implements MarketRepository {
         .cast<Map<String, dynamic>>()
         .map(_parseAd)
         .toList();
+    for (final ad in pending) {
+      final idx = _ads.indexWhere((a) => a.id == ad.id);
+      if (idx >= 0) {
+        _ads[idx] = ad;
+      } else {
+        _ads.add(ad);
+      }
+    }
     final reports = ((raw['reports'] as List?) ?? const [])
         .cast<Map<String, dynamic>>()
         .map(_parseReportItem)
         .toList();
-    return MarketOpsQueue(pendingAds: pending, reports: reports);
+    final suspended = ((raw['suspendedSellers'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(_parseSeller)
+        .toList();
+    for (final seller in suspended) {
+      _upsertSeller(seller);
+    }
+    _notify();
+    return MarketOpsQueue(
+      pendingAds: pending,
+      reports: reports,
+      suspendedSellers: suspended,
+    );
   }
 
   @override

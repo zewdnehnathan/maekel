@@ -54,7 +54,15 @@ class EventsFiltersNotifier extends Notifier<EventFilters> {
 
 final eventsCatalogProvider = Provider<List<MaekelEvent>>((ref) {
   ref.watch(eventsChangeTickProvider);
-  return ref.watch(eventsRepositoryProvider).getCatalog();
+  final now = DateTime.now();
+  return ref
+      .watch(eventsRepositoryProvider)
+      .getCatalog()
+      .where((e) {
+        final end = e.endsAt ?? e.startsAt;
+        return !end.isBefore(now);
+      })
+      .toList();
 });
 
 final eventProvider = Provider.family<MaekelEvent?, String>((ref, id) {

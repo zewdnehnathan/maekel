@@ -1,586 +1,527 @@
 # Maekel System Architecture
 
-**Product:** Maekel — Addis Ababa super app (Flutter)  
+**Product:** Maekel — Addis Ababa super-app  
+**Clients:** Flutter (Android APK + Web QA hosts)  
+**Backend:** Fastify microservices behind an HTTP gateway  
 **Modules:** Ride · Food · Market · Events · Games  
-**Backend style:** **Microservice per product module**, plus shared platform services  
-**Aligned to:** [MVP cut](./mvp-cut-ride-food-market.md), [Ride FRD](./ride-functional-requirements.md), [Food FRD](./food-delivery-functional-requirements.md), [Market FRD](./market-functional-requirements.md)  
-**Version:** 0.1  
-**Status:** Proposed architecture (ready for engineering lock)
+**Platform:** Identity · Chat  
+**Version:** 1.0 (as-built)  
+**Date:** 2026-11-24  
+
+This document describes the **running system** used for local development and the Render + Neon demo/QA deploy. Proposed future splits (separate media/places/notification services) are noted only where relevant.
 
 ---
 
 ## 1. Goals & constraints
 
-| Goal | Implication |
-|------|-------------|
-| One phone → one identity, many roles | Central **Identity** service; modules grant roles |
-| Independent module delivery | Deploy/scale Ride ≠ Food ≠ Market |
-| Clear data ownership | No shared writable DB across modules |
-| Realtime where needed | Ride location/matching; Food order events; Market chat |
-| Ethiopia launch (Addis) | ETB, +251, SMS OTP provider, local wallets later |
-| Flutter-only mobile clients (MVP) | BFF/API Gateway exposes mobile-friendly HTTP + WebSocket/SSE |
+| Goal | How Maekel meets it |
+|------|---------------------|
+| One phone → one identity, many roles | `identity-service` issues JWT; modules enforce roles |
+| Independent module delivery | Separate Node apps + Postgres DB per service |
+| Clear data ownership | No shared writable tables across modules |
+| Ethiopia launch (Addis) | ETB, E.164 `+251`, mock OTP for QA, subcity places |
+| Flutter-only clients (MVP) | Gateway exposes mobile-friendly REST; media via gateway URLs |
+| Demo on free cloud | Single-process demo boot on Render; Neon Postgres |
 
-**Non-goals (architecture v0.1):** multi-region active-active, multi-tenant white-label, Games backend, full loyalty ledger.
+**Non-goals today:** multi-region HA, white-label tenants, production SMS provider, card payments, separate media/places microservices.
 
 ---
 
-## 2. High-level context
+## 2. System context (whole product)
 
 ```mermaid
 flowchart TB
   subgraph clients [Clients]
-    Flutter[Maekel Flutter App]
-    AdminWeb[Ops Admin Web]
+    FlutterApp[Flutter app Android and Web]
+    OpsUser[Ops Staff in app]
   end
 
-  subgraph edge [Edge]
-    GW[API Gateway / BFF]
-    CDN[CDN - images]
+  subgraph edge [Public edge]
+    GW[API Gateway port 8080]
   end
 
-  subgraph platform [Platform services]
+  subgraph platform [Platform]
     Identity[identity-service]
-    Profile[profile-service]
-    Media[media-service]
-    Notify[notification-service]
     Chat[chat-service]
-    Places[places-service]
   end
 
-  subgraph modules [Module microservices]
-    Ride[ride-service]
-    Food[food-service]
+  subgraph modules [Product modules]
     Market[market-service]
+    Food[food-service]
+    Ride[ride-service]
+    Events[events-service]
+    Games[games-service]
   end
 
-  subgraph data [Managed data plane]
-    PG[(Postgres per service)]
-    Redis[(Redis)]
-    MQ{{Event bus}}
-    Obj[(Object storage)]
+  subgraph data [Data]
+    PG[(Postgres DB per service)]
   end
 
-  Flutter --> GW
-  AdminWeb --> GW
-  Flutter --> CDN
+  FlutterApp --> GW
+  OpsUser --> GW
   GW --> Identity
-  GW --> Profile
-  GW --> Media
-  GW --> Notify
   GW --> Chat
-  GW --> Places
-  GW --> Ride
-  GW --> Food
   GW --> Market
-  Media --> Obj
-  CDN --> Obj
-  Ride --> PG
-  Food --> PG
-  Market --> PG
+  GW --> Food
+  GW --> Ride
+  GW --> Events
+  GW --> Games
   Identity --> PG
-  Ride --> Redis
-  Food --> Redis
-  Ride --> MQ
-  Food --> MQ
-  Market --> MQ
-  Notify --> MQ
-  Chat --> MQ
+  Chat --> PG
+  Market --> PG
+  Food --> PG
+  Ride --> PG
+  Events --> PG
+  Games --> PG
 ```
 
 ---
 
-## 3. Architecture principles
+## 3. As-built service map
 
-1. **Microservice per module** — `ride-service`, `food-service`, `market-service` own their domain APIs, DBs, and deploy cycles.  
-2. **Platform services are shared** — identity, profile, places, media, notifications, chat are not “modules”; they are reusable infrastructure domains.  
-3. **Database per service** — no cross-service joins; integrate via APIs and events.  
-4. **Sync for commands, async for facts** — HTTP/gRPC for request/response; event bus for “TripStarted”, “OrderDelivered”, “AdApproved”.  
-5. **Gateway is the only public entry** for mobile/admin (except CDN for media).  
-6. **Idempotency on money/logistics commands** — place ride request, place food order, payment confirm.  
-7. **Same user across sides** — roles (`passenger`, `driver`, `customer`, `merchant_staff`, `food_rider`, `buyer`, `seller`, `admin`) attached to one `userId`.
+| Service | Port | Public prefix | Owns |
+|---------|------|---------------|------|
+| **gateway** | 8080 | `/`, `/healthz` | Reverse proxy only |
+| **identity-service** | 3001 | `/v1/auth`, `/v1/me`, `/v1/admin` | Users, OTP, JWT, role grants |
+| **market-service** | 3002 | `/v1/market` | Ads, categories, favorites, reports, seller ops, ad photos |
+| **food-service** | 3003 | `/v1/food` | Merchants, menu, cart, orders, riders, merchant media |
+| **ride-service** | 3004 | `/v1/ride` | Quotes, trips, drivers, places seed, ride ops |
+| **chat-service** | 3005 | `/v1/chat` | Threads + messages (Market chat) |
+| **games-service** | 3006 | `/v1/games` | Profiles + leaderboard scores |
+| **events-service** | 3007 | `/v1/events` | Events, RSVP/tickets, check-in, event photos |
+
+**Database-per-service (Postgres):**
+
+| Database | Service |
+|----------|---------|
+| `maekel_identity` | identity |
+| `maekel_market` | market |
+| `maekel_food` | food |
+| `maekel_ride` | ride |
+| `maekel_chat` | chat |
+| `maekel_games` | games |
+| `maekel_events` | events |
 
 ---
 
-## 4. Client architecture (Flutter)
+## 4. Architecture principles (locked)
 
-```text
-lib/
-  app/                 # MaekelApp, router, theme
-  core/                # network, auth session, DI, logging, constants
-  features/
-    auth/
-    home/
-    ride/              # passenger + driver UI
-    food/              # customer (+ merchant/rider modes later)
-    market/            # browse + sell + messages
-    games/             # stub
+1. **Microservice per module** — deploy and migrate independently.  
+2. **Gateway is the only public API** for the app (media file GETs also go through gateway prefixes).  
+3. **Database per service** — integrate via HTTP, never cross-DB joins.  
+4. **Identity issues tokens; modules authorize** — JWT `sub` + roles; privileged routes check roles.  
+5. **Media lives in the module that needs it (MVP)** — market / food / events store image bytes in Postgres `BYTEA` (`media_objects`) and serve via `/v1/.../media/files/:filename`.  
+6. **Idempotent logistics writes where it matters** — trip/order style flows avoid duplicate active work.  
+7. **One userId, many roles** — passenger and driver (or buyer and seller) share one phone login.
+
+---
+
+## 5. Flutter client architecture
+
+```mermaid
+flowchart TB
+  UI[Screens SwiftUI style Flutter widgets]
+  VM[Riverpod providers and repositories]
+  Net[API client URLSession style HTTP]
+  L10n[gen-l10n ARB locales]
+  UI --> VM
+  VM --> Net
+  UI --> L10n
+  Net --> GW[Gateway HTTPS or localhost 8080]
 ```
 
-| Concern | Approach |
-|---------|----------|
-| Navigation | `go_router` |
-| State | Riverpod (session + feature notifiers) |
-| Networking | Single `ApiClient` → Gateway base URL; attach Bearer access token |
-| Realtime | WebSocket (or SSE) channels scoped by module: `/ws/ride`, `/ws/food`, `/ws/chat` |
-| Auth storage | Secure storage for refresh token; access token in memory |
-| Offline | Optimistic drafts (Market sell draft, Food cart local); hard fail at place-order/request-ride |
+| Concern | Implementation |
+|---------|----------------|
+| State | Riverpod (`Provider` / `Notifier`) |
+| Navigation | `go_router` + `AppRoutes` |
+| Networking | Shared HTTP client; `API_BASE_URL` dart-define |
+| Auth session | Tokens after OTP; attached on authed calls |
+| Locales | en, am, ti, om, aa, so, **ar (RTL)**, sw, zh |
+| Modules | `lib/features/{ride,food,market,events,games,auth,admin,home}` |
 
-Client never talks to module services directly in production.
+**Release targets**
+
+| Target | Notes |
+|--------|-------|
+| Android APK | `--dart-define=API_BASE_URL=https://maekel-api.onrender.com` |
+| Web QA | Cloudflare Pages `maekel.pages.dev` + GitHub Pages backup |
+| Local | Gateway `http://127.0.0.1:8080` (emulator `10.0.2.2:8080`) |
 
 ---
 
-## 5. Edge: API Gateway / Mobile BFF
+## 6. API Gateway
 
-**Responsibility**
-
-- TLS termination, rate limiting, request logging  
-- JWT validation (or opaque token introspection via identity)  
-- Route `/v1/ride/*` → ride-service, `/v1/food/*` → food-service, etc.  
-- Aggregate **lightweight** mobile responses only where needed (e.g. Home badges)  
-- CORS for admin web  
-
-**Suggested public API shape**
-
-```text
-/v1/auth/*
-/v1/me/*
-/v1/places/*
-/v1/media/*
-/v1/notifications/*
-/v1/chat/*
-/v1/ride/*
-/v1/food/*
-/v1/market/*
-/v1/admin/*
-/ws                        # multiplexed or path-prefixed realtime
+```mermaid
+flowchart LR
+  Client[Flutter] --> GW[gateway Fastify]
+  GW -->|/v1/auth /v1/me /v1/admin| ID[identity 3001]
+  GW -->|/v1/market| MK[market 3002]
+  GW -->|/v1/food| FD[food 3003]
+  GW -->|/v1/ride| RD[ride 3004]
+  GW -->|/v1/chat| CH[chat 3005]
+  GW -->|/v1/games| GM[games 3006]
+  GW -->|/v1/events| EV[events 3007]
 ```
 
-Gateway does **not** contain business rules for matching, fare, cart, or moderation.
+- Package: `@fastify/http-proxy`  
+- Forwards path prefix unchanged (`rewritePrefix` = prefix)  
+- Body limit raised for multipart image uploads (12 MB)  
+- `GET /` returns route list; `GET /healthz` for probes  
 
 ---
 
-## 6. Microservice catalog
-
-### 6.1 Module services (one per product module)
-
-| Service | Domain ownership | MVP must expose |
-|---------|------------------|-----------------|
-| **`ride-service`** | Trip request, fare quote, matching, trip lifecycle, driver availability, ratings, ride earnings ledger | Passenger request/track/complete; driver online/accept/complete; cash fare |
-| **`food-service`** | Merchants, menus, carts, orders, delivery jobs, OTP handover, delivery fees | Browse food+grocery; cart; COD order; status; merchant accept; rider OTP complete |
-| **`market-service`** | Categories, ads, favorites, moderation state, seller listings | Browse/search; post ad; moderate; favorites; report |
-
-Each module service:
-
-- Has its **own Postgres schema/database**  
-- Publishes domain events  
-- Consumes identity `userId` as foreign reference (string/UUID), not a FK to identity DB  
-- May call platform services synchronously (profile, media, places, notify, chat)
-
-### 6.2 Platform services
-
-| Service | Why shared |
-|---------|------------|
-| **`identity-service`** | Phone OTP, tokens, sessions, role grants/revokes |
-| **`profile-service`** | Display name, avatar, prefs; thin user projection for UI |
-| **`places-service`** | Saved Home/Work/pins; geocode helpers; shared by Ride + Food |
-| **`media-service`** | Upload URLs, image processing, CDN keys (Market ads, Food menus, avatars) |
-| **`notification-service`** | FCM push fan-out; templates; device token registry |
-| **`chat-service`** | Threads/messages (Market MVP; Ride optional reuse) |
-
-### 6.3 Optional later services (not MVP)
-
-| Service | Trigger to split |
-|---------|------------------|
-| `payment-service` | Multiple wallets, refunds, Market premium billing |
-| `loyalty-service` | Feres Miles–class rewards |
-| `dispatch-optimizer` | Heavy Ride matching algorithms |
-| `search-service` | Elasticsearch/OpenSearch for Market at scale |
-| `games-service` | If Games needs accounts/scores |
-
-Until then, keep payment stubs **inside** the module that needs them (Ride cash confirm; Food COD; Market no goods checkout).
-
----
-
-## 7. Identity, roles & “both sides, one phone”
+## 7. Identity, roles & auth flow
 
 ```mermaid
 sequenceDiagram
   participant App as Flutter
   participant GW as Gateway
   participant ID as identity-service
-  participant Ride as ride-service
 
-  App->>GW: POST /v1/auth/otp/request {phone}
-  GW->>ID: requestOtp
-  ID-->>App: ok
-  App->>GW: POST /v1/auth/otp/verify {phone,code}
-  GW->>ID: verify
-  ID-->>App: accessToken, refreshToken, userId, roles[]
-  App->>GW: POST /v1/ride/driver/go-online
-  GW->>Ride: Authorization userId + role driver
-  Ride-->>App: online
+  App->>GW: POST /v1/auth/otp/request
+  GW->>ID: forward
+  ID-->>App: accepted
+  App->>GW: POST /v1/auth/otp/verify
+  GW->>ID: forward
+  ID-->>App: accessToken refreshToken userId roles
+  App->>GW: Authed module calls with Bearer JWT
 ```
 
-**Rules**
+### Auth rules
 
-- One `userId` per phone number (E.164, e.g. `+2519…`).  
-- Roles are claims and/or server-side grants:  
-  - Ride: `ride_passenger` (default), `ride_driver` (after ops approve)  
-  - Food: `food_customer` (default), `food_merchant`, `food_rider`  
-  - Market: `market_buyer` (default), `market_seller` (implicit on first post)  
-  - Ops: `admin`, `moderator`, `dispatcher`  
-- Module services **enforce** role on privileged endpoints; Gateway only authenticates identity.  
-- Driver/merchant approval lives in module + mirrored role grant via identity API/event.
+- Phone normalized to E.164 (`+251` + 9 digits).  
+- QA / demo: `MOCK_OTP_CODE` (default `123456`).  
+- `ADMIN_PHONES` bootstrap `platform_admin` (+ market moderator) on first verify.  
+- Staff UI can grant/revoke roles via `/v1/admin/roles/*`.  
 
----
+### Role examples
 
-## 8. Data ownership (database per service)
-
-| Service | Primary store | Typical entities |
-|---------|---------------|------------------|
-| identity | Postgres | User, Phone, OtpChallenge, Session, RoleGrant |
-| profile | Postgres | Profile, DevicePreference |
-| places | Postgres | Place, GeocodeCache |
-| media | Postgres + Object storage | Asset, UploadSession |
-| notification | Postgres | DeviceToken, NotificationLog |
-| chat | Postgres (+ Redis pub/sub) | Thread, Participant, Message |
-| **ride** | Postgres + Redis | Driver, Vehicle, FareQuote, Trip, TripEvent, DriverLocation (hot in Redis) |
-| **food** | Postgres + Redis | Merchant, MenuItem, Cart, Order, DeliveryJob, DeliveryOtp |
-| **market** | Postgres | Category, Ad, AdPhoto, Favorite, ModerationDecision, Report |
-
-**Redis use**
-
-- Ride: geospatial driver index, offer locks, idempotency keys  
-- Food: active order fan-out / short-lived locks  
-- Chat: presence / pub-sub  
-- Gateway/identity: rate limits  
-
-**No shared Postgres** across ride/food/market.
+| Area | Roles |
+|------|--------|
+| Ride | passenger (default), `ride_driver` (ops approve) |
+| Food | customer (default), merchant owner/staff, food rider |
+| Market | buyer (default), seller (on post), `market_moderator` |
+| Events | organizer (host), ops for approve/suspend |
+| Platform | `platform_admin` |
 
 ---
 
-## 9. Inter-service communication
+## 8. Data ownership
 
-### 9.1 Synchronous (HTTP or gRPC internal)
+| Service | Typical entities |
+|---------|------------------|
+| identity | users, otp_challenges, sessions/tokens, role_grants |
+| market | categories, sellers, ads, ad photos/media_objects, favorites, reports, config |
+| food | merchants, menu_items (+ modifiers), carts, orders, delivery jobs, places, media_objects |
+| ride | drivers, vehicles, fare config, quotes, trips, trip events, seed places |
+| chat | threads, participants, messages |
+| games | player profiles, scores |
+| events | organizers, categories, events (`image_urls`, cover), tickets, media_objects |
 
-| Caller | Callee | Example |
-|--------|--------|---------|
-| Gateway | any | External request routing |
-| ride-service | profile-service | Driver card display fields |
-| food-service | places-service | Validate saved address |
-| market-service | media-service | Attach photo asset IDs |
-| any module | notification-service | “Send push to userId” |
-| market-service | chat-service | Ensure thread for ad+buyer+seller |
-| any module | identity-service | Check/grant role (admin flows) |
-
-Prefer **timeouts + retries with idempotency keys** on writes.
-
-### 9.2 Asynchronous (event bus)
-
-**Bus:** Kafka / NATS / RabbitMQ (pick one; see §15).
-
-| Event (examples) | Publisher | Consumers |
-|------------------|-----------|-----------|
-| `identity.user.registered` | identity | profile (create stub) |
-| `identity.role.granted` | identity | modules cache invalidation |
-| `ride.trip.completed` | ride | notification; (later loyalty) |
-| `food.order.status_changed` | food | notification; chat optional |
-| `market.ad.approved` | market | notification; search indexer later |
-| `media.asset.ready` | media | market/food |
-| `chat.message.created` | chat | notification |
-
-Modules must remain available if a consumer is down (at-least-once delivery + idempotent handlers).
+**Media pattern (market / food / events):** multipart upload → row in `media_objects` → public URL  
+`{PUBLIC_API_BASE}/v1/{module}/media/files/{uuid}.jpg` served as raw bytes with cache headers.
 
 ---
 
-## 10. Realtime design
+## 9. Module deep dives
 
-| Channel | Mechanism | Payload focus |
-|---------|-----------|---------------|
-| Ride tracking | WebSocket from Gateway → ride-service | Driver lat/lng, trip status |
-| Food order | WebSocket or push+poll hybrid | Order status transitions |
-| Chat | WebSocket via chat-service | New messages, read receipts later |
-
-**Ride location path (MVP)**
-
-1. Driver app posts location every N seconds to `ride-service` (or gateway WS).  
-2. `ride-service` writes Redis geo + latest point; persists trail sampling to Postgres.  
-3. Passenger subscribed to `tripId` receives location updates.
-
----
-
-## 11. Module deep dives
-
-### 11.1 `ride-service`
+### 9.1 Ride
 
 ```mermaid
 flowchart LR
-  P[Passenger API] --> Quote[Fare engine]
-  P --> Req[Request trip]
-  Req --> Match[Matcher]
-  Match --> Offers[Driver offers]
-  Offers --> Trip[Trip state machine]
-  D[Driver API] --> Avail[Availability + geo]
-  Avail --> Match
-  Trip --> Track[Tracking]
-  Trip --> Pay[Cash confirm]
-  Trip --> Rate[Ratings]
+  Passenger[Passenger APIs] --> Quote[Fare quote]
+  Quote --> TripReq[Create trip]
+  TripReq --> Match[Match online drivers]
+  Match --> Offer[Driver offers]
+  Offer --> Trip[Trip state machine]
+  Driver[Driver APIs] --> Online[Go online plus location]
+  Online --> Match
+  Trip --> Cash[Confirm cash]
+  Trip --> Rate[Rate trip]
+  Ops[Ride ops] --> Drivers[Approve drivers]
+  Ops --> Live[Active trips board]
 ```
 
-**Critical invariants**
+**Invariants**
 
-- Idempotent `POST /trips` (client `Idempotency-Key`)  
-- Binding fare quote ID referenced by trip  
-- Single active trip per passenger (configurable)  
-- Driver cannot go online without `ride_driver` role + approved vehicle  
+- Binding fare quote on trip create  
+- Driver online requires approved driver role/vehicle  
+- Cash confirmation on driver side for MVP payment  
+- Ops can cancel active trips / tune fare config  
 
-**Internal packages (same deployable, not separate microservices yet):** matching, pricing, trip-state — split only when scaling demands.
-
-### 11.2 `food-service`
+### 9.2 Food
 
 ```mermaid
 flowchart LR
-  C[Customer API] --> Cat[Catalog]
-  C --> Cart[Cart]
-  Cart --> Ord[Order]
-  Ord --> Mer[Merchant workflow]
-  Mer --> Job[Delivery job]
-  Job --> OTP[OTP handover]
-  R[Rider API] --> Job
-  M[Merchant API] --> Mer
-  M --> Cat
+  Customer[Customer] --> Catalog[Merchants and menu]
+  Catalog --> Cart[Cart single merchant]
+  Cart --> Order[Place order COD]
+  Order --> MerchantWF[Merchant accept prepare ready]
+  MerchantWF --> RiderJob[Delivery job]
+  Rider[Food rider] --> RiderJob
+  RiderJob --> Done[Complete delivery]
+  OpsFood[Food ops] --> Merchants[Onboard merchants]
+  OpsFood --> Board[Order board]
 ```
 
-**Critical invariants**
+**Invariants**
 
-- Single-merchant cart in MVP  
-- Status machine matches FRD; Delivered requires OTP  
-- Delivery riders are **not** Ride drivers (separate role + tables)  
+- One merchant per cart (MVP)  
+- Order status machine advances via merchant/rider/ops endpoints  
+- Food riders ≠ Ride drivers (separate tables/roles)  
+- Menu/item images via food media endpoints  
 
-### 11.3 `market-service`
+### 9.3 Market
 
 ```mermaid
 flowchart LR
-  B[Browse API] --> Search[Search/Filter]
-  S[Sell API] --> Ads[Ad store]
-  Ads --> Mod[Moderation]
-  Mod --> Search
-  B --> Fav[Favorites]
-  Ads --> ChatHook[Create/open chat thread]
-  ChatHook --> ChatSvc[chat-service]
+  Browse[Browse and filter] --> Ads[Approved ads]
+  Sell[Sell APIs] --> Draft[Create or edit ad]
+  Draft --> Photos[Upload photos]
+  Photos --> Draft
+  Draft --> Mod[Moderation queue]
+  Mod -->|approve| Ads
+  Browse --> Fav[Favorites]
+  Ads --> Reveal[Reveal phone limits]
+  Ads --> ChatStart[Open chat thread]
+  ChatStart --> ChatSvc[chat-service]
+  OpsMkt[Market ops] --> Mod
+  OpsMkt --> Reports[Reports]
+  OpsMkt --> Cats[Categories]
 ```
 
-**Critical invariants**
+**Invariants**
 
-- Ads not publicly listed until Approved  
-- Chat is owned by `chat-service`; market stores `threadId` reference  
-- No goods payment in MVP  
+- Ads are not public until **approved**  
+- Chat ownership is `chat-service`; market stores `threadId`  
+- No goods checkout/payment in MVP  
+- Daily phone-reveal limits via market config  
+
+### 9.4 Events
+
+```mermaid
+flowchart LR
+  Host[Organizer] --> Create[Create or edit event]
+  Create --> Pics[Upload up to 8 photos]
+  Pics --> Create
+  Create --> Review[Ops approval]
+  Review --> Live[Public catalog]
+  Guest[Attendee] --> Live
+  Live --> RSVP[RSVP ticket]
+  Host --> CheckIn[Door check-in]
+  OpsEv[Events ops] --> Review
+```
+
+**Invariants**
+
+- `image_urls` array; `cover_url` = first image  
+- Capacity cannot drop below tickets sold  
+- Check-in validates ticket code for approved/ended events  
+
+### 9.5 Games
+
+```mermaid
+flowchart LR
+  Play[In-app mini games] --> Score[Submit score]
+  Score --> Board[Addis leaderboard]
+  Profile[Games profile] --> Board
+```
+
+Client-side games (Tetris, brick breaker, candy, road fighter) submit scores to `games-service`.
+
+### 9.6 Chat
+
+```mermaid
+sequenceDiagram
+  participant App as Flutter
+  participant Mkt as market-service
+  participant Chat as chat-service
+
+  App->>Mkt: POST /v1/market/ads/id/chat
+  Mkt->>Chat: ensure thread buyer seller ad
+  Chat-->>Mkt: threadId
+  Mkt-->>App: threadId
+  App->>Chat: GET or POST messages
+```
 
 ---
 
-## 12. Cross-cutting concerns
+## 10. Cross-cutting concerns
 
-### 12.1 Security
+### 10.1 Security
 
-- HTTPS everywhere; HSTS at edge  
-- Short-lived access JWT + refresh rotation  
-- OTP rate limits per phone/IP  
-- PII minimization; no tokens in logs  
-- Masked calling: integrate provider later; MVP may dial direct with rate limits  
-- Admin routes behind extra role checks + audit log  
+- HTTPS on Render; local HTTP for dev  
+- JWT access tokens; never log secrets  
+- OTP rate limits / mock code only in non-prod  
+- Multipart image type + size limits  
+- Ops routes require elevated roles  
 
-### 12.2 Observability
+### 10.2 Observability
 
-- Structured logs with `requestId`, `userId`, `module`  
-- Metrics: trip match time, order OTP success, ad approve latency  
-- Tracing: Gateway → service (OpenTelemetry)  
-- Per-service health: `/healthz`, `/readyz`  
+- Per-service Fastify logs  
+- `GET /healthz` on gateway (and services via shared helper)  
+- Render free tier cold-starts (~30–60s after idle)  
 
-### 12.3 Idempotency & consistency
+### 10.3 Configuration
 
-- Write APIs accepting `Idempotency-Key`  
-- Outbox pattern (or transactional inbox) for reliable event publish from Postgres  
-
-### 12.4 File uploads
-
-1. Client asks `media-service` for signed upload URL  
-2. Client uploads to object storage  
-3. `media.asset.ready` → module attaches asset ID to ad/menu/avatar  
-
----
-
-## 13. Admin / ops
-
-Thin **Admin Web** (or Flutter Web) talks to Gateway `/v1/admin/*`, which routes to:
-
-| Ops need | Service |
+| Variable | Purpose |
 |----------|---------|
-| Suspend user / grant roles | identity (+ module flags) |
-| Approve drivers / vehicles | ride-service |
-| Onboard merchants / reassign delivery | food-service |
-| Moderate ads / handle reports | market-service |
-| Push test / templates | notification-service |
+| `PUBLIC_API_BASE` | Absolute URLs embedded in media responses |
+| `POSTGRES_*` / `POSTGRES_SSL` | DB connectivity (Neon needs SSL) |
+| `JWT_SECRET` / `JWT_ACCESS_TTL_SEC` | Token crypto |
+| `MOCK_OTP_CODE` | Demo OTP |
+| `ADMIN_PHONES` | Bootstrap admins |
+| `*_URL` / `*_PORT` | Service discovery for gateway + local boot |
 
-Do **not** build one mega-admin DB; compose via APIs.
+### 10.4 Localization
+
+- Flutter ARB + `flutter gen-l10n`  
+- Place names stay English in API filters; UI maps via `localizedPlace`  
+- Arabic enables RTL through Flutter Material/Widgets delegates  
+- Font fallbacks: Noto Sans Ethiopic, Noto Sans Arabic, Noto Sans SC  
 
 ---
 
-## 14. Deployment topology
+## 11. Deployment topology
+
+### 11.1 Local development
 
 ```mermaid
 flowchart TB
-  subgraph k8s [Kubernetes / container platform]
-    GW
-    identity
-    profile
-    places
-    media
-    notify
-    chat
-    ride
-    food
-    market
-  end
-
-  subgraph managed [Managed cloud]
-    PG1[(Postgres instances)]
-    R[(Redis)]
-    Bus{{Event bus}}
-    S3[(Object storage)]
-    FCM[FCM]
-    SMS[SMS OTP provider]
-  end
-
-  ride --> PG1
-  food --> PG1
-  market --> PG1
-  identity --> PG1
-  ride --> R
-  ride --> Bus
-  food --> Bus
-  market --> Bus
-  notify --> FCM
-  identity --> SMS
-  media --> S3
+  Dev[Developer machine]
+  Dev --> FlutterDev[Flutter run]
+  Dev --> Node[npm run dev:all]
+  Node --> GW[gateway 8080]
+  Node --> Svc[Seven domain services]
+  Svc --> LocalPG[(Local Postgres 7 DBs)]
+  FlutterDev --> GW
 ```
 
-**Environments:** `dev` · `staging` · `prod`  
-**CI/CD:** build per service; independent version tags; contract tests at Gateway  
-**Secrets:** cloud secret manager; never in git  
+See [local-dev-setup.md](./local-dev-setup.md).
 
-**Local dev:** Docker Compose with all services + Postgres/Redis; Flutter points at local Gateway.
+### 11.2 Demo / QA cloud
+
+```mermaid
+flowchart TB
+  Users[Testers] --> Web[maekel.pages.dev]
+  Users --> APK[Release APK]
+  Web --> API[maekel-api.onrender.com]
+  APK --> API
+  API --> Demo[Single Node process demo-all]
+  Demo --> Neon[(Neon Postgres databases)]
+```
+
+| Piece | Detail |
+|-------|--------|
+| API | Render web service `maekel-api`, blueprint `render.yaml` |
+| Boot | `npm run start:demo` → all services in one process |
+| DB | Neon; SSL on; pooled host recommended |
+| Web | Cloudflare Pages + GitHub Pages |
+| How-to | [how-to-deploy.md](./how-to-deploy.md) |
+
+### 11.3 Production-oriented evolution (not required for QA)
+
+- Split demo process → one container/service each  
+- Managed Redis for ride geo if matching load grows  
+- Dedicated object storage instead of BYTEA  
+- Real SMS OTP + FCM push service  
+- Optional event bus for notifications  
 
 ---
 
-## 15. Recommended tech stack (proposed lock)
+## 12. Tech stack (as-built)
 
-> Frontend is already Flutter. Backend choices below optimize for microservice-per-module + Ethiopia MVP.
+| Layer | Choice |
+|-------|--------|
+| Mobile / Web UI | Flutter + Riverpod + go_router |
+| Gateway & APIs | Node.js 22, Fastify, TypeScript, Zod |
+| Shared lib | `@maekel/shared` (createService, env, DB pool, errors) |
+| Auth | JWT + mock OTP |
+| DB | PostgreSQL (local or Neon) |
+| Images | Multipart → Postgres BYTEA |
+| Cloud demo | Render + Neon |
+| Web hosting | Cloudflare Pages, GitHub Pages |
 
-| Layer | Recommendation | Notes |
-|-------|----------------|-------|
-| Gateway/BFF | **NestJS** or **Envoy + small BFF** | NestJS faster for mobile aggregation |
-| Module & platform APIs | **NestJS (TypeScript)** *or* **Go** for Ride hot path | Pick **one** primary language for team velocity; Go optional for `ride-service` later |
-| Primary language (default) | **TypeScript / NestJS** for all MVP services | Same patterns, shared libs (`auth-guard`, `otel`, `outbox`) |
-| DB | **PostgreSQL** (DB-per-service) | Strong consistency for orders/trips/ads |
-| Cache / geo | **Redis** | Ride driver geo, locks, rate limits |
-| Event bus | **NATS** (simpler MVP) or **Kafka** (if already standard) | Prefer NATS JetStream for MVP size |
-| Object storage | **S3-compatible** | Images |
-| Push | **Firebase Cloud Messaging** | Via notification-service |
-| SMS OTP | Local aggregator / Twilio-class provider | Behind identity-service |
-| Maps | Google Maps / Mapbox | Flutter + server geocode |
-| Admin web | Next.js or Flutter Web | Calls same Gateway |
-| Containers | Docker + Kubernetes (or ECS) | Service-per-deploy |
-| Auth tokens | JWT access + refresh | Issued by identity-service |
-
-**Explicitly not the MVP backbone:** Firebase/Firestore as system of record for Ride/Food (realtime toy OK for prototypes only). Use FCM as a **push channel**, not the domain database.
-
-### Shared libraries (monorepo option)
+**Monorepo layout**
 
 ```text
-backend/
-  apps/
-    gateway/
-    identity-service/
-    profile-service/
-    places-service/
-    media-service/
-    notification-service/
-    chat-service/
-    ride-service/
-    food-service/
-    market-service/
-  libs/
-    auth/
-    events/
-    tracing/
-    errors/
+maekel/
+  lib/                    Flutter app
+  backend/
+    apps/
+      gateway/
+      identity-service/
+      market-service/
+      food-service/
+      ride-service/
+      chat-service/
+      games-service/
+      events-service/
+    packages/shared/
+    scripts/demo-all.ts
+  docs/
+  render.yaml
 ```
 
-**Monorepo + independently deployable services** is preferred so contracts stay aligned without forcing a monolith.
+---
+
+## 13. Key API surface (summary)
+
+| Prefix | Capabilities |
+|--------|----------------|
+| `/v1/auth/*` | OTP request/verify |
+| `/v1/me` | Current user |
+| `/v1/admin/*` | Staff roles |
+| `/v1/market/*` | Catalog, sell, media, favorites, chat hook, ops |
+| `/v1/food/*` | Merchants, cart, orders, merchant/rider/ops |
+| `/v1/ride/*` | Quotes, trips, driver, ops |
+| `/v1/chat/*` | Threads, messages |
+| `/v1/games/*` | Profile, scores, leaderboard |
+| `/v1/events/*` | Catalog, host, media, RSVP, check-in, ops |
 
 ---
 
-## 16. MVP service slice (what to build first)
+## 14. Failure modes & resilience
 
-| Phase | Ship |
-|-------|------|
-| M0 | Gateway + identity + profile + notification (FCM) |
-| M1 | media + places |
-| M2 | **market-service** + chat-service + admin moderate |
-| M3 | **food-service** (customer/merchant/rider APIs) |
-| M4 | **ride-service** (passenger/driver + matching + WS tracking) |
-
-Matches product build order in the MVP cut (Market → Food → Ride) after shell platform.
+| Failure | Expected behavior |
+|---------|-------------------|
+| Render cold start | First request slow; wake via `/healthz` |
+| chat-service down | Market listing still works; chat CTA fails |
+| Duplicate trip/order taps | Server rejects or returns existing active work |
+| Oversized image | 413 / validation error from multipart limits |
+| Neon sleep / SSL misconfig | Services fail to boot; check `POSTGRES_SSL` |
 
 ---
 
-## 17. Failure modes & resilience
+## 15. Security & compliance checklist
 
-| Failure | Behavior |
-|---------|----------|
-| notification-service down | Domain write succeeds; push retries from outbox |
-| chat-service down | Market posting still works; contact CTA degraded |
-| Redis down | Ride matching degraded/fail closed; do not corrupt trips |
-| Duplicate client submit | Idempotency returns original trip/order |
-| Partial deploy | Gateway feature flags hide unfinished module routes |
-
----
-
-## 18. Security & compliance checklist
-
-- [ ] Phone numbers stored normalized; access audited  
-- [ ] OTP codes hashed/TTL; brute-force lockout  
-- [ ] Driver location retention policy documented  
-- [ ] Media scanned for abuse size/type limits  
-- [ ] Admin actions append-only audit  
-- [ ] Secrets rotated; least-privilege DB users per service  
+- [x] Phones stored/normalized as E.164  
+- [x] Mock OTP gated by env (not for real prod SMS)  
+- [x] Module role checks on ops/driver/merchant routes  
+- [x] Media type/size validation  
+- [ ] Production SMS provider + hashed OTP at rest  
+- [ ] Formal location retention policy  
+- [ ] Secrets only in host secret stores (not git)  
 
 ---
 
-## 19. Open decisions (need product/eng lock)
-
-1. NestJS-everywhere vs Go for `ride-service` day one  
-2. NATS vs Kafka  
-3. Masked-number provider for Ride/Market calls  
-4. Single Postgres cluster with separate databases vs separate instances  
-5. Admin as Next.js vs Flutter Web  
-
----
-
-## 20. Document map
+## 16. Document map
 
 | Doc | Role |
 |-----|------|
-| [architecture.md](./architecture.md) | This file — system & microservices |
-| [mvp-cut-ride-food-market.md](./mvp-cut-ride-food-market.md) | What to build first |
-| [ride-functional-requirements.md](./ride-functional-requirements.md) | Ride behavior |
-| [food-delivery-functional-requirements.md](./food-delivery-functional-requirements.md) | Food behavior |
-| [market-functional-requirements.md](./market-functional-requirements.md) | Market behavior |
+| [architecture.md](./architecture.md) | This file |
+| [how-to-deploy.md](./how-to-deploy.md) | Deploy API, web, APK |
+| [local-dev-setup.md](./local-dev-setup.md) | Local stack |
+| [deploy-demo-render-neon.md](./deploy-demo-render-neon.md) | Render + Neon first setup |
+| [deploy-web-qa.md](./deploy-web-qa.md) | Web hosts |
+| Module FRDs | Ride / Food / Market requirements |
+| QA guides | Step-by-step + phones/roles |
 
 ---
 
-## 21. Document history
+## 17. Document history
 
 | Version | Date | Notes |
 |---------|------|-------|
-| 0.1 | 2026-11-15 | Initial full architecture; microservice per module + platform services |
+| 0.1 | 2026-11-15 | Proposed architecture (Nest-oriented, extra platform services) |
+| **1.0** | **2026-11-24** | **As-built rewrite: Fastify services, Events/Games, media BYTEA, deploy topology; PDF diagrams pre-rendered** |

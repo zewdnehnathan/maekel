@@ -493,10 +493,23 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  ad.title,
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
+                                InkWell(
+                                  onTap: () async {
+                                    await ref
+                                        .read(marketRepositoryProvider)
+                                        .fetchAd(ad.id);
+                                    if (!context.mounted) return;
+                                    context.push(
+                                      '${AppRoutes.market}/ads/${ad.id}',
+                                    );
+                                  },
+                                  child: Text(
+                                    ad.title,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(color: MaekelColors.signal),
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -517,10 +530,18 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                                   spacing: 8,
                                   children: [
                                     TextButton(
-                                      onPressed: () => context.push(
-                                        '${AppRoutes.market}/ads/${ad.id}',
+                                      onPressed: () async {
+                                        await ref
+                                            .read(marketRepositoryProvider)
+                                            .fetchAd(ad.id);
+                                        if (!context.mounted) return;
+                                        context.push(
+                                          '${AppRoutes.market}/ads/${ad.id}',
+                                        );
+                                      },
+                                      child: Text(
+                                        AppLocalizations.of(context)!.open,
                                       ),
-                                      child: Text(AppLocalizations.of(context)!.open),
                                     ),
                                     FilledButton(
                                       onPressed: () => _approve(ad),
@@ -631,21 +652,102 @@ class _MarketOpsScreenState extends ConsumerState<MarketOpsScreen> {
                           const SizedBox(height: 10),
                         ],
                       const SizedBox(height: 18),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              AppLocalizations.of(context)!
-                                  .marketOpsCategories(categories.length)
-                                  .toUpperCase(),
-                              style: Theme.of(context).textTheme.labelLarge,
+                      Text(
+                        AppLocalizations.of(context)!
+                            .marketOpsSuspendedSellers(
+                              queue?.suspendedSellers.length ?? 0,
+                            )
+                            .toUpperCase(),
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      if (queue == null || queue.suspendedSellers.isEmpty)
+                        GlassPanel(
+                          child: Text(
+                            AppLocalizations.of(context)!.marketOpsNoSuspended,
+                          ),
+                        )
+                      else
+                        for (final seller in queue.suspendedSellers) ...[
+                          GlassPanel(
+                            accent: MaekelColors.danger,
+                            borderRadius: 16,
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        seller.name,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        seller.phoneE164,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                FilledButton(
+                                  onPressed: () async {
+                                    try {
+                                      await ref
+                                          .read(marketRepositoryProvider)
+                                          .suspendSeller(
+                                            sellerId: seller.id,
+                                            suspended: false,
+                                          );
+                                      await _load();
+                                    } on ApiException catch (e) {
+                                      if (!mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(content: Text(e.message)),
+                                      );
+                                    }
+                                  },
+                                  child: Text(
+                                    AppLocalizations.of(context)!
+                                        .marketOpsReinstateSeller,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          FilledButton.tonal(
-                            onPressed: _addCategory,
-                            child: Text(AppLocalizations.of(context)!.marketOpsAddCategory),
-                          ),
+                          const SizedBox(height: 10),
                         ],
+                      const SizedBox(height: 18),
+                      Text(
+                        AppLocalizations.of(context)!
+                            .marketOpsCategories(categories.length)
+                            .toUpperCase(),
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FilledButton.tonal(
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(0, 40),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                          ),
+                          onPressed: _addCategory,
+                          child: Text(
+                            AppLocalizations.of(context)!.marketOpsAddCategory,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       if (categories.isEmpty)

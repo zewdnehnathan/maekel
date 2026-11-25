@@ -142,16 +142,51 @@ class MarketScreen extends ConsumerWidget {
             height: 96,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemCount: categories.length + 1,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
-                final c = categories[index];
+                if (index == 0) {
+                  final allSelected = filters.categoryId == null;
+                  return InkWell(
+                    onTap: () {
+                      ref.read(marketFiltersProvider.notifier).setCategory(null);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Ink(
+                      width: 108,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        color: allSelected
+                            ? MaekelColors.signal.withValues(alpha: 0.14)
+                            : MaekelColors.panel.withValues(alpha: 0.8),
+                        border: Border.all(
+                          color: allSelected
+                              ? MaekelColors.signal.withValues(alpha: 0.5)
+                              : MaekelColors.glassBorder,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.apps_rounded, color: MaekelColors.amber),
+                          const Spacer(),
+                          Text(
+                            AppLocalizations.of(context)!.marketAllCategories,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                final c = categories[index - 1];
                 final selected = filters.categoryId == c.id;
                 return InkWell(
                   onTap: () {
-                    ref.read(marketFiltersProvider.notifier).setCategory(
-                          selected ? null : c.id,
-                        );
+                    ref.read(marketFiltersProvider.notifier).setCategory(c.id);
                     context.push('${AppRoutes.market}/c/${c.id}');
                   },
                   borderRadius: BorderRadius.circular(16),

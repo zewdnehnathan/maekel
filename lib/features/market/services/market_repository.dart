@@ -7,6 +7,7 @@ abstract class MarketRepository {
   List<String> getSubcities();
   MarketSeller? getSeller(String id);
   MarketAd? getAd(String id);
+  Future<MarketAd?> fetchAd(String id);
   List<MarketAd> searchAds(MarketFilters filters);
   List<MarketAd> getAdsForSeller(String sellerId);
   Set<String> getFavoriteIds(String userId);
@@ -416,6 +417,9 @@ class InMemoryMarketRepository implements MarketRepository {
   }
 
   @override
+  Future<MarketAd?> fetchAd(String id) async => getAd(id);
+
+  @override
   Future<MarketOpsQueue> getOpsQueue() async {
     final pending =
         _ads.where((a) => a.status == AdStatus.pending).toList();
@@ -434,6 +438,7 @@ class InMemoryMarketRepository implements MarketRepository {
             ),
           )
           .toList(),
+      suspendedSellers: _sellers.where((s) => s.suspended).toList(),
     );
   }
 

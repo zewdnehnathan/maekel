@@ -113,10 +113,12 @@ class MarketOpsQueue {
   const MarketOpsQueue({
     required this.pendingAds,
     required this.reports,
+    this.suspendedSellers = const [],
   });
 
   final List<MarketAd> pendingAds;
   final List<MarketReportItem> reports;
+  final List<MarketSeller> suspendedSellers;
 }
 
 class MarketConfig {

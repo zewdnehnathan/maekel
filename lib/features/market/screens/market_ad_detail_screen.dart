@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,30 +17,71 @@ import '../providers/market_providers.dart';
 import '../../../core/locale/place_l10n.dart';
 import '../../../l10n/app_localizations.dart';
 
-class MarketAdDetailScreen extends ConsumerWidget {
+class MarketAdDetailScreen extends ConsumerStatefulWidget {
   const MarketAdDetailScreen({super.key, required this.adId});
 
   final String adId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ad = ref.watch(marketAdProvider(adId));
+  ConsumerState<MarketAdDetailScreen> createState() =>
+      _MarketAdDetailScreenState();
+}
+
+class _MarketAdDetailScreenState extends ConsumerState<MarketAdDetailScreen> {
+  bool _loading = false;
+  String? _revealedPhone;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_ensureLoaded());
+    });
+  }
+
+  Future<void> _ensureLoaded() async {
+    final existing = ref.read(marketRepositoryProvider).getAd(widget.adId);
+    if (existing != null) return;
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    final ad =
+        await ref.read(marketRepositoryProvider).fetchAd(widget.adId);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (ad == null) {
+        _loadError = AppLocalizations.of(context)!.marketAdNotFound;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ad = ref.watch(marketAdProvider(widget.adId));
     final userId = ref.watch(marketUserIdProvider);
     final favorites = ref.watch(favoriteIdsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     if (ad == null) {
       return MarketShell(
-        title: AppLocalizations.of(context)!.marketListing,
+        title: l10n.marketListing,
         showBottomNav: false,
-        child: Center(child: Text(AppLocalizations.of(context)!.marketAdNotFound)),
+        child: Center(
+          child: _loading
+              ? const CircularProgressIndicator()
+              : Text(_loadError ?? l10n.marketAdNotFound),
+        ),
       );
     }
 
     final seller = ref.watch(marketSellerProvider(ad.sellerId));
     final isMine = userId != null && ad.sellerId == userId;
     final isFavorite = favorites.contains(ad.id);
-
-    final l10n = AppLocalizations.of(context)!;
+    final showPhone = seller?.showPhone == true;
+    final phoneOnListing = (_revealedPhone ?? seller?.phoneE164 ?? '').trim();
 
     return MarketShell(
       title: l10n.marketListing,
@@ -68,8 +111,19 @@ class MarketAdDetailScreen extends ConsumerWidget {
           SizedBox(
             height: 220,
             child: PageView.builder(
-              itemCount: ad.photoUrls.length,
+              itemCount: ad.photoUrls.isEmpty ? 1 : ad.photoUrls.length,
               itemBuilder: (context, index) {
+                if (ad.photoUrls.isEmpty) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: ColoredBox(
+                      color: MaekelColors.panelLift,
+                      child: const Center(
+                        child: Icon(Icons.image_not_supported_outlined),
+                      ),
+                    ),
+                  );
+                }
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ClipRRect(
@@ -77,7 +131,7 @@ class MarketAdDetailScreen extends ConsumerWidget {
                     child: Image.network(
                       ad.photoUrls[index],
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         color: MaekelColors.panelLift,
                         alignment: Alignment.center,
                         child: const Icon(Icons.image_not_supported_outlined),
@@ -100,14 +154,14 @@ class MarketAdDetailScreen extends ConsumerWidget {
           Text(ad.title, style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
           Text(
-            '${localizedPlace(AppLocalizations.of(context)!, ad.subcity)}, ${ad.locationLabel} · ${ad.condition.localized(AppLocalizations.of(context)!)}',
+            '${localizedPlace(l10n, ad.subcity)}, ${ad.locationLabel} · ${ad.condition.localized(l10n)}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
-          MarketSafetyBanner(compact: true),
+          const MarketSafetyBanner(compact: true),
           const SizedBox(height: 16),
           Text(
-            AppLocalizations.of(context)!.marketDetails.toUpperCase(),
+            l10n.marketDetails.toUpperCase(),
             style: Theme.of(context).textTheme.labelLarge,
           ),
           const SizedBox(height: 8),
@@ -139,7 +193,7 @@ class MarketAdDetailScreen extends ConsumerWidget {
           ],
           const SizedBox(height: 18),
           Text(
-            AppLocalizations.of(context)!.marketSeller.toUpperCase(),
+            l10n.marketSeller.toUpperCase(),
             style: Theme.of(context).textTheme.labelLarge,
           ),
           const SizedBox(height: 8),
@@ -168,6 +222,15 @@ class MarketAdDetailScreen extends ConsumerWidget {
                         seller?.locationLabel ?? ad.locationLabel,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
+                      if (!isMine && showPhone && phoneOnListing.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.marketSellerPhone(phoneOnListing),
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: MaekelColors.signal,
+                              ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -181,18 +244,27 @@ class MarketAdDetailScreen extends ConsumerWidget {
                   ? null
                   : () => _startChat(context, ref, userId, ad.id),
               icon: const Icon(Icons.chat_rounded),
-              label: Text(AppLocalizations.of(context)!.marketChatSeller),
+              label: Text(l10n.marketChatSeller),
             ),
             const SizedBox(height: 10),
-            if (seller != null && seller.showPhone)
+            if (showPhone) ...[
+              if (phoneOnListing.isEmpty)
+                OutlinedButton.icon(
+                  onPressed: userId == null
+                      ? null
+                      : () => _revealPhone(context, ref, ad.id, call: false),
+                  icon: const Icon(Icons.phone_rounded),
+                  label: Text(l10n.marketShowPhoneNumber),
+                ),
+              if (phoneOnListing.isEmpty) const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: userId == null
                     ? null
-                    : () => _callSeller(context, ref, ad.id),
+                    : () => _revealPhone(context, ref, ad.id, call: true),
                 icon: const Icon(Icons.call_rounded),
-                label: Text(AppLocalizations.of(context)!.marketCallSeller),
-              )
-            else if (seller != null)
+                label: Text(l10n.marketCallSeller),
+              ),
+            ] else if (seller != null)
               Text(
                 l10n.marketSellerHidPhone,
                 style: Theme.of(context).textTheme.bodyMedium,
@@ -207,7 +279,7 @@ class MarketAdDetailScreen extends ConsumerWidget {
               OutlinedButton(
                 onPressed: () =>
                     context.push('${AppRoutes.marketSell}?edit=${ad.id}'),
-                child: Text(AppLocalizations.of(context)!.marketEditListing),
+                child: Text(l10n.marketEditListing),
               ),
             ],
           ],
@@ -257,17 +329,22 @@ class MarketAdDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _callSeller(
+  Future<void> _revealPhone(
     BuildContext context,
     WidgetRef ref,
-    String adId,
-  ) async {
+    String adId, {
+    required bool call,
+  }) async {
     final ok = await showMarketSafetyGate(context);
     if (!ok || !context.mounted) return;
     try {
       final phone =
           await ref.read(marketRepositoryProvider).revealPhone(adId);
-      await launchUrl(Uri(scheme: 'tel', path: phone));
+      if (!mounted) return;
+      setState(() => _revealedPhone = phone);
+      if (call) {
+        await launchUrl(Uri(scheme: 'tel', path: phone));
+      }
     } on ApiException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

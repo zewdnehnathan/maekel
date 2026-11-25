@@ -586,6 +586,31 @@ class AppLocalizationsAm extends AppLocalizations {
   String get marketOpsMaxFreeAds => 'ከፍተኛ ነፃ ንቁ ማስታወቂያዎች';
 
   @override
+  String marketOpsSuspendedSellers(int count) {
+    return 'የታገዱ ሻጮች ($count)';
+  }
+
+  @override
+  String get marketOpsNoSuspended => 'የታገዱ ሻጮች የሉም።';
+
+  @override
+  String get marketOpsReinstateSeller => 'መልሰው አስገባ';
+
+  @override
+  String get marketAllCategories => 'ሁሉም';
+
+  @override
+  String get marketShowPhoneNumber => 'ስልክ አሳይ';
+
+  @override
+  String marketSellerPhone(String phone) {
+    return 'ስልክ፦ $phone';
+  }
+
+  @override
+  String get eventsOpsViewDetails => 'ዝርዝር ይመልከቱ';
+
+  @override
   String get foodSubtitle => 'በአዲስ አበባ ያድርሱ';
 
   @override
@@ -831,11 +856,39 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String eventsDoorCode(String code) {
-    return 'የበር ኮድ፡ $code';
+    return 'የዝግጅት PIN፦ $code';
+  }
+
+  @override
+  String get eventsDoorIdLabel => 'የበር መለያ';
+
+  @override
+  String get eventsDoorIdHint => 'ለምሳሌ በር A / በር 2';
+
+  @override
+  String get eventsDoorIdRequired => 'ከመግባት በፊት የበር መለያ ያስገቡ';
+
+  @override
+  String get eventsDoorIdHelp =>
+      'እያንዳንዱ አረጋጋጭ የተለየ የበር መለያ ይጠቀማል። በእያንዳንዱ መግቢያ ይቀመጣል።';
+
+  @override
+  String eventsCheckedInAtDoor(String door) {
+    return 'በር $door';
   }
 
   @override
   String get eventsCheckIn => 'መግቢያ';
+
+  @override
+  String get eventsComplete => 'ዝግጅቱን ጨርስ';
+
+  @override
+  String get eventsCompleteConfirm =>
+      'ይህን ዝግጅት እንደተጠናቀቀ ምልክት ማድረግ? ከአሳሽ ዝርዝር ይወጣል።';
+
+  @override
+  String get eventsCompleted => 'ዝግጅቱ እንደተጠናቀቀ ተመዝግቧል';
 
   @override
   String get eventsNoTickets => 'ትኬት የለም። ከአስስ RSVP ያድርጉ።';

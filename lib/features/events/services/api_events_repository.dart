@@ -328,6 +328,9 @@ class ApiEventsRepository implements EventsRepository {
             status: parseTicketStatus(j['status'] as String? ?? 'reserved'),
             ticketCode: j['ticketCode'] as String,
             createdAt: parseDt(j['createdAt']) ?? DateTime.now(),
+            doorId: j['doorId'] as String?,
+            checkedInAt: parseDt(j['checkedInAt']),
+            checkedInBy: j['checkedInBy'] as String?,
           ),
         )
         .toList();
@@ -346,6 +349,7 @@ class ApiEventsRepository implements EventsRepository {
     String eventId, {
     String? ticketCode,
     String? ticketId,
+    required String doorId,
   }) async {
     await _client.post(
       '/v1/events/events/$eventId/check-in',
@@ -353,6 +357,7 @@ class ApiEventsRepository implements EventsRepository {
       body: {
         if (ticketCode != null) 'ticketCode': ticketCode,
         if (ticketId != null) 'ticketId': ticketId,
+        'doorId': doorId.trim(),
       },
     );
   }

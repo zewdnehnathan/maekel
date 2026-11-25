@@ -46,37 +46,47 @@ class _MarketCategoryScreenState extends ConsumerState<MarketCategoryScreen> {
     final l10n = AppLocalizations.of(context)!;
     final title = category?.localized(l10n) ?? l10n.marketCategoryTitle;
 
-    return MarketShell(
-      title: title,
-      showBottomNav: false,
-      child: ads.isEmpty
-          ? Center(child: Text(AppLocalizations.of(context)!.marketNoAdsInCategory))
-          : GridView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              itemCount: ads.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.68,
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) return;
+        // Returning home should reset to "All" so Near you is unfiltered.
+        ref.read(marketFiltersProvider.notifier).setCategory(null);
+      },
+      child: MarketShell(
+        title: title,
+        showBottomNav: false,
+        child: ads.isEmpty
+            ? Center(
+                child: Text(AppLocalizations.of(context)!.marketNoAdsInCategory),
+              )
+            : GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                itemCount: ads.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.68,
+                ),
+                itemBuilder: (context, index) {
+                  final ad = ads[index];
+                  final userId = ref.read(marketUserIdProvider);
+                  return AdCard(
+                    ad: ad,
+                    isFavorite: favorites.contains(ad.id),
+                    onTap: () =>
+                        context.push('${AppRoutes.market}/ads/${ad.id}'),
+                    onFavoriteTap: userId == null
+                        ? null
+                        : () {
+                            ref
+                                .read(marketRepositoryProvider)
+                                .toggleFavorite(userId, ad.id);
+                          },
+                  );
+                },
               ),
-              itemBuilder: (context, index) {
-                final ad = ads[index];
-                final userId = ref.read(marketUserIdProvider);
-                return AdCard(
-                  ad: ad,
-                  isFavorite: favorites.contains(ad.id),
-                  onTap: () => context.push('${AppRoutes.market}/ads/${ad.id}'),
-                  onFavoriteTap: userId == null
-                      ? null
-                      : () {
-                          ref
-                              .read(marketRepositoryProvider)
-                              .toggleFavorite(userId, ad.id);
-                        },
-                );
-              },
-            ),
+      ),
     );
   }
 }

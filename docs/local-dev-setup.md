@@ -17,7 +17,7 @@ Flutter app  →  http://127.0.0.1:8080 (gateway)
 
 | Piece | Role |
 |-------|------|
-| **Gateway** (`:8080`) | Single HTTP entry; proxies `/v1/*` to services |
+| **Gateway** (`:8080`) | Single HTTP entry; proxies `/v1/`* to services |
 | **identity** | Auth (OTP), JWT, roles / Staff |
 | **market / food / ride / chat / games / events** | Domain APIs + own Postgres DB |
 | **Flutter** | Web / Android / iOS / desktop client |
@@ -193,7 +193,7 @@ Content-Type: application/json
 
 Use the returned `accessToken` as `Authorization: Bearer <token>`.
 
-Bootstrap admin (from `ADMIN_PHONES`): local phone **`999999999`**, OTP **`123456`**.
+Bootstrap admin (from `ADMIN_PHONES`): local phone `999999999`, OTP `123456`.
 
 ---
 
@@ -263,7 +263,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://maekel-api.onrend
 ### 3.4 First login in the app
 
 1. Enter a **9-digit** local number (e.g. `911234567`) — UI shows `+251`.
-2. OTP: **`123456`** (mock).
+2. OTP: `123456` (mock).
 3. You land on Home (Ride, Market, Food, Games, Events, …).
 
 Languages: open the language picker (en / am / ti / om / aa / so / ar / sw / zh). Preference is stored on device. Arabic uses RTL layout.
@@ -299,7 +299,7 @@ then restart `dev:all` if needed.
 ## 5. Architecture cheat sheet
 
 - **Gateway** does not own a DB; it only proxies.
-- Services use **`@maekel/shared`** for Fastify bootstrap, JWT, Postgres pool, migrations.
+- Services use `@maekel/shared` for Fastify bootstrap, JWT, Postgres pool, migrations.
 - Auth is **mock OTP** locally (`MOCK_OTP_CODE`); not production SMS.
 - Roles: defaults on every user + Staff grants; bootstrap phones from `ADMIN_PHONES`. After a Staff grant, user must **sign out and OTP again** so the JWT refreshes.
 

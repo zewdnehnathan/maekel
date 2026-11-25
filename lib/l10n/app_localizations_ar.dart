@@ -595,6 +595,31 @@ class AppLocalizationsAr extends AppLocalizations {
   String get marketOpsMaxFreeAds => 'الحد الأقصى للإعلانات المجانية النشطة';
 
   @override
+  String marketOpsSuspendedSellers(int count) {
+    return 'البائعون الموقوفون ($count)';
+  }
+
+  @override
+  String get marketOpsNoSuspended => 'لا يوجد بائعون موقوفون.';
+
+  @override
+  String get marketOpsReinstateSeller => 'إعادة تفعيل';
+
+  @override
+  String get marketAllCategories => 'الكل';
+
+  @override
+  String get marketShowPhoneNumber => 'إظهار الرقم';
+
+  @override
+  String marketSellerPhone(String phone) {
+    return 'الهاتف: $phone';
+  }
+
+  @override
+  String get eventsOpsViewDetails => 'عرض التفاصيل';
+
+  @override
   String get foodSubtitle => 'تسليم في أديس';
 
   @override
@@ -847,11 +872,39 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String eventsDoorCode(String code) {
-    return 'رمز الباب: $code';
+    return 'رمز الفعالية: $code';
+  }
+
+  @override
+  String get eventsDoorIdLabel => 'معرّف الباب';
+
+  @override
+  String get eventsDoorIdHint => 'مثلاً البوابة أ / الباب 2';
+
+  @override
+  String get eventsDoorIdRequired => 'أدخل معرّف الباب قبل تسجيل الدخول';
+
+  @override
+  String get eventsDoorIdHelp =>
+      'كل مدقق يستخدم معرّف باب مختلف. يُحفظ مع كل تسجيل دخول.';
+
+  @override
+  String eventsCheckedInAtDoor(String door) {
+    return 'الباب $door';
   }
 
   @override
   String get eventsCheckIn => 'تحقق في';
+
+  @override
+  String get eventsComplete => 'إنهاء الفعالية';
+
+  @override
+  String get eventsCompleteConfirm =>
+      'تعليم هذه الفعالية كمنتهية؟ ستختفي من قائمة التصفح.';
+
+  @override
+  String get eventsCompleted => 'تم تعليم الفعالية كمنتهية';
 
   @override
   String get eventsNoTickets => 'لا توجد تذاكر بعد. الرد على الدعوة من التصفح.';

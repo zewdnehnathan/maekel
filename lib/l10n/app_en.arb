@@ -274,6 +274,27 @@
   "marketOpsRejectAd": "Reject ad",
   "marketOpsAddCategory": "Add category",
   "marketOpsMaxFreeAds": "Max active free ads",
+  "marketOpsSuspendedSellers": "Suspended sellers ({count})",
+  "@marketOpsSuspendedSellers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "marketOpsNoSuspended": "No suspended sellers.",
+  "marketOpsReinstateSeller": "Reinstate",
+  "marketAllCategories": "All",
+  "marketShowPhoneNumber": "Show number",
+  "marketSellerPhone": "Phone: {phone}",
+  "@marketSellerPhone": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "eventsOpsViewDetails": "View details",
   "foodSubtitle": "Deliver in Addis",
   "foodBlurb": "Restaurants & groceries · COD · OTP handover",
   "foodDeliveryPin": "Delivery pin",
@@ -425,7 +446,7 @@
   "eventsCheckedIn": "Checked in",
   "eventsNotHosted": "You have not hosted an event yet.",
   "eventsAttendees": "Attendees",
-  "eventsDoorCode": "Door code: {code}",
+  "eventsDoorCode": "Event PIN: {code}",
   "@eventsDoorCode": {
     "placeholders": {
       "code": {
@@ -433,7 +454,22 @@
       }
     }
   },
+  "eventsDoorIdLabel": "Door ID",
+  "eventsDoorIdHint": "e.g. Gate A / Door 2",
+  "eventsDoorIdRequired": "Enter your Door ID before check-in",
+  "eventsDoorIdHelp": "Each checker uses a different Door ID. It is saved on every check-in.",
+  "eventsCheckedInAtDoor": "Door {door}",
+  "@eventsCheckedInAtDoor": {
+    "placeholders": {
+      "door": {
+        "type": "String"
+      }
+    }
+  },
   "eventsCheckIn": "Check in",
+  "eventsComplete": "Complete event",
+  "eventsCompleteConfirm": "Mark this event as ended? It will leave the public browse list.",
+  "eventsCompleted": "Event marked as ended",
   "eventsNoTickets": "No tickets yet. RSVP from Browse.",
   "eventsPending": "Pending ({count})",
   "@eventsPending": {

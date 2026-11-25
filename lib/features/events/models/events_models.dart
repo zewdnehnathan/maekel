@@ -141,6 +141,9 @@ class EventAttendee {
     required this.status,
     required this.ticketCode,
     required this.createdAt,
+    this.doorId,
+    this.checkedInAt,
+    this.checkedInBy,
   });
 
   final String id;
@@ -150,6 +153,9 @@ class EventAttendee {
   final TicketStatus status;
   final String ticketCode;
   final DateTime createdAt;
+  final String? doorId;
+  final DateTime? checkedInAt;
+  final String? checkedInBy;
 }
 
 class EventsOpsQueue {

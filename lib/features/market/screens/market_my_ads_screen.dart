@@ -215,11 +215,14 @@ class _MarketMyAdsScreenState extends ConsumerState<MarketMyAdsScreen> {
                     Wrap(
                       spacing: 8,
                       children: [
-                        TextButton(
-                          onPressed: () => context
-                              .push('${AppRoutes.market}/ads/${ad.id}'),
-                          child: Text(AppLocalizations.of(context)!.open),
-                        ),
+                        // Rejected / pending: Edit is the path (Open duplicated Edit listing).
+                        if (ad.status == AdStatus.approved ||
+                            ad.status == AdStatus.sold)
+                          TextButton(
+                            onPressed: () => context
+                                .push('${AppRoutes.market}/ads/${ad.id}'),
+                            child: Text(AppLocalizations.of(context)!.open),
+                          ),
                         if (ad.status != AdStatus.sold)
                           TextButton(
                             onPressed: () => context.push(

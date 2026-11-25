@@ -604,6 +604,31 @@ class AppLocalizationsOm extends AppLocalizations {
   String get marketOpsMaxFreeAds => 'Max active beeksisa bilisaa';
 
   @override
+  String marketOpsSuspendedSellers(int count) {
+    return 'Suspended sellers ($count)';
+  }
+
+  @override
+  String get marketOpsNoSuspended => 'No suspended sellers.';
+
+  @override
+  String get marketOpsReinstateSeller => 'Reinstate';
+
+  @override
+  String get marketAllCategories => 'All';
+
+  @override
+  String get marketShowPhoneNumber => 'Show number';
+
+  @override
+  String marketSellerPhone(String phone) {
+    return 'Phone: $phone';
+  }
+
+  @override
+  String get eventsOpsViewDetails => 'View details';
+
+  @override
   String get foodSubtitle => 'Addis keessatti geessi';
 
   @override
@@ -857,11 +882,39 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String eventsDoorCode(String code) {
-    return 'Koodii balbalaa: $code';
+    return 'Event PIN: $code';
+  }
+
+  @override
+  String get eventsDoorIdLabel => 'Door ID';
+
+  @override
+  String get eventsDoorIdHint => 'e.g. Gate A / Door 2';
+
+  @override
+  String get eventsDoorIdRequired => 'Enter your Door ID before check-in';
+
+  @override
+  String get eventsDoorIdHelp =>
+      'Each checker uses a different Door ID. It is saved on every check-in.';
+
+  @override
+  String eventsCheckedInAtDoor(String door) {
+    return 'Door $door';
   }
 
   @override
   String get eventsCheckIn => 'Galmaa\'i';
+
+  @override
+  String get eventsComplete => 'Complete event';
+
+  @override
+  String get eventsCompleteConfirm =>
+      'Mark this event as ended? It will leave the public browse list.';
+
+  @override
+  String get eventsCompleted => 'Event marked as ended';
 
   @override
   String get eventsNoTickets =>

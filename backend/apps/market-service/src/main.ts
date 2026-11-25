@@ -144,7 +144,7 @@ async function boot() {
     const res = await pool.query(
       `SELECT * FROM sellers WHERE suspended = FALSE ORDER BY name`,
     );
-    return { items: res.rows.map(mapSeller) };
+    return { items: res.rows.map((r) => mapSeller(r)) };
   });
 
   app.get('/v1/market/sellers/:id', async (req) => {
@@ -157,7 +157,7 @@ async function boot() {
   app.get('/v1/market/me/seller', async (req) => {
     const user = requireAuth(req);
     const seller = await ensureSeller(user.sub, user.phone);
-    return mapSeller(seller);
+    return mapSeller(seller, { includePhone: true });
   });
 
   app.patch('/v1/market/me/seller', async (req) => {
@@ -186,7 +186,7 @@ async function boot() {
     const res = await pool.query(`SELECT * FROM sellers WHERE id = $1`, [
       user.sub,
     ]);
-    return mapSeller(res.rows[0]);
+    return mapSeller(res.rows[0], { includePhone: true });
   });
 
   app.get('/v1/market/me/notifications', async (req) => {
@@ -715,6 +715,9 @@ async function boot() {
        ORDER BY r.created_at ASC
        LIMIT 100`,
     );
+    const suspended = await pool.query(
+      `SELECT * FROM sellers WHERE suspended = TRUE ORDER BY name ASC`,
+    );
     return {
       pendingAds: pending.rows.map(mapAd),
       reports: reports.rows.map((r) => ({
@@ -727,6 +730,9 @@ async function boot() {
         status: r.status,
         createdAt: r.created_at,
       })),
+      suspendedSellers: suspended.rows.map((r) =>
+        mapSeller(r, { includePhone: true }),
+      ),
     };
   });
 
@@ -806,7 +812,7 @@ async function boot() {
       );
     }
     const res = await pool.query(`SELECT * FROM sellers WHERE id = $1`, [id]);
-    return mapSeller(res.rows[0]);
+    return mapSeller(res.rows[0], { includePhone: true });
   });
 
   app.post('/v1/market/ops/categories', async (req) => {
@@ -911,13 +917,21 @@ function extensionForMime(mime: string): string {
   }
 }
 
-function mapSeller(row: Record<string, unknown>) {
+function mapSeller(
+  row: Record<string, unknown>,
+  opts: { includePhone?: boolean } = {},
+) {
+  const showPhone = Boolean(row.show_phone);
+  // Public responses only expose the number when the seller opted in.
+  // Owner/ops paths pass includePhone to always see the real number.
+  const phone =
+    opts.includePhone || showPhone ? String(row.phone_e164 ?? '') : '';
   return {
     id: row.id,
     name: row.name,
-    phoneE164: row.phone_e164,
+    phoneE164: phone,
     locationLabel: row.location_label,
-    showPhone: row.show_phone,
+    showPhone,
     suspended: Boolean(row.suspended),
   };
 }

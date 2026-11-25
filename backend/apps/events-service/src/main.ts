@@ -99,6 +99,9 @@ async function boot() {
     )`,
     `CREATE INDEX IF NOT EXISTS tickets_user_idx ON tickets (user_id)`,
     `CREATE INDEX IF NOT EXISTS tickets_event_idx ON tickets (event_id)`,
+    `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS door_id TEXT`,
+    `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMPTZ`,
+    `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS checked_in_by UUID`,
     `ALTER TABLE events ADD COLUMN IF NOT EXISTS image_urls TEXT[] NOT NULL DEFAULT '{}'`,
     // Survive Render ephemeral disk: store event photos in Postgres BYTEA.
     `CREATE TABLE IF NOT EXISTS media_objects (
@@ -198,7 +201,11 @@ async function boot() {
       })
       .parse(req.query ?? {});
 
-    const clauses = [`e.status = 'approved'`, `e.starts_at >= NOW() - INTERVAL '1 day'`];
+    // Browse: live/upcoming only — hide past-dated events.
+    const clauses = [
+      `e.status = 'approved'`,
+      `COALESCE(e.ends_at, e.starts_at) >= NOW()`,
+    ];
     const params: unknown[] = [];
     if (q.categoryId) {
       params.push(q.categoryId);
@@ -659,6 +666,9 @@ async function boot() {
         qty: r.qty,
         status: r.status,
         ticketCode: r.ticket_code,
+        doorId: r.door_id ?? null,
+        checkedInAt: r.checked_in_at ?? null,
+        checkedInBy: r.checked_in_by ?? null,
         createdAt: r.created_at,
       })),
       checkInCode: event.check_in_code,
@@ -674,6 +684,8 @@ async function boot() {
       .object({
         ticketCode: z.string().min(4).optional(),
         ticketId: z.string().uuid().optional(),
+        // Per-checker / per-gate label so shared host logins can tell doors apart.
+        doorId: z.string().trim().min(1).max(40),
       })
       .parse(req.body ?? {});
 
@@ -686,6 +698,8 @@ async function boot() {
     if (!['approved', 'ended'].includes(String(event.status))) {
       throw new AppError('Event not check-in ready', 400, 'not_ready');
     }
+
+    const doorId = body.doorId.trim();
 
     let ticket;
     if (body.ticketId) {
@@ -711,16 +725,27 @@ async function boot() {
       return {
         id: ticket.id,
         status: ticket.status,
+        doorId: ticket.door_id ?? null,
+        checkedInAt: ticket.checked_in_at ?? null,
         alreadyCheckedIn: true,
       };
     }
     const updated = await pool.query(
-      `UPDATE tickets SET status = 'checked_in' WHERE id = $1 RETURNING *`,
-      [ticket.id],
+      `UPDATE tickets SET
+         status = 'checked_in',
+         door_id = $2,
+         checked_in_at = NOW(),
+         checked_in_by = $3
+       WHERE id = $1
+       RETURNING *`,
+      [ticket.id, doorId, user.sub],
     );
     return {
       id: updated.rows[0].id,
       status: updated.rows[0].status,
+      doorId: updated.rows[0].door_id,
+      checkedInAt: updated.rows[0].checked_in_at,
+      checkedInBy: updated.rows[0].checked_in_by,
       alreadyCheckedIn: false,
     };
   });
