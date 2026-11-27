@@ -12,6 +12,14 @@ import {
   requireRole,
 } from '@maekel/shared';
 import { z } from 'zod';
+import {
+  assertRiderCanClaim,
+  grantIdentityRole,
+  listAvailableJobsForRider,
+  phoneForUserId,
+  registerPartnerRoutes,
+  resolveUserByPhone,
+} from './partner_routes.js';
 
 const port = envInt('FOOD_PORT', 3003);
 const publicApiBase = env(
@@ -90,6 +98,59 @@ async function boot() {
       bytes BYTEA NOT NULL,
       byte_len INT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    `ALTER TABLE merchants ADD COLUMN IF NOT EXISTS owner_phone TEXT`,
+    `ALTER TABLE merchants ADD COLUMN IF NOT EXISTS self_delivery BOOLEAN NOT NULL DEFAULT FALSE`,
+    `CREATE TABLE IF NOT EXISTS merchant_applications (
+      id UUID PRIMARY KEY,
+      kind TEXT NOT NULL,
+      applicant_user_id UUID NOT NULL,
+      applicant_phone TEXT NOT NULL,
+      title TEXT NOT NULL,
+      subcity TEXT NOT NULL DEFAULT 'Bole',
+      license_media_id TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      review_note TEXT,
+      reviewed_by UUID,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      reviewed_at TIMESTAMPTZ
+    )`,
+    `CREATE TABLE IF NOT EXISTS delivery_orgs (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      owner_user_id UUID NOT NULL,
+      owner_phone TEXT,
+      license_media_id TEXT,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS delivery_org_members (
+      org_id TEXT NOT NULL REFERENCES delivery_orgs(id) ON DELETE CASCADE,
+      rider_user_id UUID NOT NULL,
+      phone TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (org_id, rider_user_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS merchant_riders (
+      merchant_id TEXT NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+      rider_user_id UUID NOT NULL,
+      phone TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (merchant_id, rider_user_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS customer_reports (
+      id UUID PRIMARY KEY,
+      order_id UUID NOT NULL REFERENCES orders(id),
+      customer_id UUID NOT NULL,
+      reporter_user_id UUID NOT NULL,
+      reporter_kind TEXT NOT NULL,
+      reason TEXT NOT NULL DEFAULT 'customer_no_show',
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      review_note TEXT,
+      reviewed_by UUID,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      reviewed_at TIMESTAMPTZ
     )`,
   ]);
   await seed();
@@ -736,11 +797,7 @@ async function boot() {
   app.get('/v1/food/rider/jobs', async (req) => {
     const user = requireAuth(req);
     requireRole(user, [...riderStaff]);
-    const available = await pool.query(
-      `SELECT * FROM orders
-       WHERE status = 'ready' AND rider_id IS NULL
-       ORDER BY created_at ASC`,
-    );
+    const availableRows = await listAvailableJobsForRider(pool, user.sub);
     const mine = await pool.query(
       `SELECT * FROM orders
        WHERE rider_id = $1
@@ -749,7 +806,7 @@ async function boot() {
       [user.sub],
     );
     return {
-      available: available.rows.map(mapOrder),
+      available: availableRows.map(mapOrder),
       active: mine.rows.map(mapOrder),
     };
   });
@@ -758,6 +815,7 @@ async function boot() {
     const user = requireAuth(req);
     requireRole(user, [...riderStaff]);
     const { id } = req.params as { id: string };
+    await assertRiderCanClaim(pool, id, user.sub);
     const res = await pool.query(
       `UPDATE orders SET rider_id = $1
        WHERE id = $2 AND status = 'ready' AND rider_id IS NULL
@@ -862,8 +920,13 @@ async function boot() {
         ? body.coverageSubcities
         : [body.subcity];
     let ownerId = body.ownerUserId ?? null;
+    let ownerPhone: string | null = null;
     if (body.ownerPhone?.trim()) {
-      ownerId = await resolveUserIdByPhone(body.ownerPhone.trim());
+      const resolved = await resolveUserByPhone(body.ownerPhone.trim());
+      ownerId = resolved.id;
+      ownerPhone = resolved.phone;
+    } else if (ownerId) {
+      ownerPhone = await phoneForUserId(ownerId);
     }
     if (ownerId) {
       const taken = await pool.query(
@@ -881,8 +944,9 @@ async function boot() {
     await pool.query(
       `INSERT INTO merchants (
         id, name, kind, subcity, is_open, eta_minutes, delivery_fee_etb,
-        min_order_etb, rating, cover_url, hours_label, owner_user_id, coverage_subcities
-      ) VALUES ($1,$2,$3,$4,TRUE,$5,$6,$7,4.0,$8,$9,$10,$11)`,
+        min_order_etb, rating, cover_url, hours_label, owner_user_id,
+        owner_phone, coverage_subcities
+      ) VALUES ($1,$2,$3,$4,TRUE,$5,$6,$7,4.0,$8,$9,$10,$11,$12)`,
       [
         id,
         body.name,
@@ -893,11 +957,14 @@ async function boot() {
         body.minOrderEtb,
         body.coverUrl,
         body.hoursLabel,
-        // If no staff phone given, leave unowned until ops assigns.
         ownerId,
+        ownerPhone,
         JSON.stringify(coverage),
       ],
     );
+    if (ownerId) {
+      await grantIdentityRole(ownerId, 'food_merchant');
+    }
     const res = await pool.query(`SELECT * FROM merchants WHERE id = $1`, [id]);
     return mapMerchant(res.rows[0]);
   });
@@ -916,8 +983,13 @@ async function boot() {
 
     let ownerId: string | null =
       body.ownerUserId === undefined ? null : body.ownerUserId;
+    let ownerPhone: string | null = null;
     if (body.ownerPhone?.trim()) {
-      ownerId = await resolveUserIdByPhone(body.ownerPhone.trim());
+      const resolved = await resolveUserByPhone(body.ownerPhone.trim());
+      ownerId = resolved.id;
+      ownerPhone = resolved.phone;
+    } else if (ownerId) {
+      ownerPhone = await phoneForUserId(ownerId);
     }
     if (ownerId) {
       const taken = await pool.query(
@@ -933,10 +1005,15 @@ async function boot() {
       }
     }
     const res = await pool.query(
-      `UPDATE merchants SET owner_user_id = $2 WHERE id = $1 RETURNING *`,
-      [id, ownerId],
+      `UPDATE merchants
+       SET owner_user_id = $2, owner_phone = $3
+       WHERE id = $1 RETURNING *`,
+      [id, ownerId, ownerPhone],
     );
     if (!res.rowCount) throw new AppError('Not found', 404, 'not_found');
+    if (ownerId) {
+      await grantIdentityRole(ownerId, 'food_merchant');
+    }
     return mapMerchant(res.rows[0]);
   });
 
@@ -976,6 +1053,13 @@ async function boot() {
       [id, body.reason],
     );
     return getOrder(id);
+  });
+
+  registerPartnerRoutes(app, pool, {
+    mapMerchant,
+    mapOrder,
+    publicApiBase,
+    extensionForMime,
   });
 
   await listen(app, port);
@@ -1030,33 +1114,8 @@ async function requireOwnedMerchant(userId: string, _roles: string[]) {
 }
 
 async function resolveUserIdByPhone(rawPhone: string): Promise<string> {
-  const digits = rawPhone.replace(/\D/g, '');
-  const e164 =
-    rawPhone.startsWith('+')
-      ? rawPhone
-      : digits.length === 9
-        ? `+251${digits}`
-        : digits.length === 12 && digits.startsWith('251')
-          ? `+${digits}`
-          : rawPhone;
-  // Identity and food share Neon host; look up in identity DB.
-  const identityPool = createPool(databaseUrl('maekel_identity'));
-  try {
-    const res = await identityPool.query(
-      `SELECT id FROM users WHERE phone_e164 = $1`,
-      [e164],
-    );
-    if (!res.rowCount) {
-      throw new AppError(
-        `No user registered with ${e164}. They must OTP once first.`,
-        404,
-        'user_not_found',
-      );
-    }
-    return res.rows[0].id as string;
-  } finally {
-    await identityPool.end().catch(() => undefined);
-  }
+  const user = await resolveUserByPhone(rawPhone);
+  return user.id;
 }
 
 function assertMerchantOrder(
@@ -1193,6 +1252,8 @@ type MerchantDto = {
   coverUrl: string;
   hoursLabel: string;
   ownerUserId: string | null;
+  ownerPhone: string | null;
+  selfDelivery: boolean;
   coverageSubcities: string[];
 };
 
@@ -1234,6 +1295,8 @@ function mapMerchant(row: Record<string, unknown>): MerchantDto {
     coverUrl: row.cover_url as string,
     hoursLabel: row.hours_label as string,
     ownerUserId: (row.owner_user_id as string | null) ?? null,
+    ownerPhone: (row.owner_phone as string | null) ?? null,
+    selfDelivery: Boolean(row.self_delivery),
     coverageSubcities,
   };
 }

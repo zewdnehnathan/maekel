@@ -297,3 +297,31 @@ extension TripStatusLabel on TripStatus {
 
 /// Rough Addis center used when no places are selected yet.
 const LatLng kAddisCenter = LatLng(9.03, 38.75);
+
+enum RideMisconductStatus { pending, warned, suspended, ignored }
+
+class RideMisconductReport {
+  const RideMisconductReport({
+    required this.id,
+    required this.tripId,
+    required this.reporterUserId,
+    required this.reporterRole,
+    required this.accusedUserId,
+    required this.reason,
+    required this.status,
+    this.note,
+    this.reviewNote,
+    this.createdAt,
+  });
+
+  final String id;
+  final String tripId;
+  final String reporterUserId;
+  final String reporterRole;
+  final String accusedUserId;
+  final String reason;
+  final RideMisconductStatus status;
+  final String? note;
+  final String? reviewNote;
+  final DateTime? createdAt;
+}

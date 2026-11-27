@@ -17,12 +17,18 @@ class AuthSession {
     required this.phoneE164,
     required this.accessToken,
     this.roles = const [],
+    this.accountStatus = 'active',
+    this.warnMessage,
   });
 
   final String userId;
   final String phoneE164;
   final String accessToken;
   final List<String> roles;
+  final String accountStatus;
+  final String? warnMessage;
+
+  bool get isWarned => accountStatus == 'warned';
 
   bool get isPlatformAdmin => roles.contains('platform_admin');
 
@@ -36,6 +42,9 @@ class AuthSession {
   /// Assigned restaurant staff (not Food ops — ops uses Food ops screen).
   bool get isFoodMerchant =>
       isPlatformAdmin || roles.contains('food_merchant');
+
+  bool get isFoodDeliveryMerchant =>
+      isPlatformAdmin || roles.contains('food_delivery_merchant');
 
   bool get isFoodRider =>
       isPlatformAdmin || isFoodOps || roles.contains('food_rider');
@@ -141,6 +150,8 @@ class AuthNotifier extends Notifier<AuthState> {
       final roles = ((raw['roles'] as List?) ?? const [])
           .map((e) => '$e')
           .toList();
+      final accountStatus = (raw['accountStatus'] as String?) ?? 'active';
+      final warnMessage = raw['warnMessage'] as String?;
 
       _tokens.setAccessToken(accessToken);
       state = AuthState(
@@ -149,6 +160,8 @@ class AuthNotifier extends Notifier<AuthState> {
           phoneE164: phone,
           accessToken: accessToken,
           roles: roles,
+          accountStatus: accountStatus,
+          warnMessage: warnMessage,
         ),
       );
 
@@ -190,6 +203,10 @@ class AuthNotifier extends Notifier<AuthState> {
     final market = ref.read(marketRepositoryProvider);
     if (market is ApiMarketRepository) {
       market.clearAuthed();
+    }
+    final food = ref.read(foodRepositoryProvider);
+    if (food is ApiFoodRepository) {
+      food.clearAuthed();
     }
     final events = ref.read(eventsRepositoryProvider);
     if (events is ApiEventsRepository) {

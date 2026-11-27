@@ -106,6 +106,82 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
     }
   }
 
+  Future<void> _reportMisconduct(RideTrip trip) async {
+    const reasons = <String, String>{
+      'harassment': 'Harassment',
+      'rude_behavior': 'Rude behavior',
+      'other': 'Other',
+    };
+    String selected = 'harassment';
+    final noteController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            return AlertDialog(
+              backgroundColor: MaekelColors.panel,
+              title: const Text('Report passenger safety / misconduct'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
+                    value: selected,
+                    items: [
+                      for (final e in reasons.entries)
+                        DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setLocal(() => selected = v);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Details (optional)',
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(rideRepositoryProvider).reportMisconduct(
+            tripId: trip.id,
+            reason: selected,
+            note: noteController.text.trim().isEmpty
+                ? null
+                : noteController.text.trim(),
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Report sent to Ride ops')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
+
   String _offerCountdown(RideTrip trip) {
     final l10n = AppLocalizations.of(context)!;
     final expires = trip.offerExpiresAt;
@@ -304,6 +380,14 @@ class _RideDriverScreenState extends ConsumerState<RideDriverScreen> {
                         onPressed: () => _report(active, 'wrong_pin'),
                         child: Text(AppLocalizations.of(context)!.rideWrongPin),
                       ),
+                      if (active.status == TripStatus.inProgress ||
+                          active.status == TripStatus.completed ||
+                          active.status == TripStatus.cancelled)
+                        OutlinedButton.icon(
+                          onPressed: () => _reportMisconduct(active),
+                          icon: const Icon(Icons.report_gmailerrorred_outlined),
+                          label: const Text('Report safety'),
+                        ),
                     ],
                   ),
                 ],

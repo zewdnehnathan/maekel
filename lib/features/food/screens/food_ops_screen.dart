@@ -22,6 +22,8 @@ class FoodOpsScreen extends ConsumerStatefulWidget {
 class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
   List<FoodOrder> _orders = const [];
   List<FoodMerchant> _merchants = const [];
+  List<FoodApplication> _applications = const [];
+  List<CustomerReport> _reports = const [];
   bool _loading = true;
   bool _busy = false;
   String? _error;
@@ -60,11 +62,16 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
       });
     }
     try {
-      final board = await ref.read(foodRepositoryProvider).getOpsBoard();
+      final repo = ref.read(foodRepositoryProvider);
+      final board = await repo.getOpsBoard();
+      final apps = await repo.opsListApplications(status: 'pending');
+      final reports = await repo.opsListReports(status: 'pending');
       if (!mounted) return;
       setState(() {
         _orders = board.orders;
         _merchants = board.merchants;
+        _applications = apps;
+        _reports = reports;
         _loading = false;
         if (!silent) _error = null;
       });
@@ -204,6 +211,156 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                   children: [
+                    Text(
+                      'CUSTOMER NO-SHOW REPORTS (${_reports.length})',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    if (_reports.isEmpty)
+                      const GlassPanel(
+                        child: Text('No pending customer reports.'),
+                      ),
+                    for (final report in _reports) ...[
+                      const SizedBox(height: 10),
+                      GlassPanel(
+                        borderRadius: 16,
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Order ${report.orderId.substring(0, 8)} · ${report.reason}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              'Customer ${report.customerId.substring(0, 8)} · via ${report.reporterKind}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            if (report.note != null && report.note!.isNotEmpty)
+                              Text(
+                                report.note!,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                FilledButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _run(() async {
+                                            await ref
+                                                .read(foodRepositoryProvider)
+                                                .opsReviewReport(
+                                                  report.id,
+                                                  action: 'warn',
+                                                );
+                                          }),
+                                  child: const Text('Warn'),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: MaekelColors.danger,
+                                  ),
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _run(() async {
+                                            await ref
+                                                .read(foodRepositoryProvider)
+                                                .opsReviewReport(
+                                                  report.id,
+                                                  action: 'suspend',
+                                                );
+                                          }),
+                                  child: const Text('Suspend'),
+                                ),
+                                OutlinedButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _run(() async {
+                                            await ref
+                                                .read(foodRepositoryProvider)
+                                                .opsReviewReport(
+                                                  report.id,
+                                                  action: 'ignore',
+                                                );
+                                          }),
+                                  child: const Text('Ignore'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 22),
+                    Text(
+                      'PENDING APPLICATIONS (${_applications.length})',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    if (_applications.isEmpty)
+                      const GlassPanel(
+                        child: Text('No pending partner applications.'),
+                      ),
+                    for (final app in _applications) ...[
+                      const SizedBox(height: 10),
+                      GlassPanel(
+                        borderRadius: 16,
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              app.title,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              '${app.kind == FoodApplicationKind.deliveryOrg ? 'delivery' : 'restaurant'} · ${app.applicantPhone} · ${app.subcity}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                FilledButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _run(() async {
+                                            await ref
+                                                .read(foodRepositoryProvider)
+                                                .opsApproveApplication(app.id);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Approved. Applicant must re-OTP for roles.',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          }),
+                                  child: const Text('Approve'),
+                                ),
+                                const SizedBox(width: 8),
+                                OutlinedButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _run(() async {
+                                            await ref
+                                                .read(foodRepositoryProvider)
+                                                .opsRejectApplication(app.id);
+                                          }),
+                                  child: const Text('Reject'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 22),
                     Text(
                       l10n.foodOrderBoard(_orders.length).toUpperCase(),
                       style: Theme.of(context).textTheme.labelLarge,
@@ -376,7 +533,9 @@ class _FoodOpsScreenState extends ConsumerState<FoodOpsScreen> {
                             ),
                             Text(
                               l10n.foodOwner(
-                                m.ownerUserId ?? l10n.foodUnassigned,
+                                m.ownerPhone?.isNotEmpty == true
+                                    ? m.ownerPhone!
+                                    : (m.ownerUserId ?? l10n.foodUnassigned),
                               ),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),

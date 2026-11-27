@@ -648,6 +648,72 @@ class ApiRideRepository implements RideRepository {
     return _upsertTrip(_parseTrip(raw));
   }
 
+  @override
+  Future<RideMisconductReport> reportMisconduct({
+    required String tripId,
+    required String reason,
+    String? note,
+  }) async {
+    final raw = await _client.post(
+      '/v1/ride/trips/$tripId/report-misconduct',
+      auth: true,
+      body: {
+        'reason': reason,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    ) as Map<String, dynamic>;
+    return _parseMisconduct(raw);
+  }
+
+  Future<List<RideMisconductReport>> getOpsMisconductReports({
+    String status = 'pending',
+  }) async {
+    final raw = await _client.get(
+      '/v1/ride/ops/misconduct-reports',
+      auth: true,
+      query: {'status': status},
+    );
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseMisconduct)
+        .toList();
+  }
+
+  Future<RideMisconductReport> reviewMisconductReport(
+    String id, {
+    required String action,
+    String? message,
+    String? note,
+  }) async {
+    final raw = await _client.post(
+      '/v1/ride/ops/misconduct-reports/$id/review',
+      auth: true,
+      body: {
+        'action': action,
+        if (message != null) 'message': message,
+        if (note != null) 'note': note,
+      },
+    ) as Map<String, dynamic>;
+    return _parseMisconduct(raw);
+  }
+
+  RideMisconductReport _parseMisconduct(Map<String, dynamic> j) {
+    return RideMisconductReport(
+      id: j['id'] as String,
+      tripId: j['tripId'] as String,
+      reporterUserId: j['reporterUserId'] as String,
+      reporterRole: j['reporterRole'] as String? ?? '',
+      accusedUserId: j['accusedUserId'] as String,
+      reason: j['reason'] as String? ?? 'other',
+      status: RideMisconductStatus.values.byName(j['status'] as String),
+      note: j['note'] as String?,
+      reviewNote: j['reviewNote'] as String?,
+      createdAt: j['createdAt'] == null
+          ? null
+          : DateTime.tryParse(j['createdAt'].toString()),
+    );
+  }
+
   RideFareConfig _parseFareConfig(Map<String, dynamic> raw) {
     return RideFareConfig(
       baseEtb: (raw['baseEtb'] as num).toInt(),

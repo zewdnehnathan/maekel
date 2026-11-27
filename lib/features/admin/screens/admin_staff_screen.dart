@@ -264,6 +264,10 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
                                   value: 'food_merchant',
                                   child: Text(AppLocalizations.of(context)!.adminFoodMerchant),
                                 ),
+                                const DropdownMenuItem(
+                                  value: 'food_delivery_merchant',
+                                  child: Text('Delivery merchant'),
+                                ),
                                 DropdownMenuItem(
                                   value: 'food_rider',
                                   child: Text(AppLocalizations.of(context)!.adminFoodRider),

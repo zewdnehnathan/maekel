@@ -89,6 +89,8 @@ class FoodMerchant {
     required this.coverUrl,
     required this.hoursLabel,
     this.ownerUserId,
+    this.ownerPhone,
+    this.selfDelivery = false,
     this.coverageSubcities = const [],
   });
 
@@ -104,6 +106,8 @@ class FoodMerchant {
   final String coverUrl;
   final String hoursLabel;
   final String? ownerUserId;
+  final String? ownerPhone;
+  final bool selfDelivery;
   final List<String> coverageSubcities;
 
   bool covers(String pinSubcity) {
@@ -114,6 +118,8 @@ class FoodMerchant {
   FoodMerchant copyWith({
     bool? isOpen,
     String? ownerUserId,
+    String? ownerPhone,
+    bool? selfDelivery,
     bool clearOwner = false,
   }) {
     return FoodMerchant(
@@ -129,6 +135,8 @@ class FoodMerchant {
       coverUrl: coverUrl,
       hoursLabel: hoursLabel,
       ownerUserId: clearOwner ? null : (ownerUserId ?? this.ownerUserId),
+      ownerPhone: clearOwner ? null : (ownerPhone ?? this.ownerPhone),
+      selfDelivery: selfDelivery ?? this.selfDelivery,
       coverageSubcities: coverageSubcities,
     );
   }
@@ -317,4 +325,88 @@ extension MerchantKindLabel on MerchantKind {
   String localized(AppLocalizations l10n) => this == MerchantKind.restaurant
       ? l10n.foodRestaurants
       : l10n.foodGroceries;
+}
+
+enum FoodApplicationKind { restaurant, deliveryOrg }
+
+enum FoodApplicationStatus { pending, approved, rejected }
+
+class FoodApplication {
+  const FoodApplication({
+    required this.id,
+    required this.kind,
+    required this.applicantUserId,
+    required this.applicantPhone,
+    required this.title,
+    required this.subcity,
+    required this.status,
+    this.licenseMediaId,
+    this.reviewNote,
+    this.createdAt,
+  });
+
+  final String id;
+  final FoodApplicationKind kind;
+  final String applicantUserId;
+  final String applicantPhone;
+  final String title;
+  final String subcity;
+  final FoodApplicationStatus status;
+  final String? licenseMediaId;
+  final String? reviewNote;
+  final DateTime? createdAt;
+}
+
+class DeliveryOrg {
+  const DeliveryOrg({
+    required this.id,
+    required this.name,
+    required this.ownerUserId,
+    this.ownerPhone,
+    this.isActive = true,
+  });
+
+  final String id;
+  final String name;
+  final String ownerUserId;
+  final String? ownerPhone;
+  final bool isActive;
+}
+
+class DeliveryMember {
+  const DeliveryMember({
+    required this.riderUserId,
+    required this.phone,
+  });
+
+  final String riderUserId;
+  final String phone;
+}
+
+enum CustomerReportStatus { pending, warned, suspended, ignored }
+
+class CustomerReport {
+  const CustomerReport({
+    required this.id,
+    required this.orderId,
+    required this.customerId,
+    required this.reporterUserId,
+    required this.reporterKind,
+    required this.reason,
+    required this.status,
+    this.note,
+    this.reviewNote,
+    this.createdAt,
+  });
+
+  final String id;
+  final String orderId;
+  final String customerId;
+  final String reporterUserId;
+  final String reporterKind;
+  final String reason;
+  final CustomerReportStatus status;
+  final String? note;
+  final String? reviewNote;
+  final DateTime? createdAt;
 }

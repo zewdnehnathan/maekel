@@ -37,6 +37,7 @@ const staffRoles = [
   'market_ops',
   'food_ops',
   'food_merchant',
+  'food_delivery_merchant',
   'food_rider',
   'ride_ops',
   'events_ops',
@@ -47,6 +48,7 @@ const grantableRoles = [
   'market_ops',
   'food_ops',
   'food_merchant',
+  'food_delivery_merchant',
   'food_rider',
   'ride_ops',
   'events_ops',
@@ -72,6 +74,10 @@ async function boot() {
       role TEXT NOT NULL,
       PRIMARY KEY (user_id, role)
     )`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status TEXT NOT NULL DEFAULT 'active'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS warn_message TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS moderation_note TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ`,
     `CREATE TABLE IF NOT EXISTS refresh_tokens (
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -134,7 +140,8 @@ async function boot() {
     );
 
     let user = await pool.query(
-      `SELECT id, phone_e164 FROM users WHERE phone_e164 = $1`,
+      `SELECT id, phone_e164, account_status, warn_message
+       FROM users WHERE phone_e164 = $1`,
       [phone],
     );
     if (user.rowCount === 0) {
@@ -147,12 +154,22 @@ async function boot() {
         await grantRole(userId, role);
       }
       user = await pool.query(
-        `SELECT id, phone_e164 FROM users WHERE id = $1`,
+        `SELECT id, phone_e164, account_status, warn_message
+         FROM users WHERE id = $1`,
         [userId],
       );
     }
 
     const userId = user.rows[0].id as string;
+    const accountStatus = (user.rows[0].account_status as string) || 'active';
+    if (accountStatus === 'suspended') {
+      throw new AppError(
+        'This account is suspended. Contact Food support.',
+        403,
+        'account_suspended',
+      );
+    }
+
     // Returning users created before market_seller / events roles existed.
     await grantRole(userId, 'market_seller');
     await grantRole(userId, 'events_attendee');
@@ -176,6 +193,8 @@ async function boot() {
       userId,
       phone,
       roles,
+      accountStatus,
+      warnMessage: (user.rows[0].warn_message as string | null) ?? null,
       accessToken,
       refreshToken: refresh,
       tokenType: 'Bearer',
@@ -186,12 +205,99 @@ async function boot() {
   app.get('/v1/me', async (req) => {
     const user = requireAuth(req);
     const roles = await listRoles(user.sub);
+    const profile = await pool.query(
+      `SELECT account_status, warn_message FROM users WHERE id = $1`,
+      [user.sub],
+    );
+    const accountStatus =
+      (profile.rows[0]?.account_status as string | undefined) ?? 'active';
+    if (accountStatus === 'suspended') {
+      throw new AppError(
+        'This account is suspended. Contact Food support.',
+        403,
+        'account_suspended',
+      );
+    }
     return {
       userId: user.sub,
       phone: user.phone,
       roles,
+      accountStatus,
+      warnMessage: (profile.rows[0]?.warn_message as string | null) ?? null,
       isPlatformAdmin: roles.includes('platform_admin'),
       isMarketModerator: isMarketModerator(roles),
+    };
+  });
+
+  /** Internal/ops moderation — food_ops or platform_admin. */
+  app.post('/v1/admin/users/moderate', async (req) => {
+    const actor = requireAuth(req);
+    requireRole(actor, ['platform_admin', 'food_ops']);
+    const body = z
+      .object({
+        userId: z.string().uuid().optional(),
+        phone: z.string().min(9).optional(),
+        action: z.enum(['warn', 'suspend', 'clear']),
+        message: z.string().max(280).optional(),
+        note: z.string().max(500).optional(),
+      })
+      .refine((v) => Boolean(v.userId || v.phone), {
+        message: 'userId or phone required',
+      })
+      .parse(req.body ?? {});
+
+    const target = await resolveUser({
+      userId: body.userId,
+      phone: body.phone,
+    });
+
+    if (body.action === 'suspend') {
+      await pool.query(
+        `UPDATE users
+         SET account_status = 'suspended',
+             warn_message = NULL,
+             moderation_note = $2,
+             moderated_at = NOW()
+         WHERE id = $1`,
+        [target.id, body.note ?? body.message ?? 'Suspended by ops'],
+      );
+    } else if (body.action === 'warn') {
+      await pool.query(
+        `UPDATE users
+         SET account_status = 'warned',
+             warn_message = $2,
+             moderation_note = $3,
+             moderated_at = NOW()
+         WHERE id = $1`,
+        [
+          target.id,
+          body.message ??
+            'Warning: a delivery no-show was reported on your account.',
+          body.note ?? null,
+        ],
+      );
+    } else {
+      await pool.query(
+        `UPDATE users
+         SET account_status = 'active',
+             warn_message = NULL,
+             moderation_note = $2,
+             moderated_at = NOW()
+         WHERE id = $1`,
+        [target.id, body.note ?? 'Cleared by ops'],
+      );
+    }
+
+    const updated = await pool.query(
+      `SELECT id, phone_e164, account_status, warn_message FROM users WHERE id = $1`,
+      [target.id],
+    );
+    return {
+      ok: true,
+      userId: updated.rows[0].id,
+      phone: updated.rows[0].phone_e164,
+      accountStatus: updated.rows[0].account_status,
+      warnMessage: updated.rows[0].warn_message,
     };
   });
 
@@ -346,6 +452,7 @@ async function applyBootstrapAdminRoles(
   await grantRole(userId, 'market_moderator');
   await grantRole(userId, 'food_ops');
   await grantRole(userId, 'food_merchant');
+  await grantRole(userId, 'food_delivery_merchant');
   await grantRole(userId, 'food_rider');
   await grantRole(userId, 'ride_ops');
   await grantRole(userId, 'events_ops');
@@ -387,6 +494,7 @@ async function reconcileStaffRoles(): Promise<void> {
     await grantRole(userId, 'market_moderator');
     await grantRole(userId, 'food_ops');
     await grantRole(userId, 'food_merchant');
+    await grantRole(userId, 'food_delivery_merchant');
     await grantRole(userId, 'food_rider');
     await grantRole(userId, 'ride_ops');
     await grantRole(userId, 'events_ops');

@@ -20,6 +20,7 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
   RideFareConfig? _config;
   List<RideDriver> _drivers = const [];
   List<RideTrip> _active = const [];
+  List<RideMisconductReport> _reports = const [];
   bool _loading = true;
   String? _error;
 
@@ -46,11 +47,13 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
       final config = await repo.getFareConfig();
       final drivers = await repo.getOpsDrivers();
       final active = await repo.getOpsActiveTrips();
+      final reports = await repo.getOpsMisconductReports();
       if (!mounted) return;
       setState(() {
         _config = config;
         _drivers = drivers;
         _active = active;
+        _reports = reports;
         _loading = false;
       });
     } catch (e) {
@@ -59,6 +62,24 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
         _error = '$e';
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _reviewReport(String id, String action) async {
+    final repo = ref.read(rideRepositoryProvider);
+    if (repo is! ApiRideRepository) return;
+    try {
+      await repo.reviewMisconductReport(id, action: action);
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Report $action')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
     }
   }
 
@@ -99,6 +120,60 @@ class _RideOpsScreenState extends ConsumerState<RideOpsScreen> {
                     accent: MaekelColors.danger,
                     child: Text(_error!),
                   ),
+                Text(
+                  'SAFETY REPORTS (${_reports.length})',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 8),
+                if (_reports.isEmpty)
+                  const GlassPanel(
+                    child: Text('No pending safety / misconduct reports.'),
+                  ),
+                for (final report in _reports) ...[
+                  GlassPanel(
+                    accent: MaekelColors.danger,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${report.reason} · trip ${report.tripId.substring(0, 8)}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          '${report.reporterRole} → accused ${report.accusedUserId.substring(0, 8)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (report.note != null && report.note!.isNotEmpty)
+                          Text(report.note!),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            FilledButton(
+                              onPressed: () => _reviewReport(report.id, 'warn'),
+                              child: const Text('Warn'),
+                            ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: MaekelColors.danger,
+                              ),
+                              onPressed: () =>
+                                  _reviewReport(report.id, 'suspend'),
+                              child: const Text('Suspend'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () =>
+                                  _reviewReport(report.id, 'ignore'),
+                              child: const Text('Ignore'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                const SizedBox(height: 12),
                 Text(
                   AppLocalizations.of(context)!.rideFareConfig.toUpperCase(),
                   style: Theme.of(context).textTheme.labelLarge,

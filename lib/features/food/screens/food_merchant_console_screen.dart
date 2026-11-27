@@ -30,6 +30,8 @@ class _FoodMerchantConsoleScreenState
   FoodMerchant? _merchant;
   List<FoodOrder> _orders = const [];
   List<MenuItem> _menu = const [];
+  List<DeliveryMember> _riders = const [];
+  final _riderPhone = TextEditingController();
   bool _loading = true;
   bool _busy = false;
   String? _error;
@@ -47,6 +49,7 @@ class _FoodMerchantConsoleScreenState
   @override
   void dispose() {
     _poll?.cancel();
+    _riderPhone.dispose();
     super.dispose();
   }
 
@@ -62,15 +65,20 @@ class _FoodMerchantConsoleScreenState
       final mine = await repo.getMyMerchant();
       List<FoodOrder> orders = const [];
       List<MenuItem> menu = const [];
+      List<DeliveryMember> riders = const [];
       if (mine != null) {
         orders = await repo.getMerchantOrders();
         menu = await repo.getMerchantMenu();
+        if (mine.selfDelivery) {
+          riders = await repo.getMerchantRiders();
+        }
       }
       if (!mounted) return;
       setState(() {
         _merchant = mine;
         _orders = orders;
         _menu = menu;
+        _riders = riders;
         _loading = false;
         if (!silent) _error = null;
       });
@@ -519,6 +527,81 @@ class _FoodMerchantConsoleScreenState
                                         },
                                       ),
                             ),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Self-delivery'),
+                              subtitle: const Text(
+                                'Only your riders see ready orders for this restaurant',
+                              ),
+                              value: _merchant!.selfDelivery,
+                              activeThumbColor: MaekelColors.food,
+                              onChanged: _busy
+                                  ? null
+                                  : (v) => _run(
+                                        () async {
+                                          await ref
+                                              .read(foodRepositoryProvider)
+                                              .setSelfDelivery(v);
+                                        },
+                                      ),
+                            ),
+                            if (_merchant!.selfDelivery) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'YOUR RIDERS',
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _riderPhone,
+                                      keyboardType: TextInputType.phone,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Rider phone',
+                                        prefixText: '+251 ',
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  FilledButton(
+                                    onPressed: _busy
+                                        ? null
+                                        : () => _run(() async {
+                                              final local = _riderPhone.text
+                                                  .replaceAll(
+                                                    RegExp(r'\D'),
+                                                    '',
+                                                  );
+                                              if (local.length < 9) return;
+                                              await ref
+                                                  .read(foodRepositoryProvider)
+                                                  .addMerchantRider(local);
+                                              _riderPhone.clear();
+                                            }),
+                                    child: const Text('Add'),
+                                  ),
+                                ],
+                              ),
+                              for (final r in _riders)
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(r.phone),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: _busy
+                                        ? null
+                                        : () => _run(() async {
+                                              await ref
+                                                  .read(foodRepositoryProvider)
+                                                  .removeMerchantRider(
+                                                    r.riderUserId,
+                                                  );
+                                            }),
+                                  ),
+                                ),
+                            ],
                           ],
                         ),
                       ),

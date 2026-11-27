@@ -9,6 +9,7 @@ import {
   requireAuth,
   requireRole,
 } from '@maekel/shared';
+import type { Pool } from 'pg';
 import { z } from 'zod';
 
 const port = envInt('RIDE_PORT', 3004);
@@ -98,6 +99,20 @@ async function boot() {
     `ALTER TABLE trips ADD COLUMN IF NOT EXISTS dropoff_lat DOUBLE PRECISION`,
     `ALTER TABLE trips ADD COLUMN IF NOT EXISTS dropoff_lng DOUBLE PRECISION`,
     `ALTER TABLE trips ADD COLUMN IF NOT EXISTS distance_km NUMERIC(8,3)`,
+    `CREATE TABLE IF NOT EXISTS misconduct_reports (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id),
+      reporter_user_id UUID NOT NULL,
+      reporter_role TEXT NOT NULL,
+      accused_user_id UUID NOT NULL,
+      reason TEXT NOT NULL,
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      review_note TEXT,
+      reviewed_by UUID,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      reviewed_at TIMESTAMPTZ
+    )`,
     `CREATE TABLE IF NOT EXISTS ride_config (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -648,7 +663,238 @@ async function boot() {
     return getTrip(id);
   });
 
+  // ── Safety / misconduct reports (#8) ─────────────────────────────────
+  app.post('/v1/ride/trips/:id/report-misconduct', async (req) => {
+    const user = requireAuth(req);
+    const { id } = req.params as { id: string };
+    const body = z
+      .object({
+        reason: z.enum([
+          'unsafe_driving',
+          'harassment',
+          'rude_behavior',
+          'vehicle_issue',
+          'other',
+        ]),
+        note: z.string().max(500).optional(),
+      })
+      .parse(req.body ?? {});
+
+    const tripRow = await pool.query(`SELECT * FROM trips WHERE id = $1`, [id]);
+    if (!tripRow.rowCount) throw new AppError('Not found', 404, 'not_found');
+    const trip = tripRow.rows[0] as Record<string, unknown>;
+    const status = trip.status as string;
+    if (!['completed', 'cancelled', 'in_progress'].includes(status)) {
+      throw new AppError(
+        'Report after the trip is underway or finished',
+        400,
+        'bad_status',
+      );
+    }
+
+    const passengerId = trip.passenger_id as string;
+    const driverId = trip.driver_id as string | null;
+    if (!driverId) {
+      throw new AppError('No driver on this trip', 400, 'no_driver');
+    }
+    const driver = await pool.query(
+      `SELECT user_id FROM drivers WHERE id = $1`,
+      [driverId],
+    );
+    const driverUserId = driver.rows[0]?.user_id as string | undefined;
+    if (!driverUserId) {
+      throw new AppError('Driver account missing', 400, 'no_driver');
+    }
+
+    let reporterRole: 'passenger' | 'driver';
+    let accusedUserId: string;
+    if (user.sub === passengerId) {
+      reporterRole = 'passenger';
+      accusedUserId = driverUserId;
+    } else if (user.sub === driverUserId) {
+      reporterRole = 'driver';
+      accusedUserId = passengerId;
+    } else {
+      throw new AppError('Only trip parties can report', 403, 'forbidden');
+    }
+
+    const dup = await pool.query(
+      `SELECT id FROM misconduct_reports
+       WHERE trip_id = $1 AND reporter_user_id = $2 AND status = 'pending'`,
+      [id, user.sub],
+    );
+    if (dup.rowCount) {
+      throw new AppError('Report already pending', 409, 'duplicate');
+    }
+
+    const reportId = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO misconduct_reports (
+        id, trip_id, reporter_user_id, reporter_role, accused_user_id,
+        reason, note, status
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'pending')`,
+      [
+        reportId,
+        id,
+        user.sub,
+        reporterRole,
+        accusedUserId,
+        body.reason,
+        body.note ?? null,
+      ],
+    );
+    const res = await pool.query(
+      `SELECT * FROM misconduct_reports WHERE id = $1`,
+      [reportId],
+    );
+    return mapMisconductReport(res.rows[0]);
+  });
+
+  app.get('/v1/ride/ops/misconduct-reports', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, [...opsStaff]);
+    const q = z
+      .object({
+        status: z
+          .enum(['pending', 'warned', 'suspended', 'ignored', 'all'])
+          .default('pending'),
+      })
+      .parse(req.query ?? {});
+    const res =
+      q.status === 'all'
+        ? await pool.query(
+            `SELECT * FROM misconduct_reports ORDER BY created_at DESC LIMIT 100`,
+          )
+        : await pool.query(
+            `SELECT * FROM misconduct_reports WHERE status = $1
+             ORDER BY created_at ASC LIMIT 100`,
+            [q.status],
+          );
+    return { items: res.rows.map(mapMisconductReport) };
+  });
+
+  app.post('/v1/ride/ops/misconduct-reports/:id/review', async (req) => {
+    const user = requireAuth(req);
+    requireRole(user, [...opsStaff]);
+    const { id } = req.params as { id: string };
+    const body = z
+      .object({
+        action: z.enum(['warn', 'suspend', 'ignore']),
+        message: z.string().max(280).optional(),
+        note: z.string().max(500).optional(),
+      })
+      .parse(req.body ?? {});
+
+    const reportRes = await pool.query(
+      `SELECT * FROM misconduct_reports WHERE id = $1`,
+      [id],
+    );
+    if (!reportRes.rowCount) throw new AppError('Not found', 404, 'not_found');
+    const report = reportRes.rows[0] as Record<string, unknown>;
+    if (report.status !== 'pending') {
+      throw new AppError('Already reviewed', 400, 'bad_status');
+    }
+
+    let newStatus = 'ignored';
+    if (body.action === 'warn' || body.action === 'suspend') {
+      await moderateIdentityUser({
+        userId: report.accused_user_id as string,
+        action: body.action,
+        message:
+          body.message ??
+          (body.action === 'warn'
+            ? 'Warning: a Ride safety report was filed about your account.'
+            : undefined),
+        note: body.note ?? `Ride misconduct report ${id}`,
+      });
+      newStatus = body.action === 'warn' ? 'warned' : 'suspended';
+    }
+
+    const updated = await pool.query(
+      `UPDATE misconduct_reports
+       SET status = $2, review_note = $3, reviewed_by = $4, reviewed_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id, newStatus, body.note ?? body.action, user.sub],
+    );
+    return mapMisconductReport(updated.rows[0]);
+  });
+
   await listen(app, port);
+}
+
+function mapMisconductReport(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    reporterUserId: row.reporter_user_id,
+    reporterRole: row.reporter_role,
+    accusedUserId: row.accused_user_id,
+    reason: row.reason,
+    note: row.note,
+    status: row.status,
+    reviewNote: row.review_note,
+    reviewedBy: row.reviewed_by,
+    createdAt: row.created_at,
+    reviewedAt: row.reviewed_at,
+  };
+}
+
+async function withIdentityPool<T>(fn: (p: Pool) => Promise<T>): Promise<T> {
+  const identityPool = createPool(databaseUrl('maekel_identity'));
+  try {
+    return await fn(identityPool);
+  } finally {
+    await identityPool.end().catch(() => undefined);
+  }
+}
+
+async function moderateIdentityUser(input: {
+  userId: string;
+  action: 'warn' | 'suspend' | 'clear';
+  message?: string;
+  note?: string;
+}): Promise<void> {
+  await withIdentityPool(async (identityPool) => {
+    if (input.action === 'suspend') {
+      await identityPool.query(
+        `UPDATE users
+         SET account_status = 'suspended',
+             warn_message = NULL,
+             moderation_note = $2,
+             moderated_at = NOW()
+         WHERE id = $1`,
+        [input.userId, input.note ?? 'Suspended via ride report'],
+      );
+      return;
+    }
+    if (input.action === 'warn') {
+      await identityPool.query(
+        `UPDATE users
+         SET account_status = 'warned',
+             warn_message = $2,
+             moderation_note = $3,
+             moderated_at = NOW()
+         WHERE id = $1`,
+        [
+          input.userId,
+          input.message ??
+            'Warning: a Ride safety report was filed about your account.',
+          input.note ?? null,
+        ],
+      );
+      return;
+    }
+    await identityPool.query(
+      `UPDATE users
+       SET account_status = 'active',
+           warn_message = NULL,
+           moderation_note = $2,
+           moderated_at = NOW()
+       WHERE id = $1`,
+      [input.userId, input.note ?? 'Cleared'],
+    );
+  });
 }
 
 function haversineKm(

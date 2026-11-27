@@ -260,11 +260,58 @@ class _FoodRiderScreenState extends ConsumerState<FoodRiderScreen> {
                   onPressed: _busy ? null : () => _complete(order),
                   child: Text(AppLocalizations.of(context)!.foodCompleteCod),
                 ),
+              if (mine &&
+                  (order.status == OrderStatus.onTheWay ||
+                      order.status == OrderStatus.pickedUp))
+                OutlinedButton(
+                  onPressed: _busy ? null : () => _reportNoShow(order.id),
+                  child: const Text('Report no-show'),
+                ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _reportNoShow(String orderId) async {
+    final noteController = TextEditingController();
+    final note = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: MaekelColors.panel,
+        title: const Text('Report customer no-show'),
+        content: TextField(
+          controller: noteController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'What happened?',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, noteController.text.trim()),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+    if (note == null) return;
+    await _run(() async {
+      await ref.read(foodRepositoryProvider).reportCustomer(
+            orderId: orderId,
+            note: note.isEmpty ? null : note,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report sent to Food ops')),
+        );
+      }
+    });
   }
 
   @override

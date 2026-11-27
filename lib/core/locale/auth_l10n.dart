@@ -25,6 +25,7 @@ String localizedAdminRole(AppLocalizations l10n, String role) {
     'market_ops' => l10n.adminMarketOps,
     'food_ops' => l10n.adminFoodOps,
     'food_merchant' => l10n.adminFoodMerchant,
+    'food_delivery_merchant' => 'Delivery merchant',
     'food_rider' => l10n.adminFoodRider,
     'ride_ops' => l10n.adminRideOps,
     'events_ops' => l10n.adminEventsOps,

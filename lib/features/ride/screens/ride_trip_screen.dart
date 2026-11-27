@@ -23,6 +23,86 @@ class RideTripScreen extends ConsumerStatefulWidget {
 class _RideTripScreenState extends ConsumerState<RideTripScreen> {
   int _rating = 5;
 
+  Future<void> _reportMisconduct(String tripId) async {
+    const reasons = <String, String>{
+      'unsafe_driving': 'Unsafe driving',
+      'harassment': 'Harassment',
+      'rude_behavior': 'Rude behavior',
+      'vehicle_issue': 'Vehicle issue',
+      'other': 'Other',
+    };
+    String selected = 'unsafe_driving';
+    final noteController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            return AlertDialog(
+              backgroundColor: MaekelColors.panel,
+              title: const Text('Report safety / misconduct'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
+                    value: selected,
+                    items: [
+                      for (final e in reasons.entries)
+                        DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setLocal(() => selected = v);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Details (optional)',
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(rideRepositoryProvider).reportMisconduct(
+            tripId: tripId,
+            reason: selected,
+            note: noteController.text.trim().isEmpty
+                ? null
+                : noteController.text.trim(),
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report sent to Ride ops')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final trip = ref.watch(rideTripProvider(widget.tripId));
@@ -234,6 +314,16 @@ class _RideTripScreenState extends ConsumerState<RideTripScreen> {
             Text(
               AppLocalizations.of(context)!
                   .rideYouRated(trip.passengerRating!),
+            ),
+          ],
+          if (trip.status == TripStatus.completed ||
+              trip.status == TripStatus.cancelled ||
+              trip.status == TripStatus.inProgress) ...[
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => _reportMisconduct(trip.id),
+              icon: const Icon(Icons.report_gmailerrorred_outlined),
+              label: const Text('Report safety issue'),
             ),
           ],
         ],

@@ -97,6 +97,46 @@ abstract class FoodRepository {
   Future<FoodOrder> opsReassign(String orderId, {String? riderId});
   Future<FoodOrder> opsCancel(String orderId, {String reason});
 
+  Future<String> uploadApplicationMedia({
+    required List<int> bytes,
+    required String filename,
+    String contentType,
+  });
+  Future<FoodApplication> submitApplication({
+    required FoodApplicationKind kind,
+    required String title,
+    required String subcity,
+    String? licenseMediaId,
+  });
+  Future<List<FoodApplication>> myApplications();
+  Future<List<FoodApplication>> opsListApplications({String status});
+  Future<void> opsApproveApplication(String id, {String? note});
+  Future<void> opsRejectApplication(String id, {String note});
+
+  Future<FoodMerchant> setSelfDelivery(bool enabled);
+  Future<List<DeliveryMember>> getMerchantRiders();
+  Future<DeliveryMember> addMerchantRider(String phone);
+  Future<void> removeMerchantRider(String riderUserId);
+
+  Future<DeliveryOrg> getDeliveryOrg();
+  Future<List<DeliveryMember>> getDeliveryMembers();
+  Future<DeliveryMember> addDeliveryMember(String phone);
+  Future<void> removeDeliveryMember(String riderUserId);
+  Future<List<FoodOrder>> getDeliveryActiveOrders();
+  Future<List<FoodOrder>> getDeliveryReportableOrders();
+  Future<CustomerReport> reportCustomer({
+    required String orderId,
+    String reason,
+    String? note,
+  });
+  Future<List<CustomerReport>> opsListReports({String status});
+  Future<CustomerReport> opsReviewReport(
+    String id, {
+    required String action,
+    String? message,
+    String? note,
+  });
+
   Stream<void> get changes;
 }
 
@@ -635,5 +675,140 @@ class InMemoryFoodRepository implements FoodRepository {
     String reason = 'Cancelled by support',
   }) async {
     return merchantReject(orderId, reason: reason);
+  }
+
+  @override
+  Future<String> uploadApplicationMedia({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  }) async =>
+      'local://$filename';
+
+  @override
+  Future<FoodApplication> submitApplication({
+    required FoodApplicationKind kind,
+    required String title,
+    required String subcity,
+    String? licenseMediaId,
+  }) async {
+    return FoodApplication(
+      id: _id('app'),
+      kind: kind,
+      applicantUserId: 'local',
+      applicantPhone: '+251000000000',
+      title: title,
+      subcity: subcity,
+      status: FoodApplicationStatus.pending,
+      licenseMediaId: licenseMediaId,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<FoodApplication>> myApplications() async => const [];
+
+  @override
+  Future<List<FoodApplication>> opsListApplications({
+    String status = 'pending',
+  }) async =>
+      const [];
+
+  @override
+  Future<void> opsApproveApplication(String id, {String? note}) async {}
+
+  @override
+  Future<void> opsRejectApplication(
+    String id, {
+    String note = 'Rejected',
+  }) async {}
+
+  @override
+  Future<FoodMerchant> setSelfDelivery(bool enabled) async {
+    if (_merchants.isEmpty) throw StateError('No merchant');
+    _merchants[0] = _merchants[0].copyWith(selfDelivery: enabled);
+    _notify();
+    return _merchants[0];
+  }
+
+  @override
+  Future<List<DeliveryMember>> getMerchantRiders() async => const [];
+
+  @override
+  Future<DeliveryMember> addMerchantRider(String phone) async =>
+      DeliveryMember(riderUserId: _id('r'), phone: phone);
+
+  @override
+  Future<void> removeMerchantRider(String riderUserId) async {}
+
+  @override
+  Future<DeliveryOrg> getDeliveryOrg() async => const DeliveryOrg(
+        id: 'local-org',
+        name: 'Local fleet',
+        ownerUserId: 'local',
+      );
+
+  @override
+  Future<List<DeliveryMember>> getDeliveryMembers() async => const [];
+
+  @override
+  Future<DeliveryMember> addDeliveryMember(String phone) async =>
+      DeliveryMember(riderUserId: _id('r'), phone: phone);
+
+  @override
+  Future<void> removeDeliveryMember(String riderUserId) async {}
+
+  @override
+  Future<List<FoodOrder>> getDeliveryActiveOrders() async => const [];
+
+  @override
+  Future<List<FoodOrder>> getDeliveryReportableOrders() async => const [];
+
+  @override
+  Future<CustomerReport> reportCustomer({
+    required String orderId,
+    String reason = 'customer_no_show',
+    String? note,
+  }) async {
+    return CustomerReport(
+      id: _id('rep'),
+      orderId: orderId,
+      customerId: 'local',
+      reporterUserId: 'local',
+      reporterKind: 'delivery_merchant',
+      reason: reason,
+      status: CustomerReportStatus.pending,
+      note: note,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<CustomerReport>> opsListReports({
+    String status = 'pending',
+  }) async =>
+      const [];
+
+  @override
+  Future<CustomerReport> opsReviewReport(
+    String id, {
+    required String action,
+    String? message,
+    String? note,
+  }) async {
+    return CustomerReport(
+      id: id,
+      orderId: id,
+      customerId: 'local',
+      reporterUserId: 'local',
+      reporterKind: 'ops',
+      reason: 'customer_no_show',
+      status: switch (action) {
+        'warn' => CustomerReportStatus.warned,
+        'suspend' => CustomerReportStatus.suspended,
+        _ => CustomerReportStatus.ignored,
+      },
+      note: note,
+    );
   }
 }

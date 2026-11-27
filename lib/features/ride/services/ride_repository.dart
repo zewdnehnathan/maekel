@@ -38,6 +38,11 @@ abstract class RideRepository {
     required String reason,
     String? note,
   });
+  Future<RideMisconductReport> reportMisconduct({
+    required String tripId,
+    required String reason,
+    String? note,
+  });
   Stream<void> get changes;
 }
 
@@ -486,5 +491,24 @@ class InMemoryRideRepository implements RideRepository {
     );
     _notify();
     return _trips[idx];
+  }
+
+  @override
+  Future<RideMisconductReport> reportMisconduct({
+    required String tripId,
+    required String reason,
+    String? note,
+  }) async {
+    return RideMisconductReport(
+      id: 'local-rep',
+      tripId: tripId,
+      reporterUserId: 'local',
+      reporterRole: 'passenger',
+      accusedUserId: 'local',
+      reason: reason,
+      status: RideMisconductStatus.pending,
+      note: note,
+      createdAt: DateTime.now(),
+    );
   }
 }

@@ -62,6 +62,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (session?.isWarned == true) ...[
+                  Material(
+                    color: MaekelColors.amber.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: MaekelColors.amber,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              session!.warnMessage?.isNotEmpty == true
+                                  ? session.warnMessage!
+                                  : 'Account warning: a delivery no-show was reported. Please be available at drop-off.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 FadeTransition(
                   opacity: _brandFade,
                   child: SlideTransition(

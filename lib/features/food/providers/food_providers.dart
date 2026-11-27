@@ -18,7 +18,7 @@ final foodChangeTickProvider = StreamProvider<int>((ref) {
 
 final foodKindFilterProvider = StateProvider<MerchantKind?>((ref) => null);
 final foodQueryProvider = StateProvider<String>((ref) => '');
-final foodCoverageSubcityProvider = StateProvider<String?>((ref) => 'Bole');
+final foodCoverageSubcityProvider = StateProvider<String?>((ref) => null);
 
 final foodMerchantsProvider = Provider<List<FoodMerchant>>((ref) {
   ref.watch(foodChangeTickProvider);

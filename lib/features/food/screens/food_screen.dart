@@ -36,11 +36,24 @@ class FoodScreen extends ConsumerWidget {
     return FoodShell(
       title: l10n.foodTitle,
       actions: [
+        IconButton(
+          tooltip: 'Partner apply',
+          onPressed: () => context.push(AppRoutes.foodApply),
+          icon: const Icon(Icons.handshake_outlined),
+          color: MaekelColors.food,
+        ),
         if (session?.isFoodMerchant == true)
           IconButton(
             tooltip: AppLocalizations.of(context)!.foodMerchantConsole,
             onPressed: () => context.push(AppRoutes.foodMerchantConsole),
             icon: const Icon(Icons.storefront_outlined),
+            color: MaekelColors.food,
+          ),
+        if (session?.isFoodDeliveryMerchant == true)
+          IconButton(
+            tooltip: 'Delivery fleet',
+            onPressed: () => context.push(AppRoutes.foodDeliveryConsole),
+            icon: const Icon(Icons.local_shipping_outlined),
             color: MaekelColors.food,
           ),
         if (session?.isFoodRider == true)
@@ -89,6 +102,12 @@ class FoodScreen extends ConsumerWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
+              _KindChip(
+                label: l10n.all,
+                selected: pin == null,
+                onTap: () =>
+                    ref.read(foodCoverageSubcityProvider.notifier).state = null,
+              ),
               for (final p in _pins)
                 _KindChip(
                   label: localizedPlace(l10n, p),

@@ -12,8 +12,10 @@ import '../features/events/screens/events_my_screen.dart';
 import '../features/events/screens/events_ops_screen.dart';
 import '../features/events/screens/events_screen.dart';
 import '../features/events/screens/events_tickets_screen.dart';
+import '../features/food/screens/food_apply_screen.dart';
 import '../features/food/screens/food_cart_screen.dart';
 import '../features/food/screens/food_checkout_screen.dart';
+import '../features/food/screens/food_delivery_console_screen.dart';
 import '../features/food/screens/food_merchant_console_screen.dart';
 import '../features/food/screens/food_merchant_screen.dart';
 import '../features/food/screens/food_ops_screen.dart';
@@ -69,6 +71,8 @@ abstract final class AppRoutes {
   static const foodMerchantConsole = '/food/console';
   static const foodRider = '/food/rider';
   static const foodOps = '/food/ops';
+  static const foodApply = '/food/apply';
+  static const foodDeliveryConsole = '/food/delivery';
 
   static const games = '/games';
   static const brickBreaker = '/games/brick-breaker';
@@ -134,6 +138,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (loc == AppRoutes.foodRider &&
           session != null &&
           !session.isFoodRider) {
+        return AppRoutes.food;
+      }
+      if (loc == AppRoutes.foodDeliveryConsole &&
+          session != null &&
+          !session.isFoodDeliveryMerchant &&
+          !session.isFoodOps) {
         return AppRoutes.food;
       }
       if (loc == AppRoutes.rideOps &&
@@ -262,6 +272,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'console',
             builder: (context, state) => const FoodMerchantConsoleScreen(),
+          ),
+          GoRoute(
+            path: 'apply',
+            builder: (context, state) => const FoodApplyScreen(),
+          ),
+          GoRoute(
+            path: 'delivery',
+            builder: (context, state) => const FoodDeliveryConsoleScreen(),
           ),
           GoRoute(
             path: 'rider',

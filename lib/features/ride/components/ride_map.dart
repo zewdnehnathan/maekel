@@ -1,6 +1,7 @@
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:material_ui/material_ui.dart';
+// Distance is provided by latlong2.
 
 import '../../../app/theme.dart';
 import '../../../l10n/app_localizations.dart';
@@ -35,6 +36,7 @@ class _RideMapState extends State<RideMap> {
   static const double _maxZoom = 18;
 
   final MapController _mapController = MapController();
+  bool _mapReady = false;
 
   void _zoomBy(double delta) {
     final camera = _mapController.camera;
@@ -50,6 +52,37 @@ class _RideMapState extends State<RideMap> {
       _mapController.move(point, (zoom + 1.2).clamp(_minZoom, _maxZoom));
     } else {
       _mapController.move(point, zoom);
+    }
+  }
+
+  void _recenterOnFocus({bool force = false}) {
+    if (!_mapReady) return;
+    final focus = widget.myLocation ?? widget.pickupPoint;
+    if (focus == null) return;
+    final camera = _mapController.camera;
+    final moved = const Distance().as(
+          LengthUnit.Meter,
+          camera.center,
+          focus,
+        ) >
+        40;
+    if (force || moved) {
+      _mapController.move(focus, camera.zoom < 14 ? 14.2 : camera.zoom);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant RideMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldFocus = oldWidget.myLocation ?? oldWidget.pickupPoint;
+    final newFocus = widget.myLocation ?? widget.pickupPoint;
+    if (newFocus == null) return;
+    if (oldFocus == null ||
+        oldFocus.latitude != newFocus.latitude ||
+        oldFocus.longitude != newFocus.longitude) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _recenterOnFocus(force: true);
+      });
     }
   }
 
@@ -151,6 +184,10 @@ class _RideMapState extends State<RideMap> {
                   flags: interactive ? selectFlags : InteractiveFlag.none,
                   enableMultiFingerGestureRace: false,
                 ),
+                onMapReady: () {
+                  _mapReady = true;
+                  _recenterOnFocus(force: true);
+                },
                 onTap: onMapTap == null || !interactive
                     ? null
                     : (tap, point) => _handleSelect(point),

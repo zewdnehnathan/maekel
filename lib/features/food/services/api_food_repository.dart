@@ -75,7 +75,17 @@ class ApiFoodRepository implements FoodRepository {
         );
       await refreshPlaces();
       _notify();
-    } catch (_) {}
+    } catch (_) {
+      _notify();
+    }
+  }
+
+  void clearAuthed() {
+    _authed = false;
+    _orders.clear();
+    _cart = const FoodCart();
+    _places.clear();
+    _notify();
   }
 
   Future<void> _pollActive() async {
@@ -91,7 +101,9 @@ class ApiFoodRepository implements FoodRepository {
               .map(_parseOrder),
         );
       _notify();
-    } catch (_) {}
+    } catch (_) {
+      // Keep last known orders; next tick retries.
+    }
   }
 
   @override
@@ -659,6 +671,297 @@ class ApiFoodRepository implements FoodRepository {
     return _upsertOrder(_parseOrder(raw));
   }
 
+  @override
+  Future<String> uploadApplicationMedia({
+    required List<int> bytes,
+    required String filename,
+    String contentType = 'image/jpeg',
+  }) async {
+    final raw = await _client.postMultipart(
+      '/v1/food/applications/media',
+      auth: true,
+      bytes: bytes,
+      filename: filename,
+      contentType: contentType,
+    ) as Map<String, dynamic>;
+    return raw['id'] as String;
+  }
+
+  @override
+  Future<FoodApplication> submitApplication({
+    required FoodApplicationKind kind,
+    required String title,
+    required String subcity,
+    String? licenseMediaId,
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/applications',
+      auth: true,
+      body: {
+        'kind': kind == FoodApplicationKind.deliveryOrg
+            ? 'delivery_org'
+            : 'restaurant',
+        'title': title,
+        'subcity': subcity,
+        if (licenseMediaId != null) 'licenseMediaId': licenseMediaId,
+      },
+    ) as Map<String, dynamic>;
+    return _parseApplication(raw);
+  }
+
+  @override
+  Future<List<FoodApplication>> myApplications() async {
+    final raw = await _client.get('/v1/food/applications/mine', auth: true);
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseApplication)
+        .toList();
+  }
+
+  @override
+  Future<List<FoodApplication>> opsListApplications({
+    String status = 'pending',
+  }) async {
+    final raw = await _client.get(
+      '/v1/food/ops/applications',
+      auth: true,
+      query: {'status': status},
+    );
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseApplication)
+        .toList();
+  }
+
+  @override
+  Future<void> opsApproveApplication(String id, {String? note}) async {
+    await _client.post(
+      '/v1/food/ops/applications/$id/approve',
+      auth: true,
+      body: {if (note != null) 'note': note},
+    );
+  }
+
+  @override
+  Future<void> opsRejectApplication(
+    String id, {
+    String note = 'Rejected',
+  }) async {
+    await _client.post(
+      '/v1/food/ops/applications/$id/reject',
+      auth: true,
+      body: {'note': note},
+    );
+  }
+
+  @override
+  Future<FoodMerchant> setSelfDelivery(bool enabled) async {
+    final raw = await _client.patch(
+      '/v1/food/merchant/self-delivery',
+      auth: true,
+      body: {'enabled': enabled},
+    ) as Map<String, dynamic>;
+    final merchant = _parseMerchant(raw);
+    final idx = _merchants.indexWhere((m) => m.id == merchant.id);
+    if (idx >= 0) {
+      _merchants[idx] = merchant;
+    }
+    _notify();
+    return merchant;
+  }
+
+  @override
+  Future<List<DeliveryMember>> getMerchantRiders() async {
+    final raw = await _client.get('/v1/food/merchant/riders', auth: true);
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(
+          (j) => DeliveryMember(
+            riderUserId: j['riderUserId'] as String,
+            phone: j['phone'] as String,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<DeliveryMember> addMerchantRider(String phone) async {
+    final raw = await _client.post(
+      '/v1/food/merchant/riders',
+      auth: true,
+      body: {'phone': phone},
+    ) as Map<String, dynamic>;
+    return DeliveryMember(
+      riderUserId: raw['riderUserId'] as String,
+      phone: raw['phone'] as String,
+    );
+  }
+
+  @override
+  Future<void> removeMerchantRider(String riderUserId) async {
+    await _client.delete(
+      '/v1/food/merchant/riders/$riderUserId',
+      auth: true,
+    );
+  }
+
+  @override
+  Future<DeliveryOrg> getDeliveryOrg() async {
+    final raw = await _client.get('/v1/food/delivery/org', auth: true)
+        as Map<String, dynamic>;
+    return DeliveryOrg(
+      id: raw['id'] as String,
+      name: raw['name'] as String,
+      ownerUserId: raw['ownerUserId'] as String,
+      ownerPhone: raw['ownerPhone'] as String?,
+      isActive: raw['isActive'] as bool? ?? true,
+    );
+  }
+
+  @override
+  Future<List<DeliveryMember>> getDeliveryMembers() async {
+    final raw = await _client.get('/v1/food/delivery/members', auth: true);
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(
+          (j) => DeliveryMember(
+            riderUserId: j['riderUserId'] as String,
+            phone: j['phone'] as String,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<DeliveryMember> addDeliveryMember(String phone) async {
+    final raw = await _client.post(
+      '/v1/food/delivery/members',
+      auth: true,
+      body: {'phone': phone},
+    ) as Map<String, dynamic>;
+    return DeliveryMember(
+      riderUserId: raw['riderUserId'] as String,
+      phone: raw['phone'] as String,
+    );
+  }
+
+  @override
+  Future<void> removeDeliveryMember(String riderUserId) async {
+    await _client.delete(
+      '/v1/food/delivery/members/$riderUserId',
+      auth: true,
+    );
+  }
+
+  @override
+  Future<List<FoodOrder>> getDeliveryActiveOrders() async {
+    final raw =
+        await _client.get('/v1/food/delivery/active-orders', auth: true);
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseOrder)
+        .toList();
+  }
+
+  @override
+  Future<List<FoodOrder>> getDeliveryReportableOrders() async {
+    final raw =
+        await _client.get('/v1/food/delivery/reportable-orders', auth: true);
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseOrder)
+        .toList();
+  }
+
+  @override
+  Future<CustomerReport> reportCustomer({
+    required String orderId,
+    String reason = 'customer_no_show',
+    String? note,
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/reports',
+      auth: true,
+      body: {
+        'orderId': orderId,
+        'reason': reason,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    ) as Map<String, dynamic>;
+    return _parseReport(raw);
+  }
+
+  @override
+  Future<List<CustomerReport>> opsListReports({
+    String status = 'pending',
+  }) async {
+    final raw = await _client.get(
+      '/v1/food/ops/reports',
+      auth: true,
+      query: {'status': status},
+    );
+    return ((raw as Map)['items'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(_parseReport)
+        .toList();
+  }
+
+  @override
+  Future<CustomerReport> opsReviewReport(
+    String id, {
+    required String action,
+    String? message,
+    String? note,
+  }) async {
+    final raw = await _client.post(
+      '/v1/food/ops/reports/$id/review',
+      auth: true,
+      body: {
+        'action': action,
+        if (message != null) 'message': message,
+        if (note != null) 'note': note,
+      },
+    ) as Map<String, dynamic>;
+    return _parseReport(raw);
+  }
+
+  CustomerReport _parseReport(Map<String, dynamic> j) {
+    return CustomerReport(
+      id: j['id'] as String,
+      orderId: j['orderId'] as String,
+      customerId: j['customerId'] as String,
+      reporterUserId: j['reporterUserId'] as String,
+      reporterKind: j['reporterKind'] as String? ?? '',
+      reason: j['reason'] as String? ?? 'customer_no_show',
+      status: CustomerReportStatus.values.byName(j['status'] as String),
+      note: j['note'] as String?,
+      reviewNote: j['reviewNote'] as String?,
+      createdAt: j['createdAt'] == null
+          ? null
+          : DateTime.tryParse(j['createdAt'].toString()),
+    );
+  }
+
+  FoodApplication _parseApplication(Map<String, dynamic> j) {
+    final kindRaw = j['kind'] as String;
+    return FoodApplication(
+      id: j['id'] as String,
+      kind: kindRaw == 'delivery_org'
+          ? FoodApplicationKind.deliveryOrg
+          : FoodApplicationKind.restaurant,
+      applicantUserId: j['applicantUserId'] as String,
+      applicantPhone: j['applicantPhone'] as String? ?? '',
+      title: j['title'] as String,
+      subcity: j['subcity'] as String? ?? 'Bole',
+      status: FoodApplicationStatus.values.byName(j['status'] as String),
+      licenseMediaId: j['licenseMediaId'] as String?,
+      reviewNote: j['reviewNote'] as String?,
+      createdAt: j['createdAt'] == null
+          ? null
+          : DateTime.tryParse(j['createdAt'].toString()),
+    );
+  }
+
   FoodOrder _upsertOrder(FoodOrder order) {
     final idx = _orders.indexWhere((o) => o.id == order.id);
     if (idx >= 0) {
@@ -698,6 +1001,8 @@ class ApiFoodRepository implements FoodRepository {
       coverUrl: j['coverUrl'] as String,
       hoursLabel: j['hoursLabel'] as String,
       ownerUserId: j['ownerUserId'] as String?,
+      ownerPhone: j['ownerPhone'] as String?,
+      selfDelivery: j['selfDelivery'] as bool? ?? false,
       coverageSubcities: coverage,
     );
   }

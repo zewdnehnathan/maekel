@@ -7,6 +7,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../components/food_shell.dart';
 import '../models/food_models.dart';
 import '../providers/food_providers.dart';
+import '../services/api_food_repository.dart';
 import '../../../core/locale/place_l10n.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -21,6 +22,13 @@ class FoodOrderDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
+  Future<void> _refresh() async {
+    final repo = ref.read(foodRepositoryProvider);
+    if (repo is ApiFoodRepository) {
+      await repo.refreshAuthed();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final order = ref.watch(foodOrderProvider(widget.orderId));
@@ -32,7 +40,18 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
       return FoodShell(
         title: l10n.foodOrderTitle,
         showBottomNav: false,
-        child: Center(child: Text(l10n.foodOrderNotFound)),
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              SizedBox(
+                height: MediaQuery.sizeOf(context).height * 0.4,
+                child: Center(child: Text(l10n.foodOrderNotFound)),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -41,7 +60,10 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
     return FoodShell(
       title: '${l10n.foodOrderTitle} ${order.id}',
       showBottomNav: false,
-      child: ListView(
+      child: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           GlassPanel(
@@ -160,6 +182,7 @@ class _FoodOrderDetailScreenState extends ConsumerState<FoodOrderDetailScreen> {
             ),
           ],
         ],
+      ),
       ),
     );
   }
