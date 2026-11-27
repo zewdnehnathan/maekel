@@ -34,7 +34,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get otpTitle => 'ኮዱን ያስገቡ';
 
   @override
-  String get otpSubtitle => 'ሙከራ ኦቲፒ — ለአሁን 123456 ይጠቀሙ።';
+  String get otpSubtitle => 'ሙከራ ኦቲፒ — ለአሁን 828694 ይጠቀሙ።';
 
   @override
   String get otpHint => '6-አሃዝ ኮድ';

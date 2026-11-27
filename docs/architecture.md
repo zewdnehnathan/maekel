@@ -190,7 +190,7 @@ sequenceDiagram
 ### Auth rules
 
 - Phone normalized to E.164 (`+251` + 9 digits).  
-- QA / demo: `MOCK_OTP_CODE` (default `123456`).  
+- QA / demo: `MOCK_OTP_CODE` (default `828694`).  
 - `ADMIN_PHONES` bootstrap `platform_admin` (+ market moderator) on first verify.  
 - Staff UI can grant/revoke roles via `/v1/admin/roles/*`.  
 

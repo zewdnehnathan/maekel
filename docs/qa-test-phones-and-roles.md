@@ -7,7 +7,7 @@ Use these numbers on **https://maekel.pages.dev/** (backup: https://zewdnehnatha
 
 | Always the same | Value |
 |-----------------|--------|
-| OTP code | `123456` |
+| OTP code | `828694` |
 | Country code | `+251` |
 | App entry | 9-digit local number (e.g. `911111111`) |
 
@@ -55,7 +55,7 @@ Ride **driver mode** is available to any signed-in user, but they start **unappr
 
 ## 3. How to create each account
 
-1. Open the web app → enter **local** digits → OTP `123456`.
+1. Open the web app → enter **local** digits → OTP `828694`.
 2. Log in as bootstrap admin `999999999`.
 3. Home → **Staff**.
 4. Enter the **local** 9 digits → choose role → **Grant**.

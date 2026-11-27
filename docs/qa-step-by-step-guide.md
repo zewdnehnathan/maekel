@@ -14,7 +14,7 @@
 
 | Item | Value |
 |------|--------|
-| OTP (always) | `123456` |
+| OTP (always) | `828694` |
 | Phone entry | **9 local digits only** (app adds `+251`) |
 | Sessions | Use **2 browsers** or **1 normal + 1 Incognito** so two roles can act at once |
 | Cold start | Render free tier may sleep — first API call can take **30–60s**. Wait, then retry. |
@@ -53,7 +53,7 @@ Create these accounts once (Section 2). Keep this table open while testing.
 
 1. Open https://maekel.pages.dev/  
 2. Enter local digits (e.g. `911111111`) → **Continue**  
-3. OTP `123456` → **Verify**  
+3. OTP `828694` → **Verify**  
 4. Confirm you land on **Home** (tiles: Ride, Market, Food, Events, Games)  
 5. **Sign out** (power icon) before creating the next account  
 
@@ -93,7 +93,7 @@ Also log in once as admin `999999999` so Staff works.
 | 1 | Open app signed out | Phone screen |
 | 2 | Enter `911111111` → Continue | OTP screen |
 | 3 | Enter wrong OTP e.g. `000000` | Clear error, stay signed out |
-| 4 | Enter `123456` | Home loads |
+| 4 | Enter `828694` | Home loads |
 | 5 | Open Ride, back to Home, open Food, Market, Events | No re-login; no crash |
 | 6 | Sign out | Back to phone screen |
 

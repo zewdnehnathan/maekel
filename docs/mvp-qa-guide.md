@@ -4,7 +4,7 @@
 **Version:** 1.0  
 **Aligned with:** [qa-step-by-step-guide.md](./qa-step-by-step-guide.md) (click-by-click runbook)  
 **PDF copy:** [`mvp-qa-guide.pdf`](./mvp-qa-guide.pdf)  
-**App:** https://maekel.pages.dev/ · **API:** https://maekel-api.onrender.com/ · **OTP:** `123456`
+**App:** https://maekel.pages.dev/ · **API:** https://maekel-api.onrender.com/ · **OTP:** `828694`
 
 **How to use**
 1. Run steps in the [step-by-step runbook](./qa-step-by-step-guide.md) using the phones below.  
@@ -64,7 +64,7 @@ Same roster as the runbook §1. Create once (runbook §2), then reuse.
 **What must be true**
 - [ ] I enter 9 local digits; country is +251
 - [ ] Wrong OTP shows a clear error and I stay signed out
-- [ ] Correct OTP `123456` opens Home
+- [ ] Correct OTP `828694` opens Home
 - [ ] Sign out returns me to the phone screen and clears the session
 
 #### Story A02 — Home shortcuts

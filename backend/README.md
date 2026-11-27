@@ -50,7 +50,7 @@ POST /v1/auth/otp/request
 { "phone": "911234567" }
 
 POST /v1/auth/otp/verify
-{ "phone": "911234567", "code": "123456" }
+{ "phone": "911234567", "code": "828694" }
 ```
 
 Use returned `accessToken` as `Authorization: Bearer …`.

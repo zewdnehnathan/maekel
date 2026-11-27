@@ -35,7 +35,7 @@ class AppLocalizationsSo extends AppLocalizations {
   String get otpTitle => 'Geli koodhka';
 
   @override
-  String get otpSubtitle => 'OTP tijaabo — hadda isticmaal 123456.';
+  String get otpSubtitle => 'OTP tijaabo — hadda isticmaal 828694.';
 
   @override
   String get otpHint => 'Koodh 6-god ah';

@@ -35,7 +35,7 @@ class AppLocalizationsOm extends AppLocalizations {
   String get otpTitle => 'Koodii galchi';
 
   @override
-  String get otpSubtitle => 'OTP yaalii — ammaaf 123456 fayyadami.';
+  String get otpSubtitle => 'OTP yaalii — ammaaf 828694 fayyadami.';
 
   @override
   String get otpHint => 'Koodii dijiitii 6 qabu';

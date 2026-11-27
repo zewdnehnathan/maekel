@@ -34,7 +34,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get otpTitle => 'أدخل الرمز';
 
   @override
-  String get otpSubtitle => 'رمز OTP الوهمي – استخدم 123456 في الوقت الحالي.';
+  String get otpSubtitle => 'رمز OTP الوهمي – استخدم 828694 في الوقت الحالي.';
 
   @override
   String get otpHint => 'رمز مكون من 6 أرقام';

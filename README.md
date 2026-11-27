@@ -22,7 +22,7 @@ Addis Ababa super-app — Flutter client + Fastify microservices (identity, mark
 ## Mock login (local or QA)
 
 1. Enter a **9-digit** local phone (e.g. `911234567`) — prefix `+251`
-2. OTP: **`123456`**
+2. OTP: **`828694`**
 3. Bootstrap admin (if `ADMIN_PHONES` includes it): `999999999`
 
 ## Run (short)

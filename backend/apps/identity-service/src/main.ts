@@ -14,7 +14,7 @@ import {
 import { z } from 'zod';
 
 const port = envInt('IDENTITY_PORT', 3001);
-const mockOtp = env('MOCK_OTP_CODE', '123456');
+const mockOtp = env('MOCK_OTP_CODE', '828694');
 const pool = createPool(databaseUrl('maekel_identity'));
 
 /** Comma-separated E.164 phones that bootstrap as real admins. */

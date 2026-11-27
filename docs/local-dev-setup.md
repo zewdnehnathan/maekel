@@ -89,7 +89,7 @@ copy .env.example .env
 Defaults in `.env` are fine for local work:
 
 - Postgres: `localhost:5432`, user/password `postgres` / `postgres`
-- `MOCK_OTP_CODE=123456`
+- `MOCK_OTP_CODE=828694`
 - `ADMIN_PHONES=+251999999999` (bootstrap Staff admin)
 - Service URLs on `127.0.0.1:3001`–`3007`, gateway `8080`
 - `PUBLIC_API_BASE=http://127.0.0.1:8080` (used in market/food/events image URLs)
@@ -188,12 +188,12 @@ Content-Type: application/json
 POST http://127.0.0.1:8080/v1/auth/otp/verify
 Content-Type: application/json
 
-{ "phone": "911234567", "code": "123456" }
+{ "phone": "911234567", "code": "828694" }
 ```
 
 Use the returned `accessToken` as `Authorization: Bearer <token>`.
 
-Bootstrap admin (from `ADMIN_PHONES`): local phone `999999999`, OTP `123456`.
+Bootstrap admin (from `ADMIN_PHONES`): local phone `999999999`, OTP `828694`.
 
 ---
 
@@ -263,7 +263,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://maekel-api.onrend
 ### 3.4 First login in the app
 
 1. Enter a **9-digit** local number (e.g. `911234567`) — UI shows `+251`.
-2. OTP: `123456` (mock).
+2. OTP: `828694` (mock).
 3. You land on Home (Ride, Market, Food, Games, Events, …).
 
 Languages: open the language picker (en / am / ti / om / aa / so / ar / sw / zh). Preference is stored on device. Arabic uses RTL layout.
@@ -342,6 +342,6 @@ Note: free Render may **cold-start** (~30–60s) after idle. Deploy notes: [depl
 - [ ] `npm install` + `npm run build -w @maekel/shared` in `backend/`  
 - [ ] `npm run dev:all` — gateway answers on `:8080`  
 - [ ] `flutter pub get` at repo root  
-- [ ] `flutter run -d chrome` — OTP `123456` works  
+- [ ] `flutter run -d chrome` — OTP `828694` works  
 
 You’re ready to develop.

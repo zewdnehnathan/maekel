@@ -34,7 +34,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get otpTitle => '输入代码';
 
   @override
-  String get otpSubtitle => '模拟 OTP — 现在使用 123456。';
+  String get otpSubtitle => '模拟 OTP — 现在使用 828694。';
 
   @override
   String get otpHint => '6位数字代码';

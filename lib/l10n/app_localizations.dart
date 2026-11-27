@@ -163,7 +163,7 @@ abstract class AppLocalizations {
   /// No description provided for @otpSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Mock OTP — use 123456 for now.'**
+  /// **'Mock OTP — use 828694 for now.'**
   String get otpSubtitle;
 
   /// No description provided for @otpHint.

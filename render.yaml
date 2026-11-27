@@ -23,7 +23,7 @@ services:
       - key: JWT_ACCESS_TTL_SEC
         value: "3600"
       - key: MOCK_OTP_CODE
-        value: "123456"
+        value: "828694"
       # Comma-separated E.164 phones that bootstrap as platform admins / Market ops.
       - key: ADMIN_PHONES
         value: "+251999999999"

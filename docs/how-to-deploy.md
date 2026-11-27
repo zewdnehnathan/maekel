@@ -9,7 +9,7 @@ Current live targets:
 | **Web (backup)** | https://zewdnehnathan.github.io/maekel/ |
 | **Release APK** | `releases/maekel-qa.apk` (also `build/app/outputs/flutter-apk/app-release.apk`) |
 
-Mock OTP for QA: `123456`
+Mock OTP for QA: `828694`
 
 ---
 
@@ -58,7 +58,7 @@ Already set by blueprint / earlier setup for this project:
 
 - `PUBLIC_API_BASE=https://maekel-api.onrender.com` (image URLs for market/food/events)
 - `POSTGRES_*` + `POSTGRES_SSL=true` (Neon)
-- `MOCK_OTP_CODE=123456`
+- `MOCK_OTP_CODE=828694`
 - `ADMIN_PHONES` (E.164, comma-separated)
 - Internal `*_URL` pointing at `127.0.0.1:3001`–`3007`
 
@@ -132,7 +132,7 @@ For a **local** backend instead of Render, omit `--dart-define` (emulator uses `
 2. Hit `/healthz` once (wake cold start)
 3. Run `.\scripts\deploy-web.ps1`
 4. Build APK and copy to `releases\maekel-qa.apk`
-5. Share **https://maekel.pages.dev/** + APK with QA (OTP `123456`)
+5. Share **https://maekel.pages.dev/** + APK with QA (OTP `828694`)
 
 ---
 

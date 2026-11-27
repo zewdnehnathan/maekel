@@ -35,7 +35,7 @@ class AppLocalizationsAa extends AppLocalizations {
   String get otpTitle => 'Koodih usug';
 
   @override
-  String get otpSubtitle => 'OTP anqasak - away 123456 xoqoysima.';
+  String get otpSubtitle => 'OTP anqasak - away 828694 xoqoysima.';
 
   @override
   String get otpHint => '6-ixxima le mudenta';

@@ -76,7 +76,7 @@ FOOD_URL=http://127.0.0.1:3003
 RIDE_URL=http://127.0.0.1:3004
 CHAT_URL=http://127.0.0.1:3005
 GAMES_URL=http://127.0.0.1:3006
-MOCK_OTP_CODE=123456
+MOCK_OTP_CODE=828694
 ```
 
 Health check path: `/healthz`
@@ -98,7 +98,7 @@ POST /v1/auth/otp/request
 { "phone": "911234567" }
 
 POST /v1/auth/otp/verify
-{ "phone": "911234567", "code": "123456" }
+{ "phone": "911234567", "code": "828694" }
 ```
 
 ---

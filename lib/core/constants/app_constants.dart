@@ -5,7 +5,7 @@ abstract final class AppConstants {
   static const String phoneCountryCode = '+251';
   static const String currencyCode = 'ETB';
   static const String cityName = 'Addis Ababa';
-  static const String mockOtpCode = '123456';
+  static const String mockOtpCode = '828694';
   static const int otpLength = 6;
   static const int localPhoneLength = 9;
 

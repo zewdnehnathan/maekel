@@ -35,7 +35,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get otpTitle => 'Enter the code';
 
   @override
-  String get otpSubtitle => 'Mock OTP — use 123456 for now.';
+  String get otpSubtitle => 'Mock OTP — use 828694 for now.';
 
   @override
   String get otpHint => '6-digit code';

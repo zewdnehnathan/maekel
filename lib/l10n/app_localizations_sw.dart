@@ -35,7 +35,7 @@ class AppLocalizationsSw extends AppLocalizations {
   String get otpTitle => 'Ingiza msimbo';
 
   @override
-  String get otpSubtitle => 'Mock OTP - tumia 123456 kwa sasa.';
+  String get otpSubtitle => 'Mock OTP - tumia 828694 kwa sasa.';
 
   @override
   String get otpHint => 'Msimbo wa tarakimu 6';
